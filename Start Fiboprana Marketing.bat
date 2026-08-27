@@ -21,8 +21,9 @@ if not exist ".\.venv\Scripts\python.exe" (
 )
 
 echo Fiboprana marketing server starting.
-echo Wait for "Running on http://127.0.0.1:5000" below,
+echo Wait for "Running on http://127.0.0.1:5001" below,
 echo then open that URL in the browser of your choice.
+echo (Port 5001 on purpose - Stackivate's dashboard owns 5000.)
 echo Close this window or Ctrl+C to stop the server.
 echo.
 

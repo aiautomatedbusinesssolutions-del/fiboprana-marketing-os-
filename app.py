@@ -1080,4 +1080,7 @@ if __name__ == "__main__":
     # two states are localhost+debug (dev) or LAN+no-debug (phone access).
     host = "0.0.0.0" if args.network else "127.0.0.1"
     debug = not args.network
-    app.run(host=host, port=5000, debug=debug)
+    # PORT env (default 5001): the engine's dashboard owns 5000 on this machine,
+    # and Werkzeug's SO_REUSEADDR means a second bind on Windows silently shares
+    # the port instead of failing — so Fiboprana runs on its own.
+    app.run(host=host, port=int(os.environ.get("PORT", "5001")), debug=debug)

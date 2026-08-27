@@ -1525,9 +1525,9 @@ def checks_health():
                        means the job itself is failing on that video.
       * reply_ledger — X replies close Saturdays via Typefully; > 8 days past
                        due means a full weekly cycle went by without a close.
-                       Reddit rows are counted separately, not warned: frozen
-                       by design until the account appeal (delete this carve-
-                       out when Reddit thaws, with the strip's note).
+                       (The engine's reddit-frozen carve-out is removed for
+                       Fiboprana — all platforms warn; reddit_frozen stays in
+                       the payload shape as 0 for the /week strip.)
     """
     from datetime import timezone
 
@@ -1545,23 +1545,12 @@ def checks_health():
         return (now - due).total_seconds() / 86400
     video_stuck = [r for r in rows
                    if r["entity_table"] == "videos" and days_past(r) > 2]
-    reply_over = [r for r in rows
-                  if r["entity_table"] == "reply_ledger" and days_past(r) > 8]
-    platforms = {}
-    if reply_over:
-        ids = ",".join(r["entity_id"] for r in reply_over)
-        try:
-            led = supabase.select("reply_ledger", params={
-                "select": "id,platform", "id": f"in.({ids})"})
-            platforms = {r["id"]: r["platform"] for r in led}
-        except SupabaseError:
-            pass  # unknown platform counts as non-reddit: better a false warn
-    reply_stuck = [r for r in reply_over
-                   if platforms.get(r["entity_id"]) != "reddit"]
+    reply_stuck = [r for r in rows
+                   if r["entity_table"] == "reply_ledger" and days_past(r) > 8]
     return {"open": len(rows),
             "video_stuck": len(video_stuck),
             "reply_stuck": len(reply_stuck),
-            "reddit_frozen": len(reply_over) - len(reply_stuck)}
+            "reddit_frozen": 0}
 
 
 def pain_report():
@@ -1736,8 +1725,8 @@ def reply_days():
 
     # Hand-stated sending freezes — no API exposes account standing, so this
     # map is the honest record (same trust tier as hard_limits "stated").
-    # Delete the entry when the situation ends.
-    notes = {"reddit": "sending frozen — account appeal pending; the queue still feeds the pain signal"}
+    # Add an entry when a channel freezes; delete it when the situation ends.
+    notes = {}
     return {"week": monday.isoformat(),
             "channels": [{"name": n, "note": notes.get(n)} for n in ordered],
             "sent": sent}
