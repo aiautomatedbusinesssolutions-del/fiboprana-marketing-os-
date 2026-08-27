@@ -66,7 +66,7 @@ create index idx_content_calendar_pub   on marketing.content_calendar (published
 -- ── 2. Re-scope grants: close the stub's full-CRUD hole ─────────────────────
 revoke delete on marketing.content_calendar from anon, authenticated;
 revoke update on marketing.content_calendar from anon, authenticated;
-drop policy content_calendar_all on marketing.content_calendar;
+drop policy if exists content_calendar_all on marketing.content_calendar;
 
 -- Column-scoped UPDATE: lifecycle + edit capture + publish facts + outcome.
 -- Write-once under anon: draft_text (the diff anchor) and the provenance pair

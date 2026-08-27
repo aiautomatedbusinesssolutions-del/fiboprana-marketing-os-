@@ -1,19 +1,14 @@
 -- 20260802000001_funnel_counts.sql
 -- Fiboprana marketing — aggregate app-funnel counts for the daily metrics agent.
--- APPLIED to the live project 2026-08-02 (SQL editor). Idempotent; safe to re-run.
 --
--- The app's tables (public.users, waitlist, quiz_leads, founding_members) are
--- RLS-locked, as they should be. The metrics agent only needs four COUNTs, so
--- this SECURITY DEFINER function is the one narrow bridge across that boundary:
--- it returns aggregates only — no rows, no columns, no PII.
---
--- Grant note, stated plainly: execute is granted to `anon` because that is the
--- credential the whole fleet actually authenticates with — the scoped-role
--- hardening (20260625000001) was never applied live; its role doesn't exist
--- (42704, confirmed 2026-08-02). Exposure: anyone holding the app's public key
--- can read four aggregate numbers, nothing more. When the scoped agent role
--- lands (renamed — "hermes" collides with the official Nous Research Hermes
--- agents; use e.g. marketing_fleet), grant it execute and revoke anon.
+-- Fiboprana clone note (2026-08-26): the engine's original version counted its
+-- product's tables (public.users, waitlist, quiz_leads, founding_members). The
+-- Fiboprana product database doesn't exist yet (fiboprana-site is pre-launch;
+-- email capture lives in Resend, not Postgres), so this is a STUB with the same
+-- signature: the metrics agent can call it today and gets zeros. When product
+-- tables land in public (with RLS), replace the zeros with real COUNT()s —
+-- SECURITY DEFINER + aggregates-only is the one narrow bridge across RLS:
+-- counts only, no rows, no columns, no PII.
 
 create or replace function marketing.funnel_counts()
 returns jsonb
@@ -23,15 +18,15 @@ security definer
 set search_path = ''
 as $$
   select jsonb_build_object(
-    'users',            (select count(*) from public.users),
-    'waitlist',         (select count(*) from public.waitlist),
-    'quiz_leads',       (select count(*) from public.quiz_leads),
-    'founding_members', (select count(*) from public.founding_members)
+    'users',            0,
+    'waitlist',         0,
+    'quiz_leads',       0,
+    'founding_members', 0
   );
 $$;
 
 comment on function marketing.funnel_counts() is
-  'Aggregate signup-funnel counts for the daily metrics agent. Counts only — never row data.';
+  'Aggregate signup-funnel counts for the daily metrics agent. STUB returning zeros until the Fiboprana product tables exist. Counts only — never row data.';
 
 revoke all on function marketing.funnel_counts() from public, authenticated;
 grant execute on function marketing.funnel_counts() to anon, service_role;
