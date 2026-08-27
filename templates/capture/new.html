@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ heading or "New conversation" }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>{{ heading or "New conversation" }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('capture.capture_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    {% if errors %}
+        <div class="notice notice-error">Please fix the errors below.</div>
+    {% endif %}
+
+    <form method="post" class="entry-form" action="{{ form_action or url_for('capture.capture_new_submit') }}">
+        {% for name, label, kind, hint in fields %}
+            <div class="form-field{% if errors.get(name) %} has-error{% endif %}">
+                <label for="f-{{ name }}">
+                    {{ label }}{% if name == 'date' %} <span class="required">*</span>{% endif %}
+                </label>
+
+                {% if kind == 'textarea' %}
+                    <textarea id="f-{{ name }}" name="{{ name }}" rows="3" placeholder="{{ hint }}">{{ defaults.get(name, '') }}</textarea>
+                {% elif kind == 'date' %}
+                    <input id="f-{{ name }}" name="{{ name }}" type="date" value="{{ defaults.get(name, '') }}" required>
+                {% else %}
+                    <input id="f-{{ name }}" name="{{ name }}" type="text" value="{{ defaults.get(name, '') }}" placeholder="{{ hint }}">
+                {% endif %}
+
+                {% if name == 'tags' %}
+                    {% set tag_suggestions = existing_tags() %}
+                    {% if tag_suggestions %}
+                        <div class="tag-suggestions" data-target="f-tags">
+                            <span class="tag-suggestions-label">Reuse existing:</span>
+                            {% for t, n in tag_suggestions %}
+                                <button type="button" class="tag-chip" data-tag="{{ t }}" title="{{ n }} use{{ '' if n == 1 else 's' }}">{{ t }}</button>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {% if errors.get(name) %}
+                    <p class="field-error">{{ errors[name] }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit">{{ submit_label or "Save entry" }}</button>
+            <a class="button-link" href="{{ url_for('capture.capture_list') }}">Cancel</a>
+        </div>
+    </form>
+
+    <script>
+        // Click a tag chip to append it to the tags input. Skips append when
+        // the tag is already present (comma-separated, case-insensitive).
+        document.querySelectorAll('.tag-suggestions').forEach(function (group) {
+            var target = document.getElementById(group.dataset.target);
+            if (!target) return;
+            group.addEventListener('click', function (e) {
+                var chip = e.target.closest('.tag-chip');
+                if (!chip) return;
+                var tag = chip.dataset.tag;
+                var current = (target.value || '').split(',').map(function (t) { return t.trim().toLowerCase(); }).filter(Boolean);
+                if (current.indexOf(tag) !== -1) return;
+                current.push(tag);
+                target.value = current.join(', ');
+                target.focus();
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,15 @@
+flask>=3.0
+python-dotenv>=1.0
+praw>=7.7,<8
+PyYAML>=6.0,<7
+exa-py>=2.0,<3
+
+# MCP server SDK — exposes the fleet's agents to an MCP client over stdio. Only
+# needed to RUN the MCP server (fleet/mcp_server.py); the store + agent core are
+# stdlib. Install with: pip install -r requirements.txt
+mcp>=1.0
+
+# Local speech-to-text for the video brand-voice corpus (videos/transcribe.py).
+# CPU by default; first run downloads a Whisper model. Pulls ctranslate2, av,
+# onnxruntime — the one heavy dependency, isolated to the video pipeline.
+faster-whisper>=1.0

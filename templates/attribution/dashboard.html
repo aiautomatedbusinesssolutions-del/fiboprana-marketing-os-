@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Attribution — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Attribution</h1>
+        <div class="actions">
+            <a class="button" href="{{ url_for('attribution.new_form') }}">+ New tracking link</a>
+        </div>
+    </div>
+
+    <p class="lede">Short links that redirect to <code>{{ default_destination }}</code> (or any override) and log each click. Use a fresh link per published post / DM / newsletter so you can see which ones actually pulled.</p>
+
+    <div class="tiles" style="margin-top: 12px;">
+        <div class="tile">
+            <h2>{{ summary.total_links }}</h2>
+            <p>active links</p>
+        </div>
+        <div class="tile">
+            <h2>{{ summary.total_clicks }}</h2>
+            <p>clicks (all-time)</p>
+        </div>
+        <div class="tile">
+            <h2>{{ summary.clicks_7d }}</h2>
+            <p>clicks (last 7 days)</p>
+        </div>
+        <div class="tile">
+            <h2>{{ summary.clicks_30d }}</h2>
+            <p>clicks (last 30 days)</p>
+        </div>
+    </div>
+
+    {% if by_source %}
+        <section style="margin-top: 32px;">
+            <h2>Clicks by channel</h2>
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead>
+                        <tr>
+                            <th>utm_source</th>
+                            <th>clicks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in by_source %}
+                            <tr>
+                                <td>{{ row.source }}</td>
+                                <td>{{ row.click_count }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
+
+    <section style="margin-top: 32px;">
+        <h2>Links</h2>
+        {% if not links %}
+            <p class="muted">No links yet. Click <strong>New tracking link</strong> above to create your first one.</p>
+        {% else %}
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Channel</th>
+                            <th>Campaign</th>
+                            <th>Obs.</th>
+                            <th>Clicks</th>
+                            <th>Last click</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in links %}
+                            <tr>
+                                <td><a href="{{ url_for('attribution.detail', link_id=l.id) }}"><code>{{ l.code }}</code></a></td>
+                                <td>{{ l.utm_source or '—' }}</td>
+                                <td>{{ l.utm_campaign or '—' }}</td>
+                                <td>
+                                    {% if l.observation_id %}
+                                        <a href="{{ url_for('observations.observations_detail', obs_id=l.observation_id) }}">#{{ l.observation_id }}</a>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>{{ l.click_count }}</td>
+                                <td class="muted">{{ l.last_clicked_at or '—' }}</td>
+                                <td class="muted">{{ l.created_at }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

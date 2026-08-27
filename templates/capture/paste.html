@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Paste conversation — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Paste conversation</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('capture.capture_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    <p class="lede">Low-friction capture — paste the raw conversation, add a few tags, save. Structured fields can be filled in later if a specific entry warrants it.</p>
+
+    {% if errors %}
+        <div class="notice notice-error">Please fix the errors below.</div>
+    {% endif %}
+
+    <form method="post" class="entry-form" action="{{ url_for('capture.capture_paste_submit') }}">
+        {% for name, label, kind, hint in fields %}
+            <div class="form-field{% if errors.get(name) %} has-error{% endif %}">
+                <label for="f-{{ name }}">
+                    {{ label }}{% if name in ('raw_transcript', 'date') %} <span class="required">*</span>{% endif %}
+                </label>
+
+                {% if kind == 'textarea-big' %}
+                    <textarea id="f-{{ name }}" name="{{ name }}" rows="15" placeholder="{{ hint }}" required>{{ defaults.get(name, '') }}</textarea>
+                {% elif kind == 'textarea' %}
+                    <textarea id="f-{{ name }}" name="{{ name }}" rows="3" placeholder="{{ hint }}">{{ defaults.get(name, '') }}</textarea>
+                {% elif kind == 'date' %}
+                    <input id="f-{{ name }}" name="{{ name }}" type="date" value="{{ defaults.get(name, '') }}" required>
+                {% else %}
+                    <input id="f-{{ name }}" name="{{ name }}" type="text" value="{{ defaults.get(name, '') }}" placeholder="{{ hint }}">
+                {% endif %}
+
+                {% if errors.get(name) %}
+                    <p class="field-error">{{ errors[name] }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit">Save entry</button>
+            <a class="button-link" href="{{ url_for('capture.capture_list') }}">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

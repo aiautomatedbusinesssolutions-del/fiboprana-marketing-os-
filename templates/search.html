@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Search — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <h1>Search</h1>
+
+    <form class="search-form" method="get" action="{{ url_for('search') }}">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search observations, captures, ideas…" autofocus>
+        <button type="submit">Search</button>
+    </form>
+
+    {% if q %}
+        <p class="result-count">
+            {{ results|length }} result{{ '' if results|length == 1 else 's' }} for
+            <code>{{ q }}</code>
+            {% if results %}
+                — observations: {{ counts.observation }} · captures: {{ counts.capture }} · ideas: {{ counts.idea }}
+            {% endif %}
+        </p>
+
+        {% if not results %}
+            <p class="empty">No matches.</p>
+        {% else %}
+            <ul class="search-results">
+                {% for r in results %}
+                    <li class="search-result">
+                        <div class="search-result-head">
+                            <span class="search-kind kind-{{ r.kind }}">{{ r.kind }}</span>
+                            <a class="search-result-title" href="{{ r.url }}">{{ r.title }}</a>
+                            {% if r.date %}<span class="search-result-date muted">{{ r.date }}</span>{% endif %}
+                        </div>
+                        {% if r.snippet %}
+                            <div class="search-result-snippet">{{ r.snippet }}</div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% else %}
+        <p class="muted">Searches observation raw content, pain points, quotes, feature implications, and tags; capture goals, pains, quotes, transcripts, and handles; idea titles, descriptions, source, and tags. Case-insensitive substring match.</p>
+    {% endif %}
+{% endblock %}

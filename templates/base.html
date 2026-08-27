@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Fiboprana Marketing{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <nav>
+            <a href="{{ url_for('dashboard') }}" class="brand">Fiboprana Marketing</a>
+            <a href="/week" class="nav-fleet">This Week</a>
+            <a href="/review" class="nav-fleet">Replies</a>
+            <a href="{{ url_for('weekly_hub') }}">Weekly</a>
+            <a href="{{ url_for('capture.capture_list') }}">Capture</a>
+            <a href="{{ url_for('observations.observations_list') }}">Observations</a>
+            <a href="{{ url_for('sourcing.sourcing_list') }}">Sourcing</a>
+            <a href="{{ url_for('sourcing_web.sourcing_web_list') }}">Web Sourcing</a>
+            <a href="{{ url_for('radar.radar_list') }}">Radar</a>
+            <a href="{{ url_for('ideas.ideas_list') }}">Product Ideas</a>
+            <a href="{{ url_for('synthesis.synthesis_dashboard') }}">Synthesis</a>
+            <a href="{{ url_for('attribution.dashboard') }}">Attribution</a>
+            <form class="nav-search" method="get" action="{{ url_for('search') }}">
+                <input type="search" name="q" placeholder="Search…" aria-label="Search">
+            </form>
+        </nav>
+    </header>
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

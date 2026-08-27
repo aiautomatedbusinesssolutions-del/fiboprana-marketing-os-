@@ -1,0 +1,56 @@
+# Exa search configuration. Edit values here; reloaded on each scan.
+# Reference: EXA_GUIDE.md in the project root.
+
+search:
+  type: auto              # ~1s, balanced relevance and speed
+  num_results: 10         # per-query result count. Exa free tier bills the first 10
+                          # results per request as one credit, so 10 is the efficiency
+                          # sweet spot — going lower (e.g. 8) costs the same credit
+                          # for less data. Going above 10 starts billing extra.
+  max_age_hours: null     # null = default cache+livecrawl; 0 = always livecrawl
+  include_domains:
+    # Forums and platforms — good for first-person voice + threaded discussion
+    - reddit.com
+    - substack.com
+    - medium.com
+    # Mindful-productivity / quantified-self / contemplative blogs — good for
+    # pattern-revealing first-person essays. Excluded SEO/news domains
+    # (healthline, verywellmind, mindbodygreen, psychologytoday) — their content
+    # is topical-explainer style, not behavioral observation.
+    - nesslabs.com
+    - quantifiedself.com
+    - mindful.org
+    - tricycle.org
+
+# v1 audience priority: metrics-literate trackers hitting the wall (the Maya
+# wedge) + practitioners who can't see their practice working.
+templates:
+  - label: "Tracker anxiety first-person"
+    query: "my sleep tracker or readiness score is making me more anxious not less first person account"
+  - label: "Quit-the-ring retrospective"
+    query: "I stopped wearing my Oura ring or Whoop and what changed first person reflection"
+  - label: "Is meditation working doubt"
+    query: "meditating for months can't tell if it's actually doing anything for me"
+  - label: "Practice-data correlation curiosity"
+    query: "tracking whether my meditation or breathwork shows up in my HRV or sleep data"
+  - label: "Burnout behind a successful surface"
+    query: "high achiever burned out wired and tired can't relax even though everything looks fine"
+  - label: "Data means nothing frustration"
+    query: "years of wearable data but no idea what it means or what to do with it"
+
+  # Behavioral pain-point queries. Target moments of friction that synthesize
+  # into mind-state-layer opportunities: score obsession, practice abandonment,
+  # app fatigue, meaning-seeking after optimization. Phrasing mirrors how real
+  # people post these, not how a strategist would label them.
+  - label: "Score-checking compulsion"
+    query: "checking my sleep score first thing every morning before I decide how I feel"
+  - label: "Meditation app abandonment"
+    query: "downloaded Calm or Headspace used it for a week and never opened it again why"
+  - label: "Optimization emptiness"
+    query: "optimized my sleep diet and exercise but still feel empty or exhausted"
+  - label: "Orthosomnia experience"
+    query: "trying so hard to get a good sleep score that I sleep worse"
+  - label: "Wearable data vs felt sense mismatch"
+    query: "my recovery score says I'm fine but I feel terrible or vice versa"
+  - label: "Practice consistency struggle"
+    query: "keep starting and quitting meditation because I never see progress"

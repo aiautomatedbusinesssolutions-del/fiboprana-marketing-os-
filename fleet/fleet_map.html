@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fleet Map — Fiboprana Marketing OS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Fiboprana Emerald-refresh palette (verified against fiboprana-site CSS).
+   Dark is the deliberate default: this is a control room, not a document.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --bg:      #0b0f14;
+  --bg-lift: #0e141c;
+  --panel:   #121822;
+  --edge:    #1e2733;
+  --edge-hi: #2c3947;
+  --ink:     #e6edf3;
+  --dim:     #a9b6c3;
+  --faint:   #7d8894;
+  --emerald: #1db584;
+  --emerald-soft: rgba(29,181,132,.14);
+  --amber:   #e8a93b;
+  --amber-soft: rgba(232,169,59,.13);
+  --shadow:  0 1px 0 rgba(255,255,255,.03), 0 12px 30px rgba(0,0,0,.35);
+  --grid:    rgba(139,152,165,.14);
+}
+:root[data-theme="light"] {
+  --bg:      #f1f5f2;
+  --bg-lift: #e8eeea;
+  --panel:   #ffffff;
+  --edge:    #d8e2dc;
+  --edge-hi: #bccbc3;
+  --ink:     #0d1519;
+  --dim:     #566a70;
+  --faint:   #8698a0;
+  --emerald: #0d8a63;
+  --emerald-soft: rgba(13,138,99,.10);
+  --amber:   #9a6a0c;
+  --amber-soft: rgba(154,106,12,.10);
+  --shadow:  0 1px 2px rgba(16,32,26,.05), 0 10px 26px rgba(16,32,26,.08);
+  --grid:    rgba(86,106,112,.18);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 78px; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 450 16.5px/1.6 -apple-system, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+h1, h2, h3 { font-family: "IBM Plex Serif", Georgia, "Times New Roman", serif; font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 25px; letter-spacing: -.01em; }
+h3 { font-size: 17px; }
+p  { margin: 0; }
+a  { color: var(--emerald); }
+code, .mono, .num {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.eyebrow {
+  font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint); font-weight: 600;
+}
+.lede { color: var(--dim); max-width: 68ch; }
+
+/* ── chrome ───────────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--edge);
+}
+.topbar .inner {
+  max-width: 1220px; margin: 0 auto; padding: 10px 22px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.wordmark { font-family: "IBM Plex Serif", Georgia, serif; font-size: 17px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
+.wordmark .s { color: var(--emerald); }
+.wordmark .thin { color: var(--dim); font-weight: 400; }
+.siblings { display: flex; gap: 12px; flex-wrap: wrap; padding-left: 14px; border-left: 1px solid var(--edge); }
+.siblings a { color: var(--faint); text-decoration: none; font-size: 13.5px; white-space: nowrap; }
+.siblings a:hover { color: var(--emerald); }
+nav { display: flex; gap: 2px; margin-left: auto; flex-wrap: wrap; }
+nav a {
+  color: var(--dim); text-decoration: none; font-size: 14.5px;
+  padding: 5px 11px; border-radius: 999px; border: 1px solid transparent;
+}
+nav a:hover { color: var(--ink); background: var(--bg-lift); }
+nav a.on { color: var(--emerald); border-color: var(--edge-hi); background: var(--emerald-soft); }
+.iconbtn {
+  border: 1px solid var(--edge); background: var(--panel); color: var(--dim);
+  border-radius: 8px; font-size: 13.5px; padding: 5px 10px; cursor: pointer;
+}
+.iconbtn:hover { color: var(--ink); border-color: var(--edge-hi); }
+:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; border-radius: 4px; }
+
+main { max-width: 1220px; margin: 0 auto; padding: 0 22px 90px; }
+section { padding: 54px 0 8px; }
+section > header { margin-bottom: 22px; display: flex; flex-direction: column; gap: 7px; }
+
+/* ── hero ─────────────────────────────────────────────────────────────── */
+.hero { padding: 46px 0 10px; display: grid; gap: 26px; grid-template-columns: minmax(0,1.35fr) minmax(280px,.85fr); align-items: start; }
+.hero h1 { font-size: 44px; line-height: 1.08; letter-spacing: -.02em; }
+.hero h1 em { font-style: normal; color: var(--emerald); }
+.hero .lede { margin-top: 14px; font-size: 16.5px; }
+.stamp {
+  display: inline-flex; align-items: center; gap: 9px; margin-bottom: 16px;
+  font-size: 13.5px; color: var(--dim); border: 1px solid var(--edge);
+  background: var(--panel); border-radius: 999px; padding: 4px 13px 4px 9px;
+}
+.pulsedot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 0 0 var(--emerald); animation: ping 2.6s infinite; }
+@keyframes ping { 0%{box-shadow:0 0 0 0 rgba(29,181,132,.5)} 70%{box-shadow:0 0 0 8px rgba(29,181,132,0)} 100%{box-shadow:0 0 0 0 rgba(29,181,132,0)} }
+
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.kpi { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 13px 15px; box-shadow: var(--shadow); }
+.kpi .v { font-size: 27px; font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi .k { font-size: 13.5px; color: var(--dim); margin-top: 3px; }
+.kpi.acc .v { color: var(--emerald); }
+.kpi.warn .v { color: var(--amber); }
+
+/* ── heartbeat strip ──────────────────────────────────────────────────── */
+.pulse { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px,1fr)); gap: 10px; }
+.hb {
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+  padding: 12px 13px; display: flex; gap: 11px; align-items: center;
+}
+.hb .ring { flex: 0 0 34px; }
+.hb .nm { font-size: 14.5px; font-weight: 600; }
+.hb .ago { font-size: 13.5px; color: var(--dim); }
+.hb.stale { border-color: color-mix(in srgb, var(--amber) 45%, var(--edge)); }
+
+/* ── flow stage ───────────────────────────────────────────────────────── */
+.stagewrap { border: 1px solid var(--edge); border-radius: 16px; background:
+  radial-gradient(1100px 420px at 20% 0%, color-mix(in srgb, var(--emerald) 6%, transparent), transparent 60%), var(--panel);
+  box-shadow: var(--shadow); overflow: hidden; }
+.stagebar { display: flex; align-items: center; gap: 10px; padding: 11px 15px; border-bottom: 1px solid var(--edge); flex-wrap: wrap; }
+.stagebar .cap { font-size: 14px; color: var(--dim); min-height: 19px; flex: 1 1 240px; }
+.stagebar .cap b { color: var(--ink); font-weight: 600; }
+.scroller { overflow-x: auto; overflow-y: hidden; }
+#stage { position: relative; width: 1148px; height: 560px; margin: 6px 12px 14px; }
+#wires { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+#wires path { fill: none; stroke: var(--edge-hi); stroke-width: 1.6; transition: stroke .25s, opacity .25s, stroke-width .25s; }
+#wires path.dormant { stroke-dasharray: 3 5; opacity: .55; }
+#wires path.feedback { stroke-dasharray: 6 4; }
+#wires path.hot { stroke: var(--emerald); stroke-width: 2.4; }
+#wires path.dull { opacity: .16; }
+
+.node {
+  position: absolute; width: 160px; padding: 9px 11px; text-align: left;
+  background: var(--bg-lift); border: 1px solid var(--edge); border-radius: 10px;
+  color: var(--ink); font: inherit; font-size: 14.5px; cursor: pointer;
+  transition: transform .18s, border-color .18s, box-shadow .18s, opacity .25s;
+}
+.node:hover { transform: translateY(-2px); border-color: var(--edge-hi); }
+.node .t { display: block; font-weight: 600; font-size: 14.5px; line-height: 1.25; }
+.node .s { display: block; font-size: 12.5px; color: var(--dim); margin-top: 3px; letter-spacing: .02em; line-height: 1.3; }
+.node .tag { position: absolute; top: -8px; left: 10px; font-size: 12.5px; letter-spacing: .08em;
+  text-transform: uppercase; background: var(--panel); border: 1px solid var(--edge);
+  border-radius: 4px; padding: 0 5px; color: var(--faint); }
+.node.k-agent  { border-left: 3px solid var(--emerald); }
+.node.k-gate   { border-left: 3px solid var(--amber); background: var(--amber-soft); }
+.node.k-store  { border-style: dashed; }
+.node.k-source { border-left: 3px solid var(--faint); }
+.node.off { opacity: .5; }
+.node.dull { opacity: .18; }
+.node.sel { border-color: var(--emerald); box-shadow: 0 0 0 3px var(--emerald-soft); }
+.node.hot { border-color: var(--emerald); box-shadow: 0 0 0 4px var(--emerald-soft); transform: translateY(-2px); }
+.packet { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: var(--emerald); box-shadow: 0 0 12px 3px rgba(29,181,132,.55); pointer-events: none; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13.5px; color: var(--dim); padding: 0 15px 13px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+
+/* ── detail drawer ────────────────────────────────────────────────────── */
+.drawer { margin-top: 14px; border: 1px solid var(--edge); border-radius: 14px; background: var(--panel); padding: 0; overflow: hidden; }
+.drawer .dhead { display: flex; gap: 12px; align-items: baseline; padding: 15px 18px 0; flex-wrap: wrap; }
+.drawer .dbody { padding: 10px 18px 18px; display: grid; grid-template-columns: minmax(0,1.5fr) minmax(230px,1fr); gap: 22px; }
+.drawer p { color: var(--dim); font-size: 15.5px; }
+.facts { display: grid; gap: 7px; align-content: start; }
+.fact { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; border-bottom: 1px dashed var(--edge); padding-bottom: 5px; }
+.fact .fk { color: var(--faint); }
+.fact .fv { text-align: right; font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.chip { font-size: 13px; border: 1px solid var(--edge); border-radius: 999px; padding: 2px 9px; color: var(--dim); }
+.chip.in  { border-color: color-mix(in srgb, var(--emerald) 40%, var(--edge)); }
+.chip.out { border-color: color-mix(in srgb, var(--amber) 40%, var(--edge)); }
+
+.pill { font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600;
+  border-radius: 999px; padding: 2px 9px; border: 1px solid; white-space: nowrap; }
+.pill.live    { color: var(--emerald); border-color: var(--emerald); background: var(--emerald-soft); }
+.pill.built   { color: var(--emerald); border-color: color-mix(in srgb, var(--emerald) 45%, var(--edge)); }
+.pill.manual  { color: var(--amber); border-color: var(--amber); background: var(--amber-soft); }
+.pill.planned { color: var(--faint); border-color: var(--edge-hi); }
+.pill.blocked { color: var(--amber); border-color: var(--amber); }
+.pill.human   { color: var(--amber); border-color: var(--amber); background: var(--amber-soft); }
+
+/* ── roster ───────────────────────────────────────────────────────────── */
+.filters { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.fbtn { border: 1px solid var(--edge); background: var(--panel); color: var(--dim); border-radius: 999px;
+  font-size: 14px; padding: 4px 13px; cursor: pointer; }
+.fbtn.on { color: var(--emerald); border-color: var(--emerald); background: var(--emerald-soft); }
+.fbtn .n { color: var(--faint); font-size: 13px; margin-left: 5px; }
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 12px; margin-top: 16px; }
+.acard { background: var(--panel); border: 1px solid var(--edge); border-radius: 13px; padding: 14px 15px; box-shadow: var(--shadow); }
+.acard.hide { display: none; }
+.acard .ah { display: flex; align-items: center; gap: 9px; }
+.acard .ah h3 { flex: 1; font-size: 17px; }
+.acard .jobsum { color: var(--dim); font-size: 14.5px; margin-top: 7px; }
+.acard .meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 13.5px; color: var(--faint); }
+.acard .meta b { color: var(--dim); font-weight: 500; }
+.acard details { margin-top: 11px; }
+.acard summary { cursor: pointer; font-size: 14px; color: var(--emerald); list-style: none; }
+.acard summary::-webkit-details-marker { display: none; }
+.acard summary::before { content: "+ "; }
+.acard details[open] summary::before { content: "– "; }
+.acard details p { margin-top: 9px; font-size: 14.5px; color: var(--dim); }
+.acard .why { margin-top: 9px; font-size: 14px; color: var(--amber); }
+.hl { background: var(--emerald-soft); box-shadow: 0 0 0 2px var(--emerald); }
+
+/* ── week machine ─────────────────────────────────────────────────────── */
+.weekgrid { display: grid; grid-template-columns: minmax(0,1fr) minmax(300px,.75fr); gap: 18px; align-items: start; }
+.days { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.day { flex: 1 1 auto; min-width: 62px; border: 1px solid var(--edge); background: var(--panel); color: var(--dim);
+  border-radius: 10px; padding: 8px 4px; cursor: pointer; text-align: center; font-size: 14px; }
+.day .dn { display: block; font-weight: 600; color: var(--ink); }
+.day .dc { display: block; font-size: 12.5px; margin-top: 2px; }
+.day.on { border-color: var(--emerald); background: var(--emerald-soft); }
+.day.today::after { content: "today"; display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--amber); }
+.joblist { display: grid; gap: 8px; }
+.job { display: flex; align-items: center; gap: 11px; border: 1px solid var(--edge); border-radius: 10px;
+  padding: 10px 13px; background: var(--panel); }
+.job.due { border-color: color-mix(in srgb, var(--emerald) 55%, var(--edge)); }
+.job.skip { opacity: .45; }
+.job .jn { font-weight: 600; font-size: 15px; min-width: 128px; }
+.job .jd { font-size: 13.5px; color: var(--dim); flex: 1; }
+.job .jt { font-size: 13px; color: var(--faint); white-space: nowrap; }
+.job .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: 0 0 auto; }
+.job.due .dot { background: var(--emerald); }
+.switches { display: grid; gap: 9px; margin-top: 14px; }
+.sw { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--dim); cursor: pointer; }
+.sw input { accent-color: var(--emerald); width: 15px; height: 15px; }
+.term { background: var(--bg-lift); border: 1px solid var(--edge); border-radius: 12px; padding: 13px 15px;
+  font-family: ui-monospace, Consolas, monospace; font-size: 13.5px; color: var(--dim); white-space: pre-wrap; line-height: 1.75; }
+.term .g { color: var(--emerald); }
+.term .a { color: var(--amber); }
+.founderbox { border: 1px solid var(--edge); border-radius: 13px; background: var(--panel); padding: 15px 16px; }
+.founderbox h3 { font-size: 16.5px; margin-bottom: 8px; }
+.founderbox .ritual { font-size: 15px; color: var(--dim); }
+.founderbox .cost { margin-top: 12px; font-size: 13.5px; color: var(--faint); }
+
+/* ── charts ───────────────────────────────────────────────────────────── */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px,1fr)); gap: 14px; }
+.chart { background: var(--panel); border: 1px solid var(--edge); border-radius: 13px; padding: 14px 15px 10px; box-shadow: var(--shadow); }
+.chart h3 { font-size: 16px; }
+.chart .sub { font-size: 13.5px; color: var(--dim); margin: 4px 0 12px; }
+.chart .note { font-size: 13.5px; color: var(--faint); margin-top: 9px; border-top: 1px dashed var(--edge); padding-top: 8px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart svg text { font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; fill: var(--faint); font-size: 12px; }
+.chart svg .lbl { fill: var(--dim); font-size: 13px; }
+.chart svg .grid { stroke: var(--grid); stroke-width: 1; }
+#tip { position: fixed; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .12s;
+  background: var(--bg-lift); border: 1px solid var(--edge-hi); border-radius: 8px; padding: 6px 10px;
+  font-size: 13.5px; box-shadow: var(--shadow); max-width: 240px; }
+#tip.on { opacity: 1; }
+
+/* ── ledger / next ────────────────────────────────────────────────────── */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--edge); border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow); }
+.panel h3 { margin-bottom: 4px; }
+.panel .sub { font-size: 14px; color: var(--dim); margin-bottom: 12px; }
+.tl { display: grid; gap: 0; }
+.tl li { list-style: none; display: grid; grid-template-columns: 20px 1fr; gap: 12px; padding-bottom: 15px; position: relative; }
+.tl li::before { content: ""; position: absolute; left: 9px; top: 16px; bottom: -2px; width: 1px; background: var(--edge); }
+.tl li:last-child::before { display: none; }
+.tl .mark { width: 19px; height: 19px; border-radius: 50%; border: 1px solid var(--edge-hi); background: var(--bg-lift);
+  display: grid; place-items: center; font-size: 12px; color: var(--faint); margin-top: 2px; }
+.tl .now .mark { border-color: var(--emerald); color: var(--emerald); background: var(--emerald-soft); }
+.tl .t { font-size: 15.5px; font-weight: 600; }
+.tl .d { font-size: 14px; color: var(--dim); margin-top: 3px; }
+.tl .when { font-size: 13px; color: var(--faint); letter-spacing: .04em; text-transform: uppercase; }
+
+.check { display: flex; gap: 11px; align-items: flex-start; padding: 9px 0; border-bottom: 1px dashed var(--edge); }
+.check:last-of-type { border-bottom: none; }
+.check input { margin-top: 4px; accent-color: var(--emerald); width: 15px; height: 15px; flex: 0 0 auto; }
+.check .ct { font-size: 15px; }
+.check .cd { font-size: 13.5px; color: var(--dim); margin-top: 2px; }
+.check.done .ct { text-decoration: line-through; color: var(--faint); }
+.check.done .cd { opacity: .55; }
+.progress { height: 5px; border-radius: 3px; background: var(--bg-lift); overflow: hidden; margin: 4px 0 14px; }
+.progress i { display: block; height: 100%; background: var(--emerald); transition: width .35s; }
+
+.panel > .tablewrap { overflow-x: auto; }
+table.gates { min-width: 620px; width: 100%; border-collapse: collapse; font-size: 14.5px; }
+table.gates th { text-align: left; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 600; padding: 0 10px 8px 0; }
+table.gates td { padding: 9px 10px 9px 0; border-top: 1px solid var(--edge); vertical-align: top; }
+table.gates td.st { white-space: nowrap; }
+table.gates .waiting { color: var(--amber); font-family: ui-monospace, Consolas, monospace; }
+table.gates .clear { color: var(--faint); font-family: ui-monospace, Consolas, monospace; }
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 12px; }
+.rule { border: 1px solid var(--edge); border-radius: 12px; padding: 13px 15px; background: var(--panel); }
+.rule .n { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--emerald); }
+.rule h3 { font-size: 16.5px; margin: 5px 0 6px; }
+.rule p { font-size: 14px; color: var(--dim); }
+
+footer { border-top: 1px solid var(--edge); margin-top: 60px; padding: 22px 0 0; color: var(--faint); font-size: 13.5px; display: flex; gap: 18px; flex-wrap: wrap; }
+kbd { border: 1px solid var(--edge-hi); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px;
+  font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--dim); }
+
+/* ── palette / search ─────────────────────────────────────────────────── */
+.scrim { position: fixed; inset: 0; background: rgba(4,7,10,.6); backdrop-filter: blur(3px); z-index: 70;
+  display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+.scrim.on { display: flex; }
+.pal { width: min(560px, 92vw); background: var(--panel); border: 1px solid var(--edge-hi); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5); overflow: hidden; }
+.pal input { width: 100%; border: none; border-bottom: 1px solid var(--edge); background: transparent; color: var(--ink);
+  font: 450 16.5px/1.55 inherit; padding: 14px 16px; outline: none; }
+.pal ul { list-style: none; margin: 0; padding: 6px; max-height: 46vh; overflow-y: auto; }
+.pal li { padding: 9px 11px; border-radius: 8px; cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.pal li.on { background: var(--emerald-soft); }
+.pal li .pt { font-size: 15px; }
+.pal li .pk { font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-left: auto; }
+.pal .empty { padding: 16px; color: var(--faint); font-size: 14.5px; }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 33px; }
+  .drawer .dbody, .weekgrid { grid-template-columns: 1fr; }
+  nav { width: 100%; margin-left: 0; overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="inner">
+    <span class="wordmark"><span class="s">S</span>tackivate <span class="thin">/ Fleet Map</span></span>
+    <span class="siblings">
+      <a href="/week">mission control</a><a href="/review">review queue</a><a href="/kanban">pipeline</a><a href="/flow">the loop</a><a href="/fleet">tables</a>
+    </span>
+    <nav id="nav">
+      <a href="#flow" class="on">Flow</a>
+      <a href="#fleet">Fleet</a>
+      <a href="#week">Week</a>
+      <a href="#signals">Signals</a>
+      <a href="#gates">Gates</a>
+      <a href="#models">Models</a>
+      <a href="#scorecards">Scores</a>
+      <a href="#next">Next</a>
+    </nav>
+    <button class="iconbtn" id="searchbtn" title="Search (press /)">Search <kbd>/</kbd></button>
+    <button class="iconbtn" id="themebtn" title="Toggle theme (press t)">Light</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ══════════════════════════════════════ hero ══════════════════════════ -->
+<div class="hero">
+  <div>
+    <span class="stamp" id="stamp" title="Counts, heartbeats and gate states are read from the ledger when this page loads. Refresh to re-read. The charts below stay a dated snapshot."><span class="pulsedot"></span> Ledger snapshot, 24 Jul 2026, 15:08 UTC</span>
+    <h1>Nine jobs, one cron, and <em>every taste decision</em> still yours.</h1>
+    <p class="lede">This is the Marketing OS as it actually runs today: a single Railway dispatcher that
+      wakes once a day, runs whichever agents are due as isolated subprocesses, writes everything to one
+      Supabase ledger, and stops dead at every point where judgment is required. There is no orchestrator
+      agent. The schedule is the manager. Numbers on this page were read straight out of the ledger.</p>
+  </div>
+  <div class="kpis">
+    <div class="kpi acc"><div class="v" id="k1">32</div><div class="k">replies sent and logged</div></div>
+    <div class="kpi"><div class="v" id="k2">93</div><div class="k">candidates found and judged</div></div>
+    <div class="kpi warn"><div class="v" id="k3">4</div><div class="k">drafts waiting at your gate</div></div>
+    <div class="kpi"><div class="v" id="k4">$0.91</div><div class="k">total metered model spend</div></div>
+  </div>
+</div>
+
+<section id="pulse" style="padding-top:34px">
+  <div class="pulse" id="pulseStrip"></div>
+</section>
+
+<!-- ══════════════════════════════════════ flow ══════════════════════════ -->
+<section id="flow">
+  <header>
+    <span class="eyebrow">The machine</span>
+    <h2>How work moves</h2>
+    <p class="lede">Click any box for what it is, what it reads, what it writes, and its real numbers.
+      Hover to trace its wiring. Or press <b>Run a day</b> and watch a Friday execute end to end,
+      including the place where the system deliberately stops.</p>
+  </header>
+
+  <div class="stagewrap">
+    <div class="stagebar">
+      <button class="iconbtn" id="playbtn">▶ Run a day</button>
+      <button class="iconbtn" id="resetbtn">Clear</button>
+      <span class="cap" id="cap">Friday, 15:00 UTC. Railway wakes the container.</span>
+    </div>
+    <div class="scroller">
+      <div id="stage">
+        <svg id="wires">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" stroke="none"></path>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--emerald)"></i>agent (runs itself)</span>
+      <span><i style="background:var(--amber)"></i>founder gate (system waits)</span>
+      <span><i style="border:1px dashed var(--edge-hi)"></i>ledger table</span>
+      <span><i style="background:var(--faint)"></i>source</span>
+      <span style="opacity:.6">dashed wire = dormant or feedback</span>
+    </div>
+  </div>
+
+  <div class="drawer" id="drawer">
+    <div class="dhead">
+      <h3 id="dTitle">Pick a box</h3>
+      <span class="pill planned" id="dPill">idle</span>
+    </div>
+    <div class="dbody">
+      <div>
+        <p id="dText">Every box on this map is a real file in <code>fleet/</code>. Click one and its job,
+          cadence, model, and live counts land here.</p>
+        <div class="chips" id="dChips"></div>
+      </div>
+      <div class="facts" id="dFacts"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ fleet ═════════════════════════ -->
+<section id="fleet">
+  <header>
+    <span class="eyebrow">The roster</span>
+    <h2>Sixteen jobs, four states of done</h2>
+    <p class="lede">Every agent follows the same ladder: manual reps first, then a captured rulebook,
+      then an agent that applies the stable recipe. The list below includes the things deliberately
+      not built yet, because that half of the plan is just as load bearing as the built half.</p>
+  </header>
+  <div class="filters" id="filters"></div>
+  <div class="roster" id="roster"></div>
+</section>
+
+<!-- ══════════════════════════════════════ week ══════════════════════════ -->
+<section id="week">
+  <header>
+    <span class="eyebrow">The dispatcher</span>
+    <h2>What fires, and when</h2>
+    <p class="lede">One cron entry, <code>0 15 * * *</code>, running <code>python -m fleet.dispatch</code>.
+      Pick a day to see exactly which jobs come due, straight from the rules in <code>dispatch.py</code>.
+      The two switches below are the real environment flags.</p>
+  </header>
+  <div class="weekgrid">
+    <div>
+      <div class="days" id="days"></div>
+      <div class="joblist" id="joblist"></div>
+      <div class="switches">
+        <label class="sw"><input type="checkbox" id="swResearch" checked> <span><code>DISPATCH_RESEARCH=1</code> folds the Sunday research run into the dispatcher. Set on Railway as of the 24 Jul cutover.</span></label>
+        <label class="sw"><input type="checkbox" id="swReddit"> <span><code>REPLY_CHANNELS=reddit,x</code> re-enables the Reddit scanner. Off today: the account is suspended and under appeal.</span></label>
+      </div>
+    </div>
+    <div>
+      <div class="term" id="term"></div>
+      <div class="founderbox" style="margin-top:14px">
+        <h3 id="fbDay">Your side of the day</h3>
+        <div class="ritual" id="fbText"></div>
+        <div class="cost">Founder hours today: about 10.5 to 11.5 per week total, dropping to roughly 8
+          once the packager, repurposer and analytics agents land. The residual is recording. You are the
+          face and that cannot be automated.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ signals ═══════════════════════ -->
+<section id="signals">
+  <header>
+    <span class="eyebrow">Real numbers &middot; snapshot of 24 Jul, not a live read</span>
+    <h2>What the ledger says</h2>
+    <p class="lede">Every chart here is drawn from rows written by the agents themselves, hover for detail.
+      The honest read matters more than the shape: two of these look better than they are, and the captions say so.</p>
+  </header>
+  <div class="charts" id="charts"></div>
+</section>
+
+<!-- ══════════════════════════════════════ gates ═════════════════════════ -->
+<section id="gates">
+  <header>
+    <span class="eyebrow">Wait states</span>
+    <h2>Where the machine stops for you</h2>
+    <p class="lede">Each gate is a NULL or a status the system refuses to move past on its own.
+      An empty column is the alarm, which is why nothing here silently completes.</p>
+  </header>
+  <div class="panel">
+    <div class="tablewrap"><table class="gates">
+      <thead><tr><th>Gate</th><th>What it waits on</th><th>Your move</th><th>Right now</th></tr></thead>
+      <tbody id="gatebody"></tbody>
+    </table></div>
+  </div>
+
+  <div style="margin-top:26px">
+    <span class="eyebrow">Locked house rules</span>
+    <h3 style="margin:7px 0 14px; font-size:20px">Six decisions that shape every agent</h3>
+    <div class="rules" id="rules"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ models ════════════════════════ -->
+<section id="models">
+  <header>
+    <span class="eyebrow">Live control &middot; applies to each agent's next run</span>
+    <h2>Which model runs each agent</h2>
+    <p class="lede">Every agent resolves its model through one config layer: an env var wins,
+      then whatever you set here, then the built-in default. Edits save to
+      <code>fleet/models.json</code> and take effect on the agent's very next run, no restarts.
+      With the OpenRouter key set, any OpenRouter slug is valid here.</p>
+  </header>
+  <div class="panel">
+    <div class="sub" id="modelsStatus" style="margin-bottom:10px"></div>
+    <div class="tablewrap"><table class="gates">
+      <thead><tr><th>Agent</th><th>Model in use</th><th>Source</th><th>Change to</th></tr></thead>
+      <tbody id="modelsBody"></tbody>
+    </table></div>
+    <div class="sub" style="margin-top:10px">Pick a preset or type any model id, then press Enter or click set.
+      Clearing the box returns the agent to its default. The per-run $2 breaker applies to every model equally.</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ scorecards ═══════════════════════ -->
+<section id="scorecards">
+  <header>
+    <span class="eyebrow">Last 30 days &middot; from each agent's own heartbeats</span>
+    <h2>Agent scorecards</h2>
+    <p class="lede">One row per agent: how often it ran, how often it failed, what it cost,
+      and which model did the work. This is how a model change on the panel above gets judged:
+      swap the model, watch the success rate and cost here over the next runs.</p>
+  </header>
+  <div class="panel">
+    <div class="sub" id="cardsStatus" style="margin-bottom:10px"></div>
+    <div class="tablewrap"><table class="gates">
+      <thead><tr><th>Agent</th><th>Runs</th><th>Success</th><th>Cost (30d)</th>
+        <th>Avg run</th><th>Model</th><th>Last run said</th></tr></thead>
+      <tbody id="cardsBody"></tbody>
+    </table></div>
+    <div class="sub" style="margin-top:10px">Mechanical agents (metrics, drain, dispatch) cost $0 by design.
+      A failure row's message names the fix; a healthy agent that stops appearing here is the real alarm.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ next ══════════════════════════ -->
+<section id="next">
+  <header>
+    <span class="eyebrow">Where it goes</span>
+    <h2>What happens next</h2>
+    <p class="lede">The near list is checkable and remembers itself in this browser.
+      The far list is the build order from the OS doc, unchanged since it was locked.</p>
+  </header>
+  <div class="split">
+    <div class="panel">
+      <h3>This week and next</h3>
+      <div class="sub" id="checkCount">0 of 0 done</div>
+      <div class="progress"><i id="checkBar" style="width:0%"></i></div>
+      <div id="checklist"></div>
+    </div>
+    <div class="panel">
+      <h3>The build order</h3>
+      <div class="sub">From MARKETING_OS.md section 8, with today marked.</div>
+      <ul class="tl" id="timeline"></ul>
+    </div>
+  </div>
+
+  <div class="split" style="margin-top:14px">
+    <div class="panel">
+      <h3>Risks being carried</h3>
+      <div class="sub">Named out loud, with the mitigation that already exists.</div>
+      <div id="risks"></div>
+    </div>
+    <div class="panel">
+      <h3>Open calls that are yours</h3>
+      <div class="sub">Five questions the system cannot answer for itself.</div>
+      <div id="questions"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>Read-only view. Nothing here writes to Supabase or posts anywhere. The counts are a
+    snapshot taken when the page was built, not a live poll, so treat /review and /week as the
+    source of truth for anything time sensitive.</span>
+  <span style="margin-left:auto"><kbd>/</kbd> search &middot; <kbd>t</kbd> theme &middot; <kbd>1</kbd>-<kbd>6</kbd> jump &middot; <kbd>esc</kbd> close</span>
+</footer>
+</main>
+
+<div id="tip"></div>
+<div class="scrim" id="scrim">
+  <div class="pal">
+    <input id="palInput" placeholder="Search agents, gates, next steps, risks" autocomplete="off">
+    <ul id="palList"></ul>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   DATA. Pulled from the Supabase marketing schema on 2026-07-24 15:08 UTC,
+   plus MARKETING_OS.md, fleet/dispatch.py and the agent modules themselves.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const SNAP = "2026-07-24T15:08Z";
+
+const HEARTBEATS = [
+  {n:"dispatch",        h:0.0,  msg:"all jobs clean"},
+  {n:"reply",           h:0.0,  msg:"judged 10, engaged 4, drafted 8"},
+  {n:"checks",          h:0.0,  msg:"sweep clean"},
+  {n:"outcome_checker", h:10.9, msg:"8 X rows written from Typefully"},
+  {n:"reply_eval",      h:9.3,  msg:"guide-v2, 12 pairs judged"},
+  {n:"distiller",       h:35.7, msg:"7 rules proposed"},
+  {n:"research",        h:120.1,msg:"weekly, next Sunday"}
+];
+
+/* Flow graph. x,y are px in a 1160 x 560 stage. */
+const NODES = [
+  {id:"srcx",     x:8,   y:60,  kind:"source", t:"X live search",        s:"xAI grok-4.5, x_search"},
+  {id:"srcrd",    x:8,   y:150, kind:"source", t:"Reddit RSS",           s:"dormant, account suspended", off:true},
+  {id:"finder",   x:210, y:60,  kind:"agent",  t:"finder + judge",       s:"scan, dedup, score"},
+  {id:"drafter",  x:412, y:60,  kind:"agent",  t:"drafter",              s:"2 variants, guide-v2"},
+  {id:"gate",     x:614, y:60,  kind:"agent",  t:"compliance gate",      s:"regex floor, gate-v1"},
+  {id:"review",   x:816, y:60,  kind:"gate",   t:"your review",          s:"edit, send by hand"},
+  {id:"ledger",   x:980, y:150, kind:"store",  t:"reply_ledger",         s:"32 sent, diffs captured"},
+  {id:"checker",  x:980, y:262, kind:"agent",  t:"outcome checker",      s:"Saturdays, no LLM"},
+  {id:"distill",  x:760, y:262, kind:"agent",  t:"distiller",            s:"Saturdays, edits to rules"},
+  {id:"guide",    x:412, y:262, kind:"store",  t:"reply_style_guide.md", s:"v2, 7 rules approved"},
+  {id:"eval",     x:760, y:362, kind:"agent",  t:"reply eval",           s:"Saturdays, blind pairwise"},
+  {id:"ochecks",  x:980, y:362, kind:"store",  t:"outcome_checks",       s:"47 open, 15 overdue"},
+  {id:"srchn",    x:8,   y:470, kind:"source", t:"HN, RSS, Exa",         s:"radar scan"},
+  {id:"research", x:210, y:470, kind:"agent",  t:"research",             s:"Sundays, digest + pull"},
+  {id:"pull",     x:412, y:470, kind:"store",  t:"content pull",         s:"5 seeds per week"},
+  {id:"pick",     x:614, y:470, kind:"gate",   t:"your topic picks",     s:"3 videos a week"},
+  {id:"videos",   x:816, y:470, kind:"store",  t:"videos",               s:"14 rows, 5 published"},
+  {id:"sweep",    x:980, y:470, kind:"agent",  t:"checks sweep",         s:"daily, arms the clock"}
+];
+
+const EDGES = [
+  ["srcx","finder"], ["srcrd","finder","dormant"], ["finder","drafter"], ["drafter","gate"],
+  ["gate","review"], ["review","ledger"], ["ledger","checker"], ["checker","distill"],
+  ["distill","guide"], ["guide","drafter","feedback"], ["ledger","eval"], ["eval","guide","feedback"],
+  ["checker","ochecks"], ["srchn","research"], ["research","pull"], ["pull","pick"],
+  ["pick","videos"], ["videos","sweep"], ["sweep","ochecks"]
+];
+
+/* The Friday run, step by step. */
+const RUN = [
+  {node:"srcx",    cap:"<b>15:00 UTC.</b> Railway wakes the container. Friday is a weekday, so the reply job is due."},
+  {edge:["srcx","finder"], cap:"The X adapter asks Grok for fresh posts: analysis done, cannot act. Visibility floor applied."},
+  {node:"finder",  cap:"<b>finder + judge.</b> New candidates are deduped, then judged in one batched call. Engage, maybe or skip."},
+  {edge:["finder","drafter"], cap:"Only the engage rows move on. Today that was 4 of 10."},
+  {node:"drafter", cap:"<b>drafter.</b> Full post body fetched, style guide v2 and exemplars loaded, 2 variants written on distinct flip moves."},
+  {edge:["drafter","gate"], cap:"Both variants go through the floor before you ever see them."},
+  {node:"gate",    cap:"<b>compliance gate.</b> Links block. Cashtags, allocations, imperatives and outcome claims flag for your eye."},
+  {edge:["gate","review"], cap:"Drafts land in Supabase with status drafted."},
+  {node:"review",  cap:"<b>The system stops here.</b> No credential exists to post. 4 drafts are waiting for you now."},
+  {node:"sweep",   cap:"Meanwhile the checks job sweeps anything newly published and opens its 24h, 7d and 28d windows."},
+  {edge:["sweep","ochecks"], cap:"Windows are armed by published_at, not by Sunday, so they cannot drift."},
+  {node:"ochecks", cap:"<b>Done.</b> Dispatcher exits clean, pings healthchecks.io. Tomorrow the Saturday three wake up: checker, distiller, eval."}
+];
+
+const DETAIL = {
+  srcx:     {p:"live", title:"X live search",
+    text:"The one affordable door that can search live X posts today. Grok returns raw candidates; Claude still judges. The hunt prompt was retuned on 23 Jul for a visibility floor after a quote-tweet of a political post slipped through, because on X a reply inherits the parent post's audience.",
+    facts:[["model","grok-4.5"],["cost per run","$0.03 to $0.07"],["file","fleet/channels/x.py"],["candidates","47"]],
+    inn:["xAI x_search"], out:["reply_candidates"]},
+  srcrd:    {p:"blocked", title:"Reddit RSS",
+    text:"Public RSS scan through the existing keyword scorer. Off since 21 Jul: the account was flagged as spam and suspended, appeal pending with Reddit admins. A second account would be ban evasion, so the channel simply waits. Everything downstream is channel agnostic and does not care.",
+    facts:[["status","suspended, appealing"],["candidates so far","46"],["file","fleet/channels/reddit.py"],["re-enable","REPLY_CHANNELS=reddit,x"]],
+    inn:["reddit RSS"], out:["reply_candidates"]},
+  finder:   {p:"live", title:"reply finder and judge",
+    text:"Scans each enabled channel, upserts candidates so nothing is scored twice, then judges only the genuinely new ones in a single batched call against our content pillars. The judge is deliberately thin: verdict, score, one line of why, no drafting.",
+    facts:[["cadence","Mon to Fri, 15:00 UTC"],["timeout","900s"],["judged","93"],["engage / maybe / skip","41 / 17 / 31"],["file","fleet/reply_finder_agent.py"]],
+    inn:["channel adapters","judge_prompt"], out:["reply_candidates"]},
+  drafter:  {p:"live", title:"reply drafter",
+    text:"Fetches the full post body, loads the style guide plus curated positive and negative exemplars from your own sent replies, and writes 2 variants on distinct flip moves in one call. Dropped from 3 variants to 2 on 23 Jul: the third rarely added signal and cost a third more.",
+    facts:[["variants","2"],["style version","guide-v2"],["drafts written","87"],["file","fleet/reply_drafter_agent.py"]],
+    inn:["reply_candidates","style guide","exemplars"], out:["reply_drafts"]},
+  gate:     {p:"live", title:"compliance gate",
+    text:"A regex floor, not a critic. Links are an unambiguous block, hidden from review but still stored because a blocked draft is a training signal. Cashtags, allocation percentages, buy and sell imperatives, performance claims and urgency all flag for your judgement instead of silently vanishing.",
+    facts:[["ruleset","gate-v1"],["pass","77"],["flag","2"],["blocked","0"],["file","fleet/compliance_gate.py"]],
+    inn:["reply_drafts"], out:["gate_status"]},
+  review:   {p:"human", title:"your review gate",
+    text:"The one piece you drive. Since 24 Jul it lives in the dashboard at /review as self contained cards: post link, full text, finder metrics, judge reasoning, both variants with live character counts. You edit in place, open X, press send yourself, and the draft to final diff becomes the voice training label.",
+    facts:[["waiting now","4"],["median edit ratio","0.40"],["doors","/review page, review CLI"],["sends","always by hand"]],
+    inn:["reply_drafts"], out:["reply_ledger"]},
+  ledger:   {p:"live", title:"reply_ledger",
+    text:"The moat table. Every sent reply stores the post, the finder signal, the draft, your final text, the diff ratio, why you changed it, and later the outcome. Write once by grant: only the outcome columns can be updated after the fact.",
+    facts:[["rows","32"],["X / Reddit","21 / 11"],["with outcomes","8"],["file","fleet/reply_store.py"]],
+    inn:["your edits"], out:["distiller","eval","outcome checker"]},
+  checker:  {p:"live", title:"outcome checker",
+    text:"The first measure agent. Reads real engagement for sent replies and writes raw facts only, never verdicts. X numbers come free from Typefully analytics, which reports hand posted replies too, so it also recovers missing permalinks with zero manual steps. Reddit uses the official API and is waiting on a script credential.",
+    facts:[["cadence","Saturdays"],["LLM calls","none"],["rows written","8"],["last run","24 Jul 04:12 UTC"],["file","fleet/outcome_checker_agent.py"]],
+    inn:["reply_ledger","Typefully"], out:["outcome_metrics","outcome_checks"]},
+  distill:  {p:"live", title:"distiller",
+    text:"The learning pass. Reads the week's draft to final diffs and proposes style rules from voice edits, judge notes from substance edits. Nothing auto commits. Its first run independently derived the no invented stats rule you had already suspected; all 7 proposals were approved and became guide-v2.",
+    facts:[["cadence","Saturdays"],["runs","1"],["rules proposed","7"],["approved","7 of 7"],["cost","$0.05"]],
+    inn:["reply_ledger diffs"], out:["proposal file, you approve"]},
+  guide:    {p:"live", title:"reply_style_guide.md",
+    text:"The drafter's canon, and the only place voice rules live. Machine proposes, human edits. The version string is pinned onto every draft so any stored reply can be traced back to the exact rulebook that produced it.",
+    facts:[["version","guide-v2"],["drafts on v1 / v2","72 / 6"],["edited by","you, by hand"]],
+    inn:["approved proposals"], out:["drafter prompt"]},
+  eval:     {p:"live", title:"reply eval harness",
+    text:"The measuring stick. Re-drafts a gold set of real posts with the current brain, then a blind pairwise judge compares fresh draft against the reply you actually sent, A and B randomised. The number to watch is the trend across guide versions, not the raw win rate.",
+    facts:[["cadence","Saturdays"],["gold pairs","12"],["guide-v1","12 to 0"],["guide-v2","12 to 0"],["cost so far","$0.72"]],
+    inn:["reply_ledger gold pairs"], out:["eval_results.jsonl"]},
+  ochecks:  {p:"live", title:"outcome_checks",
+    text:"The analytics work queue, shipped a month before the agent that will service it. Published_at arms the clock, so windows never drift. Overdue rows nag in the morning banner, which is what keeps hand entry honest until the analytics agent exists.",
+    facts:[["open","47"],["overdue","15"],["done / skipped","1 / 2"],["windows","24h, 7d, 28d"]],
+    inn:["checks sweep"], out:["your Sunday close"]},
+  srchn:    {p:"live", title:"HN, RSS and Exa",
+    text:"The radar scan the research agent reuses. Exa is called at 10 results per request, which is the free tier's single credit boundary and the efficiency sweet spot.",
+    facts:[["sources","HN, RSS feeds, Exa"],["file","radar/"],["cadence","weekly"]],
+    inn:[], out:["trend digest"]},
+  research: {p:"live", title:"research agent",
+    text:"The fleet's first agent and the one that proved the pattern. Scans, distils a digest, reads your recent verdicts as learning input, then turns the digest into a five field content pull. Ran on its own Sunday cron for four weeks; folded into the dispatcher on 24 Jul.",
+    facts:[["cadence","Sundays, flag gated"],["runs","5"],["strong verdicts","4"],["model","claude-sonnet-4-6"],["file","fleet/research_agent.py"]],
+    inn:["radar scan","your verdicts"], out:["research_runs","content pull"]},
+  pull:     {p:"live", title:"content pull",
+    text:"Five searchable seeds per run: headline, feature seed, reddit theme and more, each traceable back to the run that produced it. That run id is the provenance anchor, which is how a video's performance can be attributed to the research that sparked it.",
+    facts:[["seeds per run","5"],["prompt version","v1.4"],["stored on","research_runs"]],
+    inn:["digest"], out:["your picks"]},
+  pick:     {p:"human", title:"your topic picks",
+    text:"You read the digest, give it a verdict, and pick three topics across the pillars. The system will not choose for you and does not pretend to: topic_selection is a lever the research agent proposes and you decide.",
+    facts:[["cadence","Sunday evening"],["picks","3 videos a week"],["gate","videos.status idea to picked"]],
+    inn:["content pull"], out:["videos"]},
+  videos:   {p:"live", title:"videos table",
+    text:"The lineage spine. It replaced the old ideas log as dedup memory, so the research agent can be told what has already been made. Status walks from idea through scripted, recorded, edited, packaged, published.",
+    facts:[["rows","14"],["published","5"],["scripted","3"],["idea","5"],["pillars","news 10, feature 2, styles 2"]],
+    inn:["your picks"], out:["outcome_checks","decisions"]},
+  sweep:    {p:"live", title:"checks sweep",
+    text:"The smallest job in the fleet and the one that keeps measurement honest. Every day it looks back 35 days for anything published without outcome windows and opens them. A unique index makes re-opening a no-op, so it is safe to run forever.",
+    facts:[["cadence","daily"],["timeout","300s"],["lookback","35 days"],["opened to date","50"]],
+    inn:["videos","content_calendar","reply_ledger"], out:["outcome_checks"]}
+};
+
+const AGENTS = [
+  {id:"dispatch", name:"dispatcher", state:"live", job:"Wakes once a day, decides what is due, runs each job as its own subprocess with a hard wall clock, records heartbeats, pings the dead man's switch, and always exits.",
+   cadence:"daily 15:00 UTC", model:"none", file:"fleet/dispatch.py",
+   more:"Railway blocks the next cron run while a container is still running, not when it exits nonzero, so the real discipline is per job timeouts plus a clean exit. The external healthchecks ping catches the hang case a timeout cannot. First fully unattended run landed today at 15:08 UTC with the computer off.",
+   why:""},
+  {id:"finder", name:"reply finder", state:"live", job:"Scans each enabled channel, dedups, and thin judges only the new candidates against our pillars in one batched call.",
+   cadence:"Mon to Fri", model:"grok-4.5 search, sonnet judge", file:"fleet/reply_finder_agent.py",
+   more:"93 candidates so far, 41 marked engage. A streak of zero candidate days is the alarm that a channel has been blocked, which is why the heartbeat message carries the count.", why:""},
+  {id:"drafter", name:"reply drafter", state:"live", job:"Turns an engage candidate into 2 reviewable variants on distinct flip moves, screened by the compliance floor before you see them.",
+   cadence:"Mon to Fri", model:"claude-sonnet-4-6", file:"fleet/reply_drafter_agent.py",
+   more:"Loads the style guide, positive exemplars and negative exemplars straight from your own ledger, so its voice spec updates the moment you approve a rule.", why:""},
+  {id:"gate", name:"compliance gate", state:"live", job:"The regex floor. Blocks links outright, flags advice line tripwires for your judgement, and stores blocked drafts anyway as a learning signal.",
+   cadence:"every draft", model:"none", file:"fleet/compliance_gate.py",
+   more:"Severity routes the finding rather than losing the draft. 77 pass, 2 flag, 0 blocked to date. The LLM compliance judge is a later phase; this is the lean floor.", why:""},
+  {id:"checker", name:"outcome checker", state:"live", job:"Reads real engagement for sent replies and writes raw facts to the ledger, closing the matching queue rows.",
+   cadence:"Saturdays", model:"none", file:"fleet/outcome_checker_agent.py",
+   more:"X metrics arrive free through Typefully analytics, which covers hand posted replies as well as scheduled ones, so impressions, profile clicks and the live URL all come from one read with no paid X API involved. Reddit needs one script app credential, blocked by the account suspension.",
+   why:"Verdicts stay yours. It writes numbers, never judgements."},
+  {id:"distiller", name:"distiller", state:"live", job:"Distils the week's draft to final edits into proposed style rules and judge notes. Nothing auto commits.",
+   cadence:"Saturdays", model:"claude-sonnet-4-6", file:"fleet/distiller_agent.py",
+   more:"First run produced 7 proposals including the no invented stats rule you had independently suspected. All 7 approved, style guide bumped to v2 on 23 Jul.", why:""},
+  {id:"eval", name:"reply eval harness", state:"live", job:"Blind pairwise judge: fresh drafts from the current brain against the replies you actually sent, tagged by guide version.",
+   cadence:"Saturdays", model:"claude-sonnet-4-6", file:"fleet/reply_eval_agent.py",
+   more:"Contamination guard excludes any ledger row used as a few shot exemplar, so the drafter is never graded against its own answer key.",
+   why:"Read it sceptically. 12 to 0 mostly means the judge is grading guide compliance and the early gold rows predate guide v2."},
+  {id:"research", name:"research agent", state:"live", job:"Scan, distil the weekly digest, read your recent verdicts, and produce the five field content pull.",
+   cadence:"Sundays, inside the dispatcher", model:"claude-sonnet-4-6", file:"fleet/research_agent.py",
+   more:"Ran four weeks on a standalone Railway cron and was cut over on 24 Jul. Cloud dedup is a soft one: the previous digest text is fed back as a do not repeat block, since the container's filesystem resets every run.", why:""},
+  {id:"sweep", name:"checks sweep", state:"live", job:"Opens 24h, 7d and 28d outcome windows for anything newly published, idempotently.",
+   cadence:"daily", model:"none", file:"fleet/dispatch.py", more:"", why:""},
+  {id:"repurposer", name:"repurposer", state:"built", job:"One clip in, platform native packages out: Short title and description, X post, Reel caption, TikTok caption, each guardrail screened.",
+   cadence:"on demand", model:"sonnet", file:"fleet/repurposer_agent.py",
+   more:"Built 22 Jul, zero reps so far. Generation is decoupled from scheduling by design: it writes drafts to the posts ledger and never posts.",
+   why:"Waiting on the shorts pipeline. Reps first, then the shape gets earned."},
+  {id:"xcontent", name:"x content batch", state:"manual", job:"Weekly post batch drafted locally, edited in session, pushed to Typefully.",
+   cadence:"weekly, local", model:"sonnet", file:"content/x_run.py",
+   more:"Works today but still writes to the old SQLite, so content_calendar has zero rows. Wiring it to Supabase is a day 0 to 30 item.",
+   why:"No cron on purpose. You have to read the output anyway, so scheduling it in the cloud saves nothing."},
+  {id:"packager", name:"packager", state:"manual", job:"Title, thumbnail spec, description and upload slot per video, with alternatives and a prediction logged at decision time.",
+   cadence:"per video session", model:"not built", file:"decisions table",
+   more:"2 decision rows logged so far against a target of roughly 15 to 20 with closed outcomes before an agent takes it over.",
+   why:"Titles and descriptions first when it lands. Thumbnails stay manual: your face, and the recipe is still tuning."},
+  {id:"analytics", name:"analytics agent", state:"planned", job:"Closes due outcome checks, computes prediction hits, writes per lever outcome basis.",
+   cadence:"daily sweep", model:"not built", file:"day 30 to 60",
+   more:"The schema shipped on day 1 and you are currently the agent. Your manual Sunday closes are its training reps.",
+   why:"Built last among the loop closing pieces. Outcome starvation is a bigger risk than building it late."},
+  {id:"xfinder", name:"reddit re-entry", state:"blocked", job:"The Reddit half of the reply loop, currently dark.",
+   cadence:"Mon to Fri when live", model:"n/a", file:"fleet/channels/reddit.py",
+   more:"Account suspended 21 Jul by a spam flag, admin appeal pending. On reinstatement the ramp is 1 to 2 comments a day, helpful first.",
+   why:"Never create a second account. That is ban evasion and it ends the channel permanently."},
+  {id:"youtube", name:"youtube comment finder", state:"planned", job:"Find comments worth replying to on our own videos.",
+   cadence:"later", model:"not built", file:"fleet/channels/youtube.py",
+   more:"Adapter stub exists. The judge, drafter, gate and store are already channel agnostic, so this is one file when it is wanted.", why:""},
+  {id:"orchestrator", name:"orchestrator agent", state:"planned", job:"An agent that manages the other agents.",
+   cadence:"never", model:"n/a", file:"deliberately absent",
+   more:"Coordination is the readable schedule, the shared ledger and heartbeats. A manager agent adds a failure mode and hides the logic that is currently one screen of Python.",
+   why:"Locked no. This is a decision, not a gap."}
+];
+
+const STATE_LABEL = {live:"live", built:"built, no reps", manual:"manual reps", planned:"not yet", blocked:"blocked"};
+
+const JOBS = [
+  {n:"reply",           due:"weekday", t:900,  d:"finder, judge, drafter. Never sends."},
+  {n:"checks",          due:"daily",   t:300,  d:"Opens outcome windows for anything newly published."},
+  {n:"outcome_checker", due:"sat",     t:300,  d:"Reads real engagement for sent replies."},
+  {n:"distiller",       due:"sat",     t:300,  d:"Distils the week's edits into proposed rules."},
+  {n:"reply_eval",      due:"sat",     t:900,  d:"Blind pairwise eval against your sent replies."},
+  {n:"research",        due:"sun",     t:1800, d:"Weekly digest and content pull. Flag gated."}
+];
+
+const DAYS = [
+  {k:"Mon", ritual:"News video day, the perishable one ships first. Script, record, silence cut, transcribe, deck, packaging session with predictions logged before upload. Then the X batch locally.", },
+  {k:"Tue", ritual:"Reply session, 12 to 17 minutes: triage the queue, rewrite, tag why, send by hand. Plus about 2 minutes closing any 24h windows from the banner."},
+  {k:"Wed", ritual:"Feature video, same ritual as Monday. Reply session. Repurposing pass on whatever published."},
+  {k:"Thu", ritual:"Ascent video. Reply session. Any shorts cut by hand get logged as calendar rows with a clip selection decision."},
+  {k:"Fri", ritual:"Reply session. Lightest day on the video side, which is why the drafts pile up here and the queue is worth clearing before the weekend."},
+  {k:"Sat", ritual:"Nothing required from you. The measure and learn agents run themselves: outcomes read, edits distilled into proposals, eval scored. The proposals wait for your approval."},
+  {k:"Sun", ritual:"The close, about 45 minutes. Status banner, close due 7d and 28d checks, give verdicts, conclude or continue experiments, read the fresh digest, pick three topics, run the build gate."}
+];
+
+/* Last field is the live key: rows that carry one get their "right now" cell
+   rewritten from the ledger on load. The rest have nothing to read yet. */
+const GATES = [
+  ["Digest verdict","research_runs.outcome_verdict is null","Verdict at the Sunday close","1 of 5 runs unverdicted","waiting","digest"],
+  ["Reply review","reply_candidates.status = drafted","Edit, grade, send by hand","4 waiting","waiting","review"],
+  ["Content pull pick","content_calendar.status = idea","Pick, or let it expire","0, the lane is not wired yet","clear",""],
+  ["Build or content","product_ideas.build_stage","Sets the stage","weekly, at the gate","clear",""],
+  ["Packaging approval","videos.status = packaged_draft","Approve, then upload by hand","0 in draft","clear","packaging"],
+  ["Publish confirm","published_at is null","The one required manual entry","5 videos published","clear","publish"],
+  ["X batch","content_calendar.status = draft","Edit in session, then Typefully","lane not wired","clear",""],
+  ["Weekly close","overdue outcome_checks","Close them or mark skipped","15 overdue","waiting","close"]
+];
+
+const RULES = [
+  ["01","No orchestrator","Coordination is a readable schedule, shared state and heartbeats. A manager agent would hide logic that currently fits on one screen."],
+  ["02","Model agnostic","No agent imports a provider SDK. Every call goes through fleet/llm.py, so swapping a model is a config string, never a code change."],
+  ["03","Never auto-post","publish.py raises on purpose and no platform credential lives in this repo. A reply is the highest stakes legal surface we have, so a human presses send."],
+  ["04","Window, not a door","The dashboard reads. Writing goes through the store modules, with two narrow logged exceptions on the review page that use the same functions the CLI does."],
+  ["05","Reps before agents","Manual reps, then a captured rulebook, then an agent that applies it, then an optimiser. Building ahead of reps produces guessed columns that go sticky under write once grants."],
+  ["06","Write once ledgers","Only outcome columns can be updated after the fact. Predictions are made before publish or they are worthless, and no ledger allows deletes."]
+];
+
+const CHECKLIST = [
+  ["sat","Watch tomorrow's Saturday run","Three jobs fire unattended for the first time: outcome checker, distiller and eval, all at 15:00 UTC with the computer off."],
+  ["sun","Confirm research inside the dispatcher","Sunday is the first run under DISPATCH_RESEARCH. Check a fresh research_runs row appears, since the standalone cron is gone."],
+  ["rail","Upgrade Railway to Hobby","The trial expires around 27 Jul. The dispatcher is now the only cron the fleet has, so an expiry is a full fleet outage."],
+  ["over","Close the 15 overdue outcome checks","Two numbers each from the Studio app. Overdue rows are the honest nag; skipping is fine, silence is not."],
+  ["gold","Curate the eval gold set","Replace the early learning period rows with clean recent sends so 12 to 0 starts meaning something."],
+  ["reddit","Chase the Reddit appeal","Still 404 as of 23 Jul. On reinstatement, re-enable the channel and ramp at 1 to 2 comments a day."],
+  ["x","Wire x_run.py to Supabase","content_calendar has zero rows, so the posts half of the ledger is blind. This kills the last SQLite coupling."],
+  ["oauth","YouTube OAuth spike","About 2 hours. The GCP app must reach production status or refresh tokens expire every 7 days forever."]
+];
+
+const TIMELINE = [
+  ["Done","Spine and rails","Migrations, asset store, lever vocabulary, outcome checks queue, dispatcher on Railway, healthchecks wired.",false],
+  ["Done","Reply loop end to end","Finder, judge, drafter, gate, review surface, ledger, outcome checker, distiller, eval. 32 sent replies with captured diffs.",false],
+  ["Now","Computer off operation","The dispatcher took over on 24 Jul. This week proves the unattended Saturday and Sunday paths.",true],
+  ["Day 0-30","Doors and wiring","x_run.py to Supabase, shorts reps by hand, YouTube OAuth spike, packaging reps on every video.",false],
+  ["Day 30-60","Close the loop","Analytics agent v0 closes YouTube sourced checks and computes prediction hits. X and thumbnail tests stay manual.",false],
+  ["Day 60-90","First deciding agents","Packager v1 on titles and descriptions only, repurposer if the shorts recipe is stable, research prompt optimiser.",false]
+];
+
+const RISKS = [
+  ["Reddit channel dark","The daily heartbeat of the flywheel is suspended and under appeal. X carries the loop alone meanwhile, and the local run stays a first class fallback."],
+  ["The outcome loop never closes","Write only ledgers would kill the whole learning premise. 15 checks are overdue right now. The nag list plus a 2 minute daily entry is the defence until the analytics agent lands."],
+  ["Silent cron death","One hung dispatcher blocks every agent at once. Per job timeouts, a 30 second socket default, clean exit discipline and an external ping that alerts on a missed run."],
+  ["Anon key ledger exposure","The agent still shares the public anon key, so that key can overwrite the marketing ledger. New tables ship column scoped from day one; the scoped role is the real fix."],
+  ["Logging tax kills the reps","Over 2 minutes a video and the habit silently stops, starving every future agent. Alternatives are one sentence; predictions only where a real hypothesis exists."],
+  ["Small channel signal starvation","Six graded title outcomes are noise, and the calibration view will look meaningful before it is. Minimum sample sizes are enforced and patience is a stated feature."]
+];
+
+const QUESTIONS = [
+  ["Video volume","Does 3 long videos a week survive an honest 10.5 to 11.5 hour budget, or is 2 a week with better packaging the stronger play this quarter?"],
+  ["Logging ceiling","Is roughly 10 minutes a video of decision logging acceptable forever, or should routine rows be trimmed to title and thumbnail only?"],
+  ["CTR lever precedence","When a title hypothesis feels urgent while a thumbnail test is running, which one waits? The system enforces that one must."],
+  ["OAuth account","Which Google account owns the GCP project pushed to production status: the channel account or the automation address?"],
+  ["24h windows","Commit to the 2 minute daily entry, or explicitly skip 24h checks until the analytics agent exists and accept 7d only calibration for a month?"]
+];
+
+/* Ledger series: [platform, date, edit_ratio, impressions or null] */
+const LEDGER = [
+["reddit","06-27",0.734,null],["reddit","06-30",0.397,null],["reddit","06-30",0.368,null],["reddit","06-30",0.198,null],
+["reddit","07-09",0.334,null],["reddit","07-09",0.281,null],["reddit","07-09",0.536,null],["x","07-09",0.507,null],
+["x","07-10",0.301,null],["x","07-10",0.147,null],["x","07-21",1.0,169],["x","07-21",1.0,55],["x","07-21",1.0,15],
+["x","07-21",0.313,4],["x","07-21",1.0,94],["x","07-21",1.0,662],["reddit","07-22",0.236,null],["reddit","07-22",0.342,null],
+["reddit","07-22",0.319,null],["x","07-22",0.457,16],["x","07-22",0.515,74],["x","07-22",0.392,null],
+["x","07-23",0.396,null],["x","07-23",0.347,null],["x","07-23",0.272,null],["x","07-24",1.0,null],["x","07-24",0.763,null],
+["x","07-24",0.962,null],["x","07-24",0.901,null]
+];
+const COSTS = [["reply_eval",0.7178],["reply",0.1381],["distiller",0.0502],["research",0],["outcome_checker",0]];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Boot
+   ═══════════════════════════════════════════════════════════════════════ */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+/* ── theme ─────────────────────────────────────────────────────────────── */
+const themeBtn = $("#themebtn");
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = t === "light" ? "Dark" : "Light";
+  try { localStorage.setItem("fleetmap.theme", t); } catch (e) {}
+}
+setTheme((() => { try { return localStorage.getItem("fleetmap.theme") || "dark"; } catch (e) { return "dark"; } })());
+themeBtn.onclick = () => setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+
+/* ── heartbeat strip ───────────────────────────────────────────────────── */
+function ring(h) {
+  const max = 168, frac = Math.max(0.04, Math.min(1, 1 - h / max));
+  const r = 14, c = 2 * Math.PI * r, col = h > 60 ? "var(--amber)" : "var(--emerald)";
+  return `<svg class="ring" viewBox="0 0 34 34" width="34" height="34" aria-hidden="true">
+    <circle cx="17" cy="17" r="${r}" fill="none" stroke="var(--edge)" stroke-width="3"></circle>
+    <circle cx="17" cy="17" r="${r}" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="${(c*frac).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 17 17)"></circle>
+  </svg>`;
+}
+$("#pulseStrip").innerHTML = HEARTBEATS.map(b => `
+  <div class="hb ${b.h > 60 ? "stale" : ""}" title="${esc(b.msg)}">
+    ${ring(b.h)}
+    <div><div class="nm">${b.n}</div>
+      <div class="ago">${b.h < 1 ? "just now" : b.h.toFixed(0) + "h ago"}</div></div>
+  </div>`).join("");
+
+/* ── flow stage ────────────────────────────────────────────────────────── */
+const stage = $("#stage"), wires = $("#wires");
+const KIND_TAG = {agent:"agent", gate:"you", store:"ledger", source:"source"};
+NODES.forEach(n => {
+  const b = document.createElement("button");
+  b.className = `node k-${n.kind}` + (n.off ? " off" : "");
+  b.style.left = n.x + "px"; b.style.top = n.y + "px";
+  b.dataset.id = n.id;
+  b.innerHTML = `<span class="tag">${KIND_TAG[n.kind]}</span><span class="t">${esc(n.t)}</span><span class="s">${esc(n.s)}</span>`;
+  b.onclick = () => selectNode(n.id);
+  b.onmouseenter = () => hoverNode(n.id);
+  b.onmouseleave = () => hoverNode(null);
+  b.onfocus = () => hoverNode(n.id);
+  stage.appendChild(b);
+});
+
+const nodeEl = id => stage.querySelector(`.node[data-id="${id}"]`);
+const paths = {};
+
+function rect(id) {
+  const e = nodeEl(id);
+  return {x: e.offsetLeft, y: e.offsetTop, w: e.offsetWidth, h: e.offsetHeight,
+          cx: e.offsetLeft + e.offsetWidth / 2, cy: e.offsetTop + e.offsetHeight / 2};
+}
+function route(a, b) {
+  const sameRow = Math.abs(a.cy - b.cy) < 34;
+  const sameCol = Math.abs(a.cx - b.cx) < 34;
+  if (b.x >= a.x + a.w - 4) {                         // forward, any row
+    const sx = a.x + a.w, ex = b.x, d = Math.max(34, (ex - sx) / 2);
+    return `M${sx},${a.cy} C${sx+d},${a.cy} ${ex-d},${b.cy} ${ex},${b.cy}`;
+  }
+  if (sameRow) {                                      // backward on one row
+    const sx = a.x, ex = b.x + b.w, d = Math.max(26, (sx - ex) / 2);
+    return `M${sx},${a.cy} C${sx-d},${a.cy} ${ex+d},${b.cy} ${ex},${b.cy}`;
+  }
+  if (sameCol) {
+    const down = b.cy > a.cy;
+    const sy = down ? a.y + a.h : a.y, ey = down ? b.y : b.y + b.h, d = Math.abs(ey - sy) / 2;
+    return `M${a.cx},${sy} C${a.cx},${sy+(down?d:-d)} ${b.cx},${ey+(down?-d:d)} ${b.cx},${ey}`;
+  }
+  const down = b.cy > a.cy;
+  const sy = down ? a.y + a.h : a.y, sx = a.cx;
+  const left = b.cx < a.cx;
+  const ex = left ? b.x + b.w : b.x, ey = b.cy;
+  return `M${sx},${sy} C${sx},${ey} ${ex + (left ? 70 : -70)},${ey} ${ex},${ey}`;
+}
+function drawWires() {
+  $$("#wires path:not([id])").forEach(p => { if (!p.closest("marker")) p.remove(); });
+  EDGES.forEach(([f, t, kind]) => {
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", route(rect(f), rect(t)));
+    p.setAttribute("marker-end", "url(#ah)");
+    p.setAttribute("class", kind || "");
+    p.style.color = "var(--edge-hi)";
+    wires.appendChild(p);
+    paths[f + ">" + t] = p;
+  });
+}
+drawWires();
+addEventListener("resize", () => { drawWires(); });
+
+function clearHot() {
+  $$(".node").forEach(n => n.classList.remove("hot", "dull"));
+  Object.values(paths).forEach(p => p.classList.remove("hot", "dull"));
+}
+function hoverNode(id) {
+  if (running) return;
+  clearHot();
+  if (!id) return;
+  const sel = stage.querySelector(".node.sel");
+  const touched = new Set([id, sel && sel.dataset.id].filter(Boolean));
+  EDGES.forEach(([f, t]) => {
+    if (f === id || t === id) { touched.add(f); touched.add(t); paths[f + ">" + t].classList.add("hot"); }
+  });
+  $$(".node").forEach(n => { if (!touched.has(n.dataset.id)) n.classList.add("dull"); });
+  Object.entries(paths).forEach(([k, p]) => { if (!p.classList.contains("hot")) p.classList.add("dull"); });
+}
+stage.addEventListener("mouseleave", () => hoverNode(null));
+addEventListener("scroll", () => { if (!running) hoverNode(null); }, {passive: true});
+
+function selectNode(id) {
+  $$(".node").forEach(n => n.classList.toggle("sel", n.dataset.id === id));
+  const d = DETAIL[id], n = NODES.find(x => x.id === id);
+  $("#dTitle").textContent = d.title;
+  const pill = $("#dPill");
+  pill.textContent = {live:"running", human:"waits for you", blocked:"blocked"}[d.p] || d.p;
+  pill.className = "pill " + (d.p === "human" ? "human" : d.p === "blocked" ? "blocked" : "live");
+  $("#dText").innerHTML = esc(d.text);
+  $("#dChips").innerHTML =
+    (d.inn || []).map(c => `<span class="chip in">reads ${esc(c)}</span>`).join("") +
+    (d.out || []).map(c => `<span class="chip out">writes ${esc(c)}</span>`).join("");
+  $("#dFacts").innerHTML = d.facts.map(([k, v]) =>
+    `<div class="fact"><span class="fk">${esc(k)}</span><span class="fv">${esc(v)}</span></div>`).join("");
+  $("#drawer").scrollIntoView({block:"nearest"});
+}
+
+/* ── the day run ───────────────────────────────────────────────────────── */
+let running = false, runTimer = null, packet = null;
+const cap = $("#cap");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function stopRun() {
+  running = false; clearTimeout(runTimer);
+  if (packet) { packet.remove(); packet = null; }
+  clearHot(); cap.innerHTML = "Friday, 15:00 UTC. Railway wakes the container.";
+  $("#playbtn").textContent = "▶ Run a day";
+}
+$("#resetbtn").onclick = () => { stopRun(); $$(".node").forEach(n => n.classList.remove("sel")); };
+$("#playbtn").onclick = () => { running ? stopRun() : startRun(); };
+
+function startRun() {
+  running = true; $("#playbtn").textContent = "■ Stop";
+  clearHot();
+  let i = 0;
+  const step = () => {
+    if (!running) return;
+    if (i >= RUN.length) { running = false; $("#playbtn").textContent = "▶ Run a day"; return; }
+    const s = RUN[i++];
+    cap.innerHTML = s.cap;
+    if (s.node) {
+      $$(".node").forEach(n => n.classList.remove("hot"));
+      nodeEl(s.node).classList.add("hot");
+      runTimer = setTimeout(step, reduced ? 900 : 1900);
+    } else {
+      const p = paths[s.edge[0] + ">" + s.edge[1]];
+      Object.values(paths).forEach(x => x.classList.remove("hot"));
+      p.classList.add("hot");
+      if (reduced) { runTimer = setTimeout(step, 700); return; }
+      travel(p, () => { runTimer = setTimeout(step, 220); });
+    }
+  };
+  step();
+}
+function travel(path, done) {
+  if (!packet) { packet = document.createElement("div"); packet.className = "packet"; stage.appendChild(packet); }
+  // Hold a local reference: stopRun() can null `packet` out from under a frame
+  // that is already queued, and a detached node still takes style writes.
+  const dot = packet, len = path.getTotalLength(), t0 = performance.now(), dur = 750;
+  dot.style.opacity = 1;
+  const frame = now => {
+    if (!running || !dot.isConnected) { dot.style.opacity = 0; return; }
+    const k = Math.min(1, (now - t0) / dur);
+    const pt = path.getPointAtLength(len * k);
+    dot.style.left = pt.x + "px"; dot.style.top = pt.y + "px";
+    if (k < 1) requestAnimationFrame(frame);
+    else { dot.style.opacity = 0; done(); }
+  };
+  requestAnimationFrame(frame);
+}
+
+/* ── roster ────────────────────────────────────────────────────────────── */
+const counts = {};
+AGENTS.forEach(a => counts[a.state] = (counts[a.state] || 0) + 1);
+const FILTERS = [["all","Everything", AGENTS.length], ...Object.keys(STATE_LABEL).map(k => [k, STATE_LABEL[k], counts[k] || 0])];
+$("#filters").innerHTML = FILTERS.map(([k, l, n], i) =>
+  `<button class="fbtn ${i === 0 ? "on" : ""}" data-f="${k}">${l}<span class="n">${n}</span></button>`).join("");
+$("#roster").innerHTML = AGENTS.map(a => `
+  <article class="acard" id="ag-${a.id}" data-state="${a.state}">
+    <div class="ah"><h3>${esc(a.name)}</h3><span class="pill ${a.state}">${STATE_LABEL[a.state]}</span></div>
+    <div class="jobsum">${esc(a.job)}</div>
+    <div class="meta"><span><b>${esc(a.cadence)}</b></span><span>${esc(a.model)}</span><span><code>${esc(a.file)}</code></span></div>
+    ${a.more ? `<details><summary>detail</summary><p>${esc(a.more)}</p>${a.why ? `<div class="why">${esc(a.why)}</div>` : ""}</details>`
+             : (a.why ? `<div class="why">${esc(a.why)}</div>` : "")}
+  </article>`).join("");
+$$("#filters .fbtn").forEach(b => b.onclick = () => {
+  $$("#filters .fbtn").forEach(x => x.classList.toggle("on", x === b));
+  const f = b.dataset.f;
+  $$("#roster .acard").forEach(c => c.classList.toggle("hide", f !== "all" && c.dataset.state !== f));
+});
+
+/* ── week machine ──────────────────────────────────────────────────────── */
+let day = 4; // Friday
+const TODAY = 4;
+function isDue(job, d) {
+  if (job.due === "daily") return true;
+  if (job.due === "weekday") return d < 5;
+  if (job.due === "sat") return d === 5;
+  if (job.due === "sun") return d === 6 && $("#swResearch").checked;
+  return false;
+}
+function renderWeek() {
+  $("#days").innerHTML = DAYS.map((d, i) => {
+    const n = JOBS.filter(j => isDue(j, i)).length;
+    return `<button class="day ${i === day ? "on" : ""} ${i === TODAY ? "today" : ""}" data-d="${i}">
+      <span class="dn">${d.k}</span><span class="dc">${n} job${n === 1 ? "" : "s"}</span></button>`;
+  }).join("");
+  $$("#days .day").forEach(b => b.onclick = () => { day = +b.dataset.d; renderWeek(); });
+
+  const reddit = $("#swReddit").checked;
+  $("#joblist").innerHTML = JOBS.map(j => {
+    const due = isDue(j, day);
+    let d = j.d;
+    if (j.n === "reply") d = `Channels: ${reddit ? "reddit, x" : "x only"}. ` + d;
+    if (j.n === "research" && !$("#swResearch").checked) d = "Flag is off, so nothing runs. " + d;
+    return `<div class="job ${due ? "due" : "skip"}">
+      <span class="dot"></span><span class="jn">${j.n}</span>
+      <span class="jd">${esc(d)}</span><span class="jt">${j.t}s cap</span></div>`;
+  }).join("");
+
+  const due = JOBS.filter(j => isDue(j, day));
+  const names = due.map(j => `'${j.n}'`).join(", ");
+  $("#term").innerHTML =
+`<span class="g">$</span> python -m fleet.dispatch
+dispatch @ 2026-07-${String(20 + day).padStart(2, "0")}T15:00:00+00:00
+due: [${names || "nothing"}]
+` + due.map(j => `
+<span class="g">===</span> ${j.n} (timeout ${j.t}s) ===`).join("") + `
+
+dispatch done <span class="g">all jobs clean</span>
+heartbeat written, healthchecks pinged`;
+
+  $("#fbDay").textContent = "Your side of " + ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][day];
+  $("#fbText").textContent = DAYS[day].ritual;
+}
+$("#swResearch").onchange = renderWeek;
+$("#swReddit").onchange = renderWeek;
+renderWeek();
+
+/* ── charts ────────────────────────────────────────────────────────────── */
+const tip = $("#tip");
+function showTip(e, html) {
+  tip.innerHTML = html; tip.classList.add("on");
+  const pad = 14;
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, e.clientX + pad) + "px";
+  tip.style.top  = Math.max(8, e.clientY - tip.offsetHeight - pad) + "px";
+}
+function hideTip() { tip.classList.remove("on"); }
+
+function chart(title, sub, svg, note) {
+  return `<div class="chart"><h3>${title}</h3><div class="sub">${sub}</div>${svg}<div class="note">${note}</div></div>`;
+}
+
+/* funnel */
+function funnelSVG() {
+  const rows = [["candidates found",93],["judged worth a reply",41],["variants drafted",87],["sent by hand",32],["outcomes read",8]];
+  const max = 93, W = 340, H = rows.length * 34 + 8;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="reply funnel">` + rows.map(([l, v], i) => {
+    const y = i * 34 + 6, w = (v / max) * (W - 108);
+    return `<g class="hit" data-tip="${esc(l)}: ${v}">
+      <rect x="104" y="${y}" width="${w}" height="19" rx="3" fill="var(--emerald)" opacity="${0.35 + 0.14 * (rows.length - i)}"></rect>
+      <text class="lbl" x="98" y="${y + 14}" text-anchor="end">${l}</text>
+      <text x="${104 + w + 6}" y="${y + 14}" fill="var(--ink)">${v}</text></g>`;
+  }).join("") + `</svg>`;
+}
+
+/* edit ratio over time */
+function editSVG() {
+  const pts = LEDGER.filter(r => r[2] != null);
+  const W = 340, H = 150, L = 26, B = 22;
+  const x = i => L + (i / (pts.length - 1)) * (W - L - 8);
+  const y = v => 8 + (1 - v) * (H - B - 8);
+  const grid = [0, .25, .5, .75, 1].map(v =>
+    `<line class="grid" x1="${L}" y1="${y(v)}" x2="${W - 8}" y2="${y(v)}"></line>
+     <text x="${L - 5}" y="${y(v) + 3}" text-anchor="end">${v.toFixed(2)}</text>`).join("");
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[2]).toFixed(1)}`).join(" ");
+  const dots = pts.map((p, i) => `<circle class="hit" cx="${x(i).toFixed(1)}" cy="${y(p[2]).toFixed(1)}" r="3.4"
+      fill="${p[0] === "x" ? "var(--emerald)" : "var(--amber)"}"
+      data-tip="${p[0]} &middot; ${p[1]}<br>edit ratio ${p[2].toFixed(2)}"></circle>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="edit ratio over time">${grid}
+    <path d="${line}" fill="none" stroke="var(--edge-hi)" stroke-width="1.4"></path>${dots}
+    <text x="${L}" y="${H - 6}">27 Jun</text><text x="${W - 8}" y="${H - 6}" text-anchor="end">24 Jul</text>
+    <text class="lbl" x="${W - 8}" y="${y(0.02)}" text-anchor="end" fill="var(--emerald)">lower is closer to your voice</text></svg>`;
+}
+
+/* impressions */
+function imprSVG() {
+  const rows = LEDGER.filter(r => r[3] != null).map(r => r[3]).sort((a, b) => b - a);
+  const W = 340, H = 132, max = Math.max(...rows), bw = (W - 20) / rows.length;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="impressions per checked reply">` + rows.map((v, i) => {
+    const h = Math.max(2, (v / max) * (H - 34));
+    return `<g class="hit" data-tip="${v} impressions"><rect x="${10 + i * bw}" y="${H - 24 - h}" width="${bw - 8}" height="${h}"
+      rx="2" fill="var(--emerald)" opacity=".8"></rect>
+      <text x="${10 + i * bw + (bw - 8) / 2}" y="${H - 12}" text-anchor="middle">${v}</text></g>`;
+  }).join("") + `</svg>`;
+}
+
+/* cost */
+function costSVG() {
+  const W = 340, max = 0.72, H = COSTS.length * 26 + 6;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="metered spend per agent">` + COSTS.map(([n, c], i) => {
+    const y = i * 26 + 5, w = Math.max(1, (c / max) * (W - 140));
+    return `<g class="hit" data-tip="${n}: $${c.toFixed(4)}">
+      <text class="lbl" x="98" y="${y + 13}" text-anchor="end">${n}</text>
+      <rect x="104" y="${y + 2}" width="${w}" height="14" rx="3" fill="var(--emerald)" opacity=".75"></rect>
+      <text x="${104 + w + 6}" y="${y + 13}" fill="var(--ink)">$${c.toFixed(2)}</text></g>`;
+  }).join("") + `</svg>`;
+}
+
+/* checks queue */
+function checksSVG() {
+  const seg = [["overdue", 15, "var(--amber)"], ["open, not yet due", 32, "var(--emerald)"], ["closed or skipped", 3, "var(--faint)"]];
+  const total = 50, W = 340;
+  let acc = 0;
+  return `<svg viewBox="0 0 ${W} 84" role="img" aria-label="outcome check queue">` + seg.map(([l, v, c]) => {
+    const w = (v / total) * (W - 16), x = 8 + acc; acc += w;
+    return `<g class="hit" data-tip="${l}: ${v}"><rect x="${x}" y="14" width="${w - 2}" height="26" rx="4" fill="${c}" opacity=".8"></rect></g>`;
+  }).join("") + seg.map(([l, v, c], i) =>
+    `<g><rect x="8" y="${50 + i * 12}" width="8" height="8" rx="2" fill="${c}" opacity=".8"></rect>
+     <text class="lbl" x="22" y="${58 + i * 12}">${l} (${v})</text></g>`).join("") + `</svg>`;
+}
+
+/* eval */
+function evalSVG() {
+  const rows = [["guide-v1", 12, 0], ["guide-v2", 12, 0]];
+  const W = 340;
+  return `<svg viewBox="0 0 ${W} 92" role="img" aria-label="blind pairwise eval">` + rows.map(([l, w, g], i) => {
+    const y = i * 40 + 8, bw = (W - 120);
+    return `<g class="hit" data-tip="${l}: fresh draft preferred ${w} of ${w + g}">
+      <text class="lbl" x="82" y="${y + 20}" text-anchor="end">${l}</text>
+      <rect x="88" y="${y + 6}" width="${bw}" height="18" rx="3" fill="var(--emerald)" opacity=".7"></rect>
+      <text x="${88 + bw + 6}" y="${y + 20}" fill="var(--ink)">${w}-${g}</text></g>`;
+  }).join("") + `</svg>`;
+}
+
+$("#charts").innerHTML =
+  chart("The reply funnel", "Everything the loop has produced since 27 Jun.", funnelSVG(),
+        "87 variants for 32 sends is by design: the drafter writes 2 per candidate and you pick one.") +
+  chart("Edit ratio, every logged reply", "How much of the draft you rewrote. Lower means the drafter is closer to your voice.", editSVG(),
+        "The four points at 1.00 on 21 Jul and the high tail on 24 Jul are replies you wrote yourself rather than drafter failures. That is why the raw average is not the metric; the trend on drafted-and-kept rows is.") +
+  chart("Impressions per checked reply", "The 8 X replies the outcome checker has read so far, sorted.", imprSVG(),
+        "One reply at 662 impressions against a median near 60. Reach on a reply is mostly the parent post's audience, which is exactly why the finder was retuned to a visibility floor.") +
+  chart("Metered model spend", "Everything the fleet has cost since metering landed on 22 Jul.", costSVG(),
+        "The eval harness is the most expensive agent because it re-drafts 12 posts and judges 12 pairs. The daily reply run is roughly 4 cents.") +
+  chart("Outcome check queue", "The work queue that shipped a month before the agent meant to service it.", checksSVG(),
+        "15 overdue rows are the honest nag. Marking one skipped is fine; letting it rot silently is the failure mode this queue exists to prevent.") +
+  chart("Blind pairwise eval", "Fresh drafts against the replies you actually sent, A and B randomised.", evalSVG(),
+        "Read this sceptically. The judge grades guide compliance, and the gold rows come from your learning period, so a clean sweep is the judge agreeing with your own later self-critique, not proof the drafter out-writes you.");
+
+$$(".chart .hit").forEach(g => {
+  g.style.cursor = "default";
+  g.addEventListener("mousemove", e => showTip(e, g.dataset.tip));
+  g.addEventListener("mouseleave", hideTip);
+});
+
+/* ── gates, rules, risks, questions ────────────────────────────────────── */
+$("#gatebody").innerHTML = GATES.map(([g, w, a, now, st, key]) =>
+  `<tr><td><b>${esc(g)}</b></td><td><code style="font-size:13.5px;color:var(--dim)">${esc(w)}</code></td>
+   <td>${esc(a)}</td><td class="st" data-gk="${key}"><span class="${st}">${esc(now)}</span></td></tr>`).join("");
+$("#rules").innerHTML = RULES.map(([n, t, p]) =>
+  `<div class="rule"><div class="n">${n}</div><h3>${esc(t)}</h3><p>${esc(p)}</p></div>`).join("");
+$("#risks").innerHTML = RISKS.map(([t, d]) =>
+  `<div class="check"><span style="color:var(--amber);font-size:15.5px;line-height:1.4">▲</span>
+   <div><div class="ct">${esc(t)}</div><div class="cd">${esc(d)}</div></div></div>`).join("");
+$("#questions").innerHTML = QUESTIONS.map(([t, d]) =>
+  `<div class="check"><span style="color:var(--dim);font-size:14.5px;line-height:1.5">?</span>
+   <div><div class="ct">${esc(t)}</div><div class="cd">${esc(d)}</div></div></div>`).join("");
+$("#timeline").innerHTML = TIMELINE.map(([when, t, d, now]) =>
+  `<li class="${now ? "now" : ""}"><span class="mark">${now ? "●" : "○"}</span>
+   <div><div class="when">${esc(when)}</div><div class="t">${esc(t)}</div><div class="d">${esc(d)}</div></div></li>`).join("");
+
+/* ── checklist with memory ─────────────────────────────────────────────── */
+let doneSet = new Set();
+try { doneSet = new Set(JSON.parse(localStorage.getItem("fleetmap.done") || "[]")); } catch (e) {}
+function renderChecks() {
+  $("#checklist").innerHTML = CHECKLIST.map(([k, t, d]) => `
+    <label class="check ${doneSet.has(k) ? "done" : ""}" data-k="${k}">
+      <input type="checkbox" ${doneSet.has(k) ? "checked" : ""}>
+      <span><span class="ct">${esc(t)}</span><span class="cd" style="display:block">${esc(d)}</span></span>
+    </label>`).join("");
+  $$("#checklist input").forEach(i => i.onchange = () => {
+    const k = i.closest(".check").dataset.k;
+    doneSet.has(k) ? doneSet.delete(k) : doneSet.add(k);
+    try { localStorage.setItem("fleetmap.done", JSON.stringify([...doneSet])); } catch (e) {}
+    renderChecks();
+  });
+  const n = doneSet.size, tot = CHECKLIST.length;
+  $("#checkCount").textContent = `${n} of ${tot} done`;
+  $("#checkBar").style.width = (n / tot * 100) + "%";
+}
+renderChecks();
+
+/* ── scrollspy ─────────────────────────────────────────────────────────── */
+const secs = ["flow","fleet","week","signals","gates","next"];
+const spy = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (e.isIntersecting) $$("#nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
+  });
+}, {rootMargin: "-45% 0px -50% 0px"});
+secs.forEach(s => spy.observe($("#" + s)));
+
+/* ── command palette ───────────────────────────────────────────────────── */
+const INDEX = [
+  ...AGENTS.map(a => ({t: a.name, k: "agent " + STATE_LABEL[a.state], go: () => { location.hash = "#fleet"; flash($("#ag-" + a.id)); }})),
+  ...NODES.map(n => ({t: n.t, k: "flow", go: () => { location.hash = "#flow"; selectNode(n.id); flash(nodeEl(n.id)); }})),
+  ...CHECKLIST.map(c => ({t: c[1], k: "next step", go: () => { location.hash = "#next"; }})),
+  ...GATES.map(g => ({t: g[0], k: "gate", go: () => { location.hash = "#gates"; }})),
+  ...RISKS.map(r => ({t: r[0], k: "risk", go: () => { location.hash = "#next"; }})),
+  ...RULES.map(r => ({t: r[1], k: "house rule", go: () => { location.hash = "#gates"; }})),
+  ...QUESTIONS.map(q => ({t: q[0], k: "open call", go: () => { location.hash = "#next"; }}))
+];
+function flash(el) { if (!el) return; el.classList.add("hl"); setTimeout(() => el.classList.remove("hl"), 2600); }
+const scrim = $("#scrim"), palInput = $("#palInput"), palList = $("#palList");
+let palSel = 0, palHits = [];
+function openPal() { scrim.classList.add("on"); palInput.value = ""; renderPal(); palInput.focus(); }
+function closePal() { scrim.classList.remove("on"); }
+function renderPal() {
+  const q = palInput.value.toLowerCase().trim();
+  palHits = q ? INDEX.filter(i => (i.t + " " + i.k).toLowerCase().includes(q)).slice(0, 9) : INDEX.slice(0, 9);
+  palSel = 0;
+  palList.innerHTML = palHits.length
+    ? palHits.map((h, i) => `<li class="${i === 0 ? "on" : ""}" data-i="${i}"><span class="pt">${esc(h.t)}</span><span class="pk">${esc(h.k)}</span></li>`).join("")
+    : `<li class="empty">Nothing matches that.</li>`;
+  $$("#palList li[data-i]").forEach(li => li.onclick = () => { palHits[+li.dataset.i].go(); closePal(); });
+}
+palInput.oninput = renderPal;
+$("#searchbtn").onclick = openPal;
+scrim.onclick = e => { if (e.target === scrim) closePal(); };
+addEventListener("keydown", e => {
+  if (scrim.classList.contains("on")) {
+    if (e.key === "Escape") closePal();
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      palSel = Math.max(0, Math.min(palHits.length - 1, palSel + (e.key === "ArrowDown" ? 1 : -1)));
+      $$("#palList li[data-i]").forEach((li, i) => li.classList.toggle("on", i === palSel));
+    }
+    if (e.key === "Enter" && palHits[palSel]) { palHits[palSel].go(); closePal(); }
+    return;
+  }
+  const typing = /input|textarea/i.test(document.activeElement.tagName);
+  if (typing) return;
+  if (e.key === "/") { e.preventDefault(); openPal(); }
+  if (e.key === "t") setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+  if (e.key === "Escape") { stopRun(); }
+  if (/^[1-6]$/.test(e.key)) location.hash = "#" + secs[+e.key - 1];
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Live read. Everything above renders from the snapshot constants first, so
+   the page is complete and readable before any fetch resolves (and stays
+   complete when opened as a bare file with no dashboard behind it). This pass
+   then overwrites only the COUNTS: the KPI tiles, the heartbeat strip, the
+   gate states, and the node subtitles that carry a number.
+
+   Same door every other surface uses: GET /api/<table> on fleet/dashboard.py,
+   which forwards to Supabase with the key from .env (week.html:554).
+
+   Deliberately NOT live: the graph, the roster, the dispatcher rules, the
+   house rules, and the six charts. The first four describe how the system is
+   built. The charts carry interpretive captions written against these exact
+   rows, so a live series would drift away from the words under it.
+   ═══════════════════════════════════════════════════════════════════════ */
+async function api(table, params) {
+  const r = await fetch(`/api/${table}?${new URLSearchParams(params || {})}`);
+  if (!r.ok) throw new Error(`${table}: HTTP ${r.status}`);
+  return r.json();
+}
+
+function setNodeSub(id, text) {
+  const n = NODES.find(x => x.id === id);
+  if (n) n.s = text;
+  const el = nodeEl(id);
+  if (el) el.querySelector(".s").textContent = text;
+}
+function setFact(nodeId, key, val) {
+  const f = (DETAIL[nodeId] || {facts: []}).facts.find(x => x[0] === key);
+  if (f) f[1] = String(val);
+}
+function setGate(key, text, cls) {
+  const td = $(`#gatebody td[data-gk="${key}"]`);
+  if (td) td.innerHTML = `<span class="${cls}">${esc(text)}</span>`;
+}
+
+async function readLedger() {
+  const grab = async fn => { try { return await fn(); } catch (e) { return null; } };
+  const [hb, cands, ledger, logs, checks, runs, vids] = await Promise.all([
+    grab(() => api("agent_heartbeat")),
+    grab(() => api("reply_candidates", {select: "platform,status", limit: 500})),
+    grab(() => api("reply_ledger", {select: "id,platform,outcome_checked_at", limit: 500})),
+    grab(() => api("agent_execution_logs", {select: "cost_usd", limit: 500})),
+    grab(() => api("outcome_checks", {select: "status,due_at", limit: 500})),
+    grab(() => api("research_runs", {select: "outcome_verdict", limit: 60})),
+    grab(() => api("videos", {select: "status", limit: 200}))
+  ]);
+  if (!hb && !cands && !ledger) return;   // no dashboard behind us: keep the snapshot
+
+  const n = (rows, fn) => rows ? rows.filter(fn).length : null;
+
+  if (hb && hb.length) {
+    const rows = [...hb].sort((a, b) => a.hours_since_success - b.hours_since_success);
+    $("#pulseStrip").innerHTML = rows.map(b => {
+      const h = Number(b.hours_since_success);
+      return `<div class="hb ${h > 60 ? "stale" : ""}" title="${esc(b.last_success || "")}">
+        ${ring(h)}<div><div class="nm">${esc(b.agent_name)}</div>
+        <div class="ago">${h < 1 ? "just now" : h.toFixed(0) + "h ago"}</div></div></div>`;
+    }).join("");
+  }
+
+  if (ledger) {
+    $("#k1").textContent = ledger.length;
+    setNodeSub("ledger", `${ledger.length} sent, diffs captured`);
+    setFact("ledger", "rows", ledger.length);
+    setFact("ledger", "X / Reddit", `${n(ledger, r => r.platform === "x")} / ${n(ledger, r => r.platform === "reddit")}`);
+    setFact("ledger", "with outcomes", n(ledger, r => r.outcome_checked_at));
+  }
+  if (cands) {
+    const waiting = n(cands, c => c.status === "drafted");
+    $("#k2").textContent = cands.length;
+    $("#k3").textContent = waiting;
+    setFact("finder", "judged", cands.length);
+    setGate("review", waiting === 1 ? "1 waiting" : `${waiting} waiting`,
+            waiting ? "waiting" : "clear");
+  }
+  if (logs) {
+    const spend = logs.reduce((s, r) => s + (Number(r.cost_usd) || 0), 0);
+    $("#k4").textContent = "$" + spend.toFixed(2);
+  }
+  if (checks) {
+    const now = new Date();
+    const open = n(checks, c => c.status === "open");
+    const overdue = n(checks, c => c.status === "open" && new Date(c.due_at) < now);
+    setNodeSub("ochecks", `${open} open, ${overdue} overdue`);
+    setFact("ochecks", "open", open);
+    setFact("ochecks", "overdue", overdue);
+    setGate("close", `${overdue} overdue`, overdue ? "waiting" : "clear");
+  }
+  if (runs) {
+    const un = n(runs, r => !r.outcome_verdict);
+    setFact("research", "runs", runs.length);
+    setGate("digest", un ? `${un} of ${runs.length} runs unverdicted` : `all ${runs.length} verdicted`,
+            un ? "waiting" : "clear");
+  }
+  if (vids) {
+    const pub = n(vids, v => v.status === "published");
+    const draft = n(vids, v => v.status === "packaged_draft");
+    setNodeSub("videos", `${vids.length} rows, ${pub} published`);
+    setFact("videos", "rows", vids.length);
+    setFact("videos", "published", pub);
+    setGate("publish", `${pub} videos published`, "clear");
+    setGate("packaging", draft ? `${draft} awaiting approval` : "0 in draft",
+            draft ? "waiting" : "clear");
+  }
+
+  const t = new Date();
+  const hhmm = String(t.getUTCHours()).padStart(2, "0") + ":" + String(t.getUTCMinutes()).padStart(2, "0");
+  $("#stamp").innerHTML = `<span class="pulsedot"></span> Read live from the ledger at ${hhmm} UTC. Refresh to re-read.`;
+
+  const sel = stage.querySelector(".node.sel");
+  if (sel) selectNode(sel.dataset.id);   // repaint the drawer with the fresh facts
+}
+readLedger();
+
+/* ── the Models panel: live read + one-click retune ─────────────────────── */
+async function renderModels() {
+  const body = document.getElementById("modelsBody");
+  const status = document.getElementById("modelsStatus");
+  let data;
+  try { data = await api("models"); }
+  catch (e) { status.textContent = "dashboard server not reachable, panel inactive"; return; }
+  let catalog = null;
+  if (data.openrouter) { try { catalog = await api("model_catalog"); } catch (e) {} }
+  const catCount = catalog && catalog.count ? catalog.count : 0;
+  status.textContent = data.openrouter
+    ? (catCount
+       ? `OpenRouter live: ${catCount} models in the catalog. Start typing in a box to search them, prices shown per million tokens.`
+       : "OpenRouter key detected: any OpenRouter slug works below.")
+    : "Direct Anthropic path (no OpenRouter key yet): Claude model ids only.";
+  const srcLabel = { env: "env var (locked)", panel: "set here", default: "default" };
+  body.innerHTML = data.models.map(m => `
+    <tr data-key="${esc(m.key)}">
+      <td><b>${esc(m.label)}</b><br><span class="sub">${esc(m.key)}</span></td>
+      <td><code>${esc(m.current)}</code></td>
+      <td><span class="sub">${esc(srcLabel[m.source] || m.source)}</span></td>
+      <td style="white-space:nowrap">
+        <input list="modelOpts" placeholder="${esc(m.default)}"
+               value="${m.source === "panel" ? esc(m.current) : ""}"
+               style="width:230px;background:var(--panel,#121a26);color:inherit;
+                      border:1px solid var(--line,#223046);border-radius:7px;
+                      padding:5px 8px;font:inherit;font-size:12.5px"
+               ${m.source === "env" ? "disabled title='env var wins; unset it to control here'" : ""}>
+        <button class="mset" style="margin-left:6px;padding:5px 10px;border-radius:7px;
+                border:1px solid var(--line,#223046);background:transparent;
+                color:inherit;cursor:pointer;font:inherit;font-size:12.5px"
+                ${m.source === "env" ? "disabled" : ""}>set</button>
+      </td>
+    </tr>`).join("");
+  let dl = document.getElementById("modelOpts");
+  if (!dl) {
+    dl = document.createElement("datalist");
+    dl.id = "modelOpts";
+    document.body.append(dl);
+  }
+  dl.innerHTML = (catCount
+    ? catalog.models.map(m => `<option value="${esc(m.id)}" label="${esc(
+        `${m.name} · $${m.in ?? "?"} in / $${m.out ?? "?"} out per M`)}">`)
+    : data.options.map(o => `<option value="${esc(o)}">`)).join("");
+  body.querySelectorAll("tr").forEach(tr => {
+    const save = async () => {
+      const input = tr.querySelector("input");
+      try {
+        const r = await fetch("/api/model_set", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: tr.dataset.key, model: input.value.trim() }),
+        });
+        if (!r.ok) throw new Error((await r.json()).error || r.status);
+        renderModels();
+      } catch (e) { status.textContent = `save failed: ${e.message}`; }
+    };
+    const btn = tr.querySelector(".mset");
+    if (btn) btn.addEventListener("click", save);
+    tr.querySelector("input").addEventListener("keydown",
+      ev => { if (ev.key === "Enter") save(); });
+  });
+}
+renderModels();
+
+/* ── agent scorecards: 30-day heartbeat roll-up ─────────────────────────── */
+async function renderScorecards() {
+  const body = document.getElementById("cardsBody");
+  const status = document.getElementById("cardsStatus");
+  let data;
+  try { data = await api("agent_runs"); }
+  catch (e) { status.textContent = "dashboard server not reachable, panel inactive"; return; }
+  if (!data.cards || !data.cards.length) {
+    status.textContent = "no heartbeats in the window yet";
+    return;
+  }
+  status.textContent = `${data.cards.length} agents heartbeated in the last ${data.window_days} days.`;
+  body.innerHTML = data.cards.map(c => {
+    const ok = c.last_status === "success";
+    const rate = c.success_rate >= 100 ? "100%"
+      : `<b style="color:var(--amber,#e8a93b)">${c.success_rate}%</b>`;
+    return `<tr>
+      <td><b>${esc(c.agent)}</b></td>
+      <td>${c.runs}</td>
+      <td>${rate}</td>
+      <td>${c.cost_usd ? "$" + c.cost_usd.toFixed(2) : "$0"}</td>
+      <td>${c.avg_duration_s != null ? c.avg_duration_s + "s" : "<span class='sub'>-</span>"}</td>
+      <td>${c.dominant_model ? `<code>${esc(c.dominant_model)}</code>` : "<span class='sub'>none</span>"}</td>
+      <td><span class="sub" ${ok ? "" : `style="color:var(--amber,#e8a93b)"`}>${esc(c.last_message || c.last_status)}</span></td>
+    </tr>`;
+  }).join("");
+}
+renderScorecards();
+
+/* first paint: land on the gate that is waiting */
+selectNode("review");
+$$(".node").forEach(n => n.classList.remove("sel"));
+
+/* a hash in the URL is honoured after the sections exist, not before */
+if (location.hash && $(location.hash)) requestAnimationFrame(() => $(location.hash).scrollIntoView());
+</script>
+</body>
+</html>

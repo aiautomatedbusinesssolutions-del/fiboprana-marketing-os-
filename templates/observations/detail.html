@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Observation #{{ row.id }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Observation #{{ row.id }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('observations.observations_edit_form', obs_id=row.id) }}">Edit</a>
+            <a class="button-link" href="{{ url_for('observations.observations_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    {% if row.raw_content %}
+        <section class="raw-transcript">
+            <h2>Raw content</h2>
+            <div class="transcript-box">{{ row.raw_content }}</div>
+        </section>
+    {% endif %}
+
+    <dl class="entry-detail">
+        {% for name, label, kind, _hint in fields %}
+            {% set val = row[name] %}
+            {% if val and name != 'raw_content' %}
+                <dt>{{ label }}</dt>
+                <dd>
+                    {% if name == 'source_url' %}
+                        <a href="{{ val }}" target="_blank" rel="noopener noreferrer">{{ val }}</a>
+                    {% elif kind == 'textarea' or kind == 'textarea-big' %}
+                        <div class="multiline">{{ val }}</div>
+                    {% elif name == 'tags' %}
+                        {% for t in val.split(',') if t %}<a class="tag" href="{{ url_for('tag_detail', tag=t.strip()) }}">{{ t }}</a>{% endfor %}
+                    {% else %}
+                        {{ val }}
+                    {% endif %}
+                </dd>
+            {% endif %}
+        {% endfor %}
+        <dt>Created at</dt>
+        <dd class="muted">{{ row.created_at }} <span class="hint">(UTC)</span></dd>
+    </dl>
+
+    <script id="observation-data" type="application/json">{{ {
+        'segment_guess':        row.segment_guess or '',
+        'pain_points':          row.pain_points or '',
+        'notable_quotes':       row.notable_quotes or '',
+        'feature_implications': row.feature_implications or '',
+        'content_hooks':        row.content_hooks or '',
+        'tags':                 row.tags or ''
+    } | tojson }}</script>
+
+    <div class="extract-row" style="margin-top: 24px;">
+        <button type="button" id="copy-md-btn" class="button-secondary">Copy as markdown</button>
+        <form method="post" action="{{ url_for('content.generate_x_posts') }}">
+            <input type="hidden" name="observation_id" value="{{ row.id }}">
+            <button type="submit" class="button">Generate X posts</button>
+        </form>
+        <form method="post" action="{{ url_for('content.generate_tiktok_posts') }}">
+            <input type="hidden" name="observation_id" value="{{ row.id }}">
+            <button type="submit" class="button">Generate TikTok posts</button>
+        </form>
+        <form method="post" action="{{ url_for('content.generate_linkedin_posts') }}">
+            <input type="hidden" name="observation_id" value="{{ row.id }}">
+            <button type="submit" class="button">Generate LinkedIn posts</button>
+        </form>
+        <form method="post" action="{{ url_for('attribution.new_form') }}">
+            <input type="hidden" name="observation_id" value="{{ row.id }}">
+            <input type="hidden" name="utm_content" value="{{ row.id }}">
+            <input type="hidden" name="utm_campaign" value="obs-{{ row.id }}">
+            <button type="submit" class="button-secondary">Create tracking link</button>
+        </form>
+        <span id="copy-md-status" class="extract-status" role="status" aria-live="polite"></span>
+    </div>
+    <textarea id="copy-md-fallback" class="copy-fallback" readonly hidden rows="10" aria-label="Markdown to copy manually"></textarea>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('copy-md-btn');
+            if (!btn) return;
+            var statusEl = document.getElementById('copy-md-status');
+            var fallbackEl = document.getElementById('copy-md-fallback');
+            var originalLabel = btn.textContent;
+            var revertTimer = null;
+
+            function readValues() {
+                var el = document.getElementById('observation-data');
+                if (!el) return {};
+                try { return JSON.parse(el.textContent); }
+                catch (e) { return {}; }
+            }
+
+            function trimField(v) {
+                return (v || '')
+                    .replace(/\r\n/g, '\n')
+                    .trim()
+                    .replace(/\n\s*\n+/g, '\n');
+            }
+
+            function buildMarkdown() {
+                var values = readValues();
+                var sections = [
+                    ['Segment guess',        'segment_guess'],
+                    ['Pain points',          'pain_points'],
+                    ['Notable quotes',       'notable_quotes'],
+                    ['Feature implications', 'feature_implications'],
+                    ['Content hooks',        'content_hooks'],
+                    ['Tags',                 'tags']
+                ];
+                return sections.map(function (pair) {
+                    var body = trimField(values[pair[1]]);
+                    return body ? '## ' + pair[0] + '\n' + body : '## ' + pair[0];
+                }).join('\n\n');
+            }
+
+            function setStatus(msg, kind) {
+                if (!statusEl) return;
+                statusEl.textContent = msg || '';
+                statusEl.className = 'extract-status' + (kind ? ' extract-status-' + kind : '');
+            }
+
+            function showFallback(md) {
+                if (!fallbackEl) return;
+                fallbackEl.hidden = false;
+                fallbackEl.value = md;
+                fallbackEl.focus();
+                fallbackEl.select();
+            }
+
+            function hideFallback() {
+                if (!fallbackEl) return;
+                fallbackEl.hidden = true;
+                fallbackEl.value = '';
+            }
+
+            btn.addEventListener('click', function () {
+                var md = buildMarkdown();
+                hideFallback();
+                if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
+
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    showFallback(md);
+                    setStatus('Copy failed — text selected, press Ctrl+C.', 'error');
+                    return;
+                }
+
+                navigator.clipboard.writeText(md).then(function () {
+                    btn.textContent = 'Copied!';
+                    setStatus('', '');
+                    revertTimer = setTimeout(function () {
+                        btn.textContent = originalLabel;
+                        revertTimer = null;
+                    }, 2000);
+                }).catch(function () {
+                    showFallback(md);
+                    setStatus('Copy failed — text selected, press Ctrl+C.', 'error');
+                });
+            });
+        })();
+    </script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Radar — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Radar</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('radar.radar_saved') }}">Saved</a>
+        </div>
+    </div>
+
+    <p class="lede">
+        Competitor + niche signal grouped by topic (the query or feed each item came from).
+        Click a topic to expand. Edit <code>radar/config.yaml</code> to change feeds, queries, or
+        the denylist — no restart needed.
+    </p>
+
+    {% if scan_error %}
+        <div class="notice notice-error">{{ scan_error }}</div>
+    {% endif %}
+
+    {% if topic_error %}
+        <div class="notice notice-error">{{ topic_error }}</div>
+    {% endif %}
+
+    {% if bulk_summary_message %}
+        <div class="notice notice-success">{{ bulk_summary_message }}</div>
+    {% endif %}
+
+    {% if scan_summary %}
+        <div class="notice notice-success">
+            Fetched
+            {{ scan_summary.hn_fetched }} HN,
+            {{ scan_summary.rss_fetched }} RSS,
+            {{ scan_summary.exa_fetched }} Exa.
+            <strong>{{ scan_summary.inserted }}</strong> new
+            (<span class="muted">{{ scan_summary.duplicates }} already seen,
+            {{ scan_summary.filtered or 0 }} denylisted</span>).
+            {% if scan_summary.errors %}
+                <br><strong>Errors:</strong>
+                {% for err in scan_summary.errors %}
+                    {{ err }}{% if not loop.last %}; {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="scan-controls" style="margin: 1em 0; display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
+        <form method="post" action="{{ url_for('radar.radar_scan') }}" style="display:inline">
+            <button type="submit" class="button">Scan all sources</button>
+        </form>
+        <form method="post" action="{{ url_for('radar.radar_topic_summarize_all') }}" style="display:inline">
+            <button type="submit" class="button button-secondary">Summarize all topics</button>
+        </form>
+        <span class="muted" style="font-size: 0.85em;">
+            Skips topics already in sync. Generates only what's missing or stale.
+        </span>
+    </div>
+
+    {% if groups %}
+        <p class="result-count">
+            {{ total_items }} item{{ '' if total_items == 1 else 's' }} across
+            {{ groups|length }} topic{{ '' if groups|length == 1 else 's' }}.
+        </p>
+
+        {% for g in groups %}
+            <details class="radar-group" style="border: 1px solid var(--border); border-radius: 4px; margin-bottom: 0.5em; padding: 0.5em 0.75em;"{% if g.topic_key == opened_key %} open{% endif %}>
+                <summary style="cursor: pointer; display: flex; justify-content: space-between; gap: 1em; align-items: center; flex-wrap: wrap;">
+                    <span>
+                        <span class="muted" style="text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">{{ g.source }}</span>
+                        &nbsp;<strong>{{ g.source_label }}</strong>
+                    </span>
+                    <span class="muted" style="font-size: 0.9em;">
+                        {{ g.entries|length }} item{{ '' if g.entries|length == 1 else 's' }}
+                        {% if g.latest_published %} · latest {{ g.latest_published[:10] }}{% endif %}
+                        {% if g.max_score is not none %}
+                            · top
+                            {% if g.source == 'exa' %}{{ '%.3f'|format(g.max_score) }}{% else %}{{ g.max_score|int }}{% endif %}
+                        {% endif %}
+                        {% if g.summary %} · <span class="badge-cached">summary cached</span>{% endif %}
+                        {% if g.summary_stale %} · <span class="badge-stale">stale</span>{% endif %}
+                    </span>
+                </summary>
+
+                <div style="margin-top: 0.75em; padding: 0.75em; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 4px; color: var(--text);">
+                    {% if g.summary %}
+                        <div style="white-space: pre-wrap; font-size: 0.95em;">{{ g.summary.summary }}</div>
+                        <div class="muted" style="margin-top: 0.5em; font-size: 0.85em;">
+                            Generated {{ g.summary.generated_at }} from {{ g.summary.item_count }} item{{ '' if g.summary.item_count == 1 else 's' }}.
+                            {% if g.summary_stale %}
+                                Topic now has {{ g.entries|length }} — regenerate to refresh.
+                            {% endif %}
+                        </div>
+                        <form method="post" action="{{ url_for('radar.radar_topic_summarize') }}" style="display:inline; margin-top: 0.5em;">
+                            <input type="hidden" name="source" value="{{ g.source }}">
+                            <input type="hidden" name="source_label" value="{{ g.source_label }}">
+                            <button type="submit" class="button button-small button-secondary">Regenerate summary</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{{ url_for('radar.radar_topic_summarize') }}" style="display:inline">
+                            <input type="hidden" name="source" value="{{ g.source }}">
+                            <input type="hidden" name="source_label" value="{{ g.source_label }}">
+                            <button type="submit" class="button button-small">Summarize features in this topic</button>
+                        </form>
+                        <span class="muted" style="margin-left: 0.5em; font-size: 0.85em;">
+                            Extracts only new products/features/launches. Says "no new features" if the batch is just news/opinion.
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="table-wrap" style="margin-top: 0.75em;">
+                    <table class="rows">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Score</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in g.entries %}
+                            <tr>
+                                <td>
+                                    <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title or r.url }}</a>
+                                    {% if r.blurb %}
+                                        <br><span class="muted">{{ r.blurb|truncate(220) }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.score is not none %}
+                                        <span class="muted">
+                                            {% if r.source == 'exa' %}{{ '%.3f'|format(r.score) }}{% else %}{{ r.score|int }}{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="muted">{{ (r.published_at or '')[:10] }}</span></td>
+                                <td>
+                                    <form method="post" action="{{ url_for('radar.radar_save', item_id=r.id) }}" style="display:inline">
+                                        <button type="submit" class="button button-small button-secondary">Save</button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('radar.radar_archive', item_id=r.id) }}" style="display:inline">
+                                        <button type="submit" class="button button-small button-secondary">Archive</button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('radar.radar_skip', item_id=r.id) }}" style="display:inline">
+                                        <button type="submit" class="button button-small button-secondary">Skip</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        {% endfor %}
+    {% else %}
+        <p class="empty">
+            No items yet. Click <strong>Scan all sources</strong> to pull from HN, RSS, and Exa.
+        </p>
+    {% endif %}
+{% endblock %}

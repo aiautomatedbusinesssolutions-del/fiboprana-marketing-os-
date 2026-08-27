@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Export observations — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Export observations</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('observations.observations_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    <p>Wrote {{ count }} entr{{ 'y' if count == 1 else 'ies' }} to the exports folder. Download below:</p>
+
+    <ul class="downloads">
+        <li><a href="{{ url_for('observations.observations_export_download', file=md_filename) }}">{{ md_filename }}</a> <span class="muted">(Markdown)</span></li>
+        <li><a href="{{ url_for('observations.observations_export_download', file=csv_filename) }}">{{ csv_filename }}</a> <span class="muted">(CSV)</span></li>
+    </ul>
+
+    <p class="muted">Same-day re-runs overwrite. Files are saved to <code>capture/exports/</code> on the server.</p>
+
+    <p><a class="button button-secondary" href="{{ url_for('observations.observations_export') }}">Re-run export</a></p>
+{% endblock %}

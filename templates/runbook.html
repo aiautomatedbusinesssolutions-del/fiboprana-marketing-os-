@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Runbook — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Weekly Runbook</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('weekly_hub') }}">Back to Weekly</a>
+        </div>
+    </div>
+
+    <p class="lede">
+        The operating procedure for the weekly system, rendered from <code>WEEKLY_RUNBOOK.md</code>.
+        Edit that file to change this page — no restart needed.
+    </p>
+
+    {% if error %}
+        <div class="notice notice-error">{{ error }}</div>
+    {% else %}
+        <div style="white-space: pre-wrap; line-height: 1.55; max-width: 80ch;">{{ content }}</div>
+    {% endif %}
+{% endblock %}

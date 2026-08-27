@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <h1>Dashboard</h1>
+    <p class="lede">Eight planned modules. Capture, Observations, Sourcing, and Product Ideas are live today.</p>
+
+    {% if fleet_surfaces %}
+    <section class="fleet-surfaces">
+        <h2 class="attention-heading">Agent fleet — the weekly workflow</h2>
+        <div class="tiles">
+            {% for s in fleet_surfaces %}
+                <a class="tile tile-active" href="{{ s.url }}">
+                    <h2>{{ s.title }}</h2>
+                    <p>{{ s.description }}</p>
+                    <span class="tile-status">open →</span>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if queue %}
+    <section class="attention-queue">
+        <h2 class="attention-heading">Needs attention</h2>
+        <div class="attention-grid">
+            {% for section in queue %}
+                <div class="attention-section">
+                    <a class="attention-section-header" href="{{ section.url }}">
+                        <span class="attention-section-title">{{ section.title }}</span>
+                        <span class="attention-section-count">{{ section.count }}</span>
+                    </a>
+                    {% if section.label %}
+                        <p class="attention-section-label">{{ section.label }}</p>
+                    {% endif %}
+                    {% if section.entries %}
+                        <ul class="attention-items">
+                            {% for item in section.entries %}
+                                <li class="attention-item">
+                                    {% if item.url and item.url != '#' %}
+                                        <a href="{{ item.url }}" class="attention-item-label">{{ item.label }}</a>
+                                    {% else %}
+                                        <span class="attention-item-label attention-item-label-unlinked">{{ item.label }}</span>
+                                    {% endif %}
+                                    {% if item.meta %}<span class="attention-item-meta">{{ item.meta }}</span>{% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        {% if section.count > section.entries|length %}
+                            <a class="attention-section-more" href="{{ section.url }}">see all {{ section.count }} →</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if synthesis and synthesis.patterns %}
+    <section class="synthesis-snapshot">
+        <div class="synthesis-snapshot-header">
+            <h2 class="synthesis-snapshot-heading">Current synthesis</h2>
+            <span class="synthesis-snapshot-meta">
+                generated {{ synthesis.generated_date }} · {{ synthesis.observation_count }} observations
+                · <a href="{{ url_for('synthesis.synthesis_run_detail', run_id=synthesis.run_id) }}">view full run →</a>
+            </span>
+        </div>
+        <ol class="synthesis-patterns">
+            {% for p in synthesis.patterns %}
+                <li class="synthesis-pattern">
+                    <span class="synthesis-pattern-title">{{ p.title }}</span>
+                    {% if p.frequency %}<span class="synthesis-pattern-freq">{{ p.frequency }}</span>{% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+        {% if synthesis.total_patterns > synthesis.patterns|length %}
+            <a class="synthesis-snapshot-more" href="{{ url_for('synthesis.synthesis_run_detail', run_id=synthesis.run_id) }}">+ {{ synthesis.total_patterns - synthesis.patterns|length }} more pattern(s)</a>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <div class="tiles">
+        {% for m in modules %}
+            {% if m.active %}
+                <a class="tile tile-active" href="{{ m.url }}">
+                    <h2>{{ m.title }}</h2>
+                    <p>{{ m.description }}</p>
+                    <span class="tile-status">open →</span>
+                </a>
+            {% else %}
+                <div class="tile tile-inactive" aria-disabled="true">
+                    <h2>{{ m.title }}</h2>
+                    <p>{{ m.description }}</p>
+                    <span class="tile-status">coming soon</span>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Sourcing — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Sourcing</h1>
+        <div class="actions">
+            <form method="post" action="{{ url_for('sourcing.sourcing_scan') }}" style="display:inline">
+                <button type="submit" class="button">Scan Now</button>
+            </form>
+            <a class="button button-secondary" href="{{ url_for('sourcing.sourcing_saved') }}">Saved for later</a>
+        </div>
+    </div>
+
+    {% if scan_error %}
+        <div class="notice notice-error">{{ scan_error }}</div>
+    {% endif %}
+
+    {% if scan_summary %}
+        <div class="notice notice-success">
+            Scanned {{ scan_summary.subreddits_scanned }} subreddit{{ '' if scan_summary.subreddits_scanned == 1 else 's' }},
+            examined {{ scan_summary.posts_examined }} posts,
+            found <strong>{{ scan_summary.new_candidates }}</strong> new candidate{{ '' if scan_summary.new_candidates == 1 else 's' }}.
+            <span class="muted">
+                (skipped: {{ scan_summary.skipped_already_seen }} seen,
+                {{ scan_summary.skipped_too_old }} too old,
+                {{ scan_summary.skipped_no_triggers }} no triggers,
+                {{ scan_summary.skipped_excluded }} excluded,
+                {{ scan_summary.skipped_low_score }} low score)
+            </span>
+            {% if scan_summary.subreddits_failed %}
+                <br><strong>Failed subreddits:</strong>
+                {% for sub, err in scan_summary.subreddits_failed %}
+                    r/{{ sub }} ({{ err }}){% if not loop.last %}; {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <form class="filters" method="get" action="{{ url_for('sourcing.sourcing_list') }}">
+        <div class="filter-field">
+            <label for="f-subreddit">Subreddit</label>
+            <input id="f-subreddit" name="subreddit" value="{{ subreddit_filter }}" placeholder="e.g. personalfinance">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Filter</button>
+            <a class="button-link" href="{{ url_for('sourcing.sourcing_list') }}">Reset</a>
+        </div>
+    </form>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} candidate{{ '' if rows|length == 1 else 's' }}.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Score</th>
+                        <th>Subreddit</th>
+                        <th>Title</th>
+                        <th>Age</th>
+                        <th>Comments</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><strong>{{ r.score }}</strong></td>
+                        <td>r/{{ r.subreddit }}</td>
+                        <td>
+                            <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>
+                            {% if r.matched_triggers %}
+                                <br><span class="muted">matched: {{ r.matched_triggers }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.posted_at %}
+                                <span class="muted">{{ r.posted_at|truncate(16, true, '') }}Z</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.comment_count }}</td>
+                        <td>
+                            <a class="button button-small" href="{{ url_for('sourcing.sourcing_extract', reddit_id=r.reddit_id) }}">Extract</a>
+                            <form method="post" action="{{ url_for('sourcing.sourcing_save_later', reddit_id=r.reddit_id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Save for later</button>
+                            </form>
+                            <form method="post" action="{{ url_for('sourcing.sourcing_skip', reddit_id=r.reddit_id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Skip</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">
+            No candidates yet. Click <strong>Scan Now</strong> to pull recent posts from the subreddits in
+            <code>sourcing/config.yaml</code>.
+        </p>
+    {% endif %}
+{% endblock %}

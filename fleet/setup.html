@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fiboprana · Hermes — Agent #1 Setup Runbook</title>
+<style>
+  :root {
+    --charcoal: #0c100f;
+    --charcoal-2: #131a18;
+    --card: #161e1c;
+    --line: #243330;
+    --emerald: #2fc78a;
+    --emerald-dim: #1f8a60;
+    --lavender: #8b8cd6;
+    --ink: #e7efec;
+    --muted: #a8b8b2;
+    --amber: #e0b15a;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--charcoal); color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55; font-size: 16.5px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* Header */
+  header.top {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(12,16,15,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line); padding: 14px 0;
+  }
+  .top-inner { max-width: 920px; margin: 0 auto; padding: 0 20px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .logo { width: 30px; height: 30px; flex: 0 0 auto; }
+  .brand { font-family: Georgia, "Times New Roman", serif; font-size: 20px;
+    letter-spacing: .3px; }
+  .brand b { color: var(--emerald); font-weight: 700; }
+  .brand .sep { color: var(--muted); margin: 0 8px; }
+  .brand .agent { color: var(--lavender); }
+  .progress-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px;
+    min-width: 220px; }
+  .bar { flex: 1; height: 8px; background: var(--charcoal-2); border-radius: 99px;
+    overflow: hidden; border: 1px solid var(--line); }
+  .bar > span { display: block; height: 100%; width: 0%; background: var(--emerald);
+    transition: width .3s ease; }
+  .pct { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14.5px;
+    white-space: nowrap; }
+
+  /* Hero */
+  .hero { padding: 30px 0 8px; }
+  .hero h1 { font-size: 26px; margin: 0 0 6px; }
+  .hero p { color: var(--muted); margin: 0; max-width: 680px; }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+  /* Jump nav */
+  nav.jumps { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 6px; }
+  nav.jumps a { text-decoration: none; color: var(--muted);
+    border: 1px solid var(--line); padding: 6px 11px; border-radius: 99px;
+    font-size: 14px; transition: all .15s; }
+  nav.jumps a:hover { color: var(--ink); border-color: var(--emerald-dim); }
+
+  /* Architecture strip */
+  .arch { background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px; margin: 18px 0 6px; }
+  .arch h3 { margin: 0 0 12px; font-size: 14.5px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+  .node { background: var(--charcoal-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 12px; font-size: 14px; flex: 1; min-width: 120px; }
+  .node .k { color: var(--emerald); font-weight: 600; display: block; font-size: 13.5px; }
+  .node .v { color: var(--muted); font-size: 13.5px; }
+  .node.lav .k { color: var(--lavender); }
+  .arrow { align-self: center; color: var(--muted); font-size: 18px; }
+
+  /* Phases */
+  .phase { background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); margin: 16px 0; overflow: hidden; }
+  .phase > .phead { display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+    border-bottom: 1px solid var(--line); }
+  .pnum { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 8px;
+    display: grid; place-items: center; font-weight: 700; font-size: 15.5px;
+    background: var(--charcoal-2); color: var(--emerald); border: 1px solid var(--line); }
+  .phead h2 { margin: 0; font-size: 17px; }
+  .phead .goal { color: var(--muted); font-size: 14.5px; margin-top: 2px; }
+  .phead .badge { margin-left: auto; }
+
+  .badge { font-size: 13px; font-weight: 600; padding: 3px 9px; border-radius: 99px;
+    text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+  .b-done { background: rgba(47,199,138,.15); color: var(--emerald);
+    border: 1px solid var(--emerald-dim); }
+  .b-now { background: rgba(224,177,90,.15); color: var(--amber);
+    border: 1px solid #6b5526; }
+  .b-later { background: rgba(139,140,214,.12); color: var(--lavender);
+    border: 1px solid #3d3e66; }
+
+  .steps { padding: 8px 18px 16px; }
+  .step { display: flex; gap: 12px; padding: 13px 0; border-bottom: 1px dashed var(--line); }
+  .step:last-child { border-bottom: none; }
+  .step input[type=checkbox] { width: 19px; height: 19px; flex: 0 0 auto; margin-top: 2px;
+    accent-color: var(--emerald); cursor: pointer; }
+  .step .body { flex: 1; min-width: 0; }
+  .step .title { font-weight: 600; }
+  .step.checked .title { color: var(--muted); text-decoration: line-through; }
+  .step .desc { color: var(--muted); font-size: 15px; margin-top: 3px; }
+  .step .desc code { background: var(--charcoal-2); padding: 1px 5px; border-radius: 4px;
+    color: var(--ink); font-size: 14px; }
+
+  .cmd { position: relative; background: #0a0d0c; border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 42px 10px 12px; margin: 8px 0 2px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 14px;
+    color: var(--emerald); overflow-x: auto; white-space: pre; }
+  .copy { position: absolute; top: 7px; right: 7px; background: var(--charcoal-2);
+    border: 1px solid var(--line); color: var(--muted); border-radius: 6px;
+    padding: 3px 8px; font-size: 13px; cursor: pointer; }
+  .copy:hover { color: var(--emerald); border-color: var(--emerald-dim); }
+  .copy.ok { color: var(--emerald); }
+
+  .verify { font-size: 14.5px; color: var(--ink); margin-top: 8px;
+    border-left: 2px solid var(--emerald-dim); padding-left: 10px; }
+  .verify b { color: var(--emerald); }
+
+  .callout { display: flex; gap: 10px; margin: 10px 0 2px; padding: 11px 13px;
+    border-radius: 8px; font-size: 14.5px; background: rgba(224,177,90,.08);
+    border: 1px solid #6b5526; }
+  .callout .ico { color: var(--amber); flex: 0 0 auto; }
+  .callout.info { background: rgba(139,140,214,.08); border-color: #3d3e66; }
+  .callout.info .ico { color: var(--lavender); }
+
+  /* Legend + reset */
+  .footrow { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-top: 24px; color: var(--muted); font-size: 14px; }
+  .footrow .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+  .reset { margin-left: auto; background: none; border: 1px solid var(--line);
+    color: var(--muted); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+    font-size: 14px; }
+  .reset:hover { color: var(--amber); border-color: #6b5526; }
+  a.inline { color: var(--lavender); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <path d="M3 27 L13 7 L19 19 L22 13 L29 27 Z" fill="#2fc78a" opacity="0.9"/>
+      <path d="M13 7 L19 19 L16 19 L13 13 Z" fill="#0c100f" opacity="0.35"/>
+    </svg>
+    <span class="brand"><b>Fiboprana</b><span class="sep">·</span><span class="agent">Hermes</span></span>
+    <div class="progress-wrap">
+      <div class="bar"><span id="barFill"></span></div>
+      <span class="pct" id="pctLabel">0%</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>Agent #1 — Weekly Research · Setup &amp; Sync Runbook</h1>
+    <p>The full path from "code written" to "an isolated cloud agent runs the research every
+      week and writes to the shared database." Work top to bottom; your checkmarks are saved
+      in this browser.</p>
+    <div class="meta">Living doc · last updated 2026-06-24 · the goal of Phases 1–2 is to prove the
+      database <em>syncs</em> before anything moves to the cloud.</div>
+  </section>
+
+  <nav class="jumps">
+    <a href="#p0">✓ Built</a>
+    <a href="#p1">1 · Database online</a>
+    <a href="#p2">2 · Validate locally</a>
+    <a href="#p3">3 · Wire Hermes</a>
+    <a href="#p4">4 · Cloud deploy</a>
+    <a href="#p5">5 · What's next</a>
+  </nav>
+
+  <section class="arch">
+    <h3>How the pieces fit</h3>
+    <div class="flow">
+      <div class="node lav"><span class="k">an MCP client</span><span class="v">chat → MCP (stdio)</span></div>
+      <div class="node lav"><span class="k">Cloud cron</span><span class="v">weekly, autonomous</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="k">research_agent.py</span><span class="v">the brain</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="k">radar + Claude</span><span class="v">digest + 5-field pull</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="k">store.py</span><span class="v">one write API</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="k">Supabase</span><span class="v">marketing schema</span></div>
+    </div>
+  </section>
+
+  <!-- PHASE 0 -->
+  <section class="phase" id="p0">
+    <div class="phead">
+      <div class="pnum">✓</div>
+      <div>
+        <h2>Already built</h2>
+        <div class="goal">The code exists and the core logic is verified — nothing to do here, just orientation.</div>
+      </div>
+      <span class="badge b-done badge-slot">Done</span>
+    </div>
+    <div class="steps">
+      <label class="step"><input type="checkbox" data-id="p0-1" checked disabled>
+        <div class="body"><div class="title">SQL migration</div>
+          <div class="desc"><code>supabase/migrations/20260624000001_init_marketing_schema.sql</code> — the <code>marketing</code> schema + 4 tables.</div>
+        </div></label>
+      <label class="step"><input type="checkbox" data-id="p0-2" checked disabled>
+        <div class="body"><div class="title">Store layer</div>
+          <div class="desc"><code>fleet/supabase.py</code> (stdlib PostgREST client) · <code>store.py</code> (log/update/learn) · <code>check.py</code> (smoke test).</div>
+        </div></label>
+      <label class="step"><input type="checkbox" data-id="p0-3" checked disabled>
+        <div class="body"><div class="title">The agent + both doors</div>
+          <div class="desc"><code>research_agent.py</code> (brain) · <code>content_pull_prompt.py</code> (v1) · <code>mcp_server.py</code> (Hermes) · <code>research_run.py</code> (cron) · <code>Dockerfile</code>.</div>
+        </div></label>
+    </div>
+  </section>
+
+  <!-- PHASE 1 -->
+  <section class="phase" id="p1">
+    <div class="phead">
+      <div class="pnum">1</div>
+      <div>
+        <h2>Bring the database online</h2>
+        <div class="goal">Stand up the schema in Supabase and confirm Python can read &amp; write it. ← you are here</div>
+      </div>
+      <span class="badge b-now badge-slot">Do now</span>
+    </div>
+    <div class="steps">
+      <label class="step"><input type="checkbox" data-id="p1-1">
+        <div class="body"><div class="title">Run the migration</div>
+          <div class="desc">Supabase Studio → <b>SQL Editor</b> → paste the whole migration file → <b>Run</b>.</div>
+          <div class="verify"><b>Worked when:</b> the Table Editor shows 4 tables under the <code>marketing</code> schema: research_runs, agent_execution_logs, content_calendar, marketing_goals.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p1-2">
+        <div class="body"><div class="title">Expose the schema to the API</div>
+          <div class="desc">Settings → <b>API → Exposed schemas</b> → add <code>marketing</code> → save.</div>
+          <div class="callout"><span class="ico">▲</span><div>The #1 gotcha. Skip this and every call fails — the anon key only sees <code>public</code> by default.</div></div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p1-3">
+        <div class="body"><div class="title">Put the keys in <code>.env</code></div>
+          <div class="desc">Get them from Settings → API (Project URL + <b>anon public</b> key). Add to the project-root <code>.env</code>:</div>
+          <div class="cmd">SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+SUPABASE_ANON_KEY=YOUR-ANON-PUBLIC-KEY</div>
+          <div class="callout info"><span class="ico">●</span><div>Use the <b>anon</b> key, not the service-role key. <code>.env</code> is already git-ignored and docker-ignored.</div></div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p1-4">
+        <div class="body"><div class="title">Verify the sync (read + write round-trip)</div>
+          <div class="cmd">python -m fleet.check --write</div>
+          <div class="verify"><b>Worked when:</b> it prints <b>“Connection healthy.”</b> after reading, inserting, and updating a throwaway row. Then delete that row in Studio (its <code>agent_name = 'smoke-test'</code>).</div>
+        </div></label>
+    </div>
+  </section>
+
+  <!-- PHASE 2 -->
+  <section class="phase" id="p2">
+    <div class="phead">
+      <div class="pnum">2</div>
+      <div>
+        <h2>Validate the agent locally</h2>
+        <div class="goal">Run the whole brain end-to-end — no Hermes, no Docker yet. Fastest way to catch problems.</div>
+      </div>
+      <span class="badge b-now badge-slot">Do now</span>
+    </div>
+    <div class="steps">
+      <label class="step"><input type="checkbox" data-id="p2-1">
+        <div class="body"><div class="title">Install dependencies</div>
+          <div class="cmd">pip install -r requirements.txt</div>
+          <div class="desc">Pulls in the <code>mcp</code> SDK. You already have <code>ANTHROPIC_API_KEY</code> in <code>.env</code> (the digest uses it); <code>EXA_API_KEY</code> is optional.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p2-2">
+        <div class="body"><div class="title">Run the research agent</div>
+          <div class="cmd">python -m fleet.research_run</div>
+          <div class="verify"><b>Worked when:</b> it prints the trend digest, then <b>This week's content pull</b> (headline / video angle / competitor note / reddit themes / feature seed), then a <code>run_id</code>.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p2-3">
+        <div class="body"><div class="title">Confirm it synced to Supabase</div>
+          <div class="desc">In Studio, open <code>marketing.research_runs</code> — there's a new row with <code>digest_md</code>, <code>content_pull</code> (the 5 fields), <code>reasoning</code>, and <code>inputs</code> filled.</div>
+          <div class="verify"><b>This is the whole point of Phases 1–2:</b> the agent ran <em>and</em> the data landed in the shared ledger.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p2-4">
+        <div class="body"><div class="title">First prompt-tuning round</div>
+          <div class="desc">Read the 5-field pull. If a field is weak/off-brand, we edit <code>fleet/content_pull_prompt.py</code> and re-run. (plan → edit → regenerate → evaluate; don't commit between rounds.) Paste me the output and we tune together.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p2-5">
+        <div class="body"><div class="title">(Optional) test the learning loop</div>
+          <div class="desc">Record a verdict on the run so the next run reads it back:</div>
+          <div class="cmd">python -c "from dotenv import load_dotenv; load_dotenv(); from fleet import store; store.update_outcome('PASTE-RUN-ID', verdict='strong', note='exactly my lane')"</div>
+          <div class="verify"><b>Worked when:</b> the row's <code>outcome_verdict</code> / <code>outcome_note</code> / <code>outcome_checked_at</code> update.</div>
+        </div></label>
+    </div>
+  </section>
+
+  <!-- PHASE 3 -->
+  <section class="phase" id="p3">
+    <div class="phead">
+      <div class="pnum">3</div>
+      <div>
+        <h2>Wire an MCP client (local)</h2>
+        <div class="goal">Run the agent from Hermes chat over MCP — the interactive door.</div>
+      </div>
+      <span class="badge b-later badge-slot">Next</span>
+    </div>
+    <div class="steps">
+      <label class="step"><input type="checkbox" data-id="p3-1">
+        <div class="body"><div class="title">Confirm the MCP server starts</div>
+          <div class="cmd">python -m fleet.mcp_server</div>
+          <div class="verify"><b>Worked when:</b> no error — it sits waiting on stdio. Ctrl+C to exit (Hermes will launch it for real).</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p3-2">
+        <div class="body"><div class="title">Register it in MCP client config</div>
+          <div class="desc">Add an MCP server entry to <code>~/.hermes/config.yaml</code>. Representative shape (match exact keys to Hermes' MCP docs):</div>
+          <div class="cmd">mcpServers:
+  fiboprana-research:
+    command: C:/dev/fiboprana-marketing-os/.venv/Scripts/python.exe
+    args: ["-m", "fleet.mcp_server"]
+    cwd: C:/dev/fiboprana-marketing-os
+    env:
+      SUPABASE_URL: "https://YOUR-PROJECT.supabase.co"
+      SUPABASE_ANON_KEY: "YOUR-ANON-KEY"
+      ANTHROPIC_API_KEY: "YOUR-ANTHROPIC-KEY"</div>
+          <div class="callout"><span class="ico">▲</span><div>I'm not certain of Hermes' exact config field names — confirm <code>command</code> / <code>args</code> / <code>env</code> against its docs. The values are right; the key names may differ.</div></div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p3-3">
+        <div class="body"><div class="title">Run it from chat</div>
+          <div class="desc">In Hermes, call <code>run_research</code>. Expect the digest + pull back in chat and a new <code>research_runs</code> row.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p3-4">
+        <div class="body"><div class="title">Test the verdict tool</div>
+          <div class="desc">Call <code>log_outcome</code> with the run_id, a verdict (<code>strong</code>/<code>ok</code>/<code>off</code>), and a note. Confirm the row's outcome fields update.</div>
+        </div></label>
+    </div>
+  </section>
+
+  <!-- PHASE 4 -->
+  <section class="phase" id="p4">
+    <div class="phead">
+      <div class="pnum">4</div>
+      <div>
+        <h2>Deploy to the cloud (isolated, 24/7)</h2>
+        <div class="goal">The agent runs off your computer, on a weekly schedule, writing to the same database.</div>
+      </div>
+      <span class="badge b-later badge-slot">Later</span>
+    </div>
+    <div class="steps">
+      <label class="step"><input type="checkbox" data-id="p4-1">
+        <div class="body"><div class="title">Push to GitHub (private)</div>
+          <div class="desc">Commit the repo. <code>.env</code> and <code>*.db</code> stay out (git-ignored).</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p4-2">
+        <div class="body"><div class="title">Connect Render / Railway to the repo</div>
+          <div class="desc">It builds from the <code>Dockerfile</code> — that's your isolation boundary (the agent can't see your machine).</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p4-3">
+        <div class="body"><div class="title">Schedule the weekly run as a CRON JOB</div>
+          <div class="desc">Command for the scheduled job:</div>
+          <div class="cmd">python -m fleet.research_run</div>
+          <div class="callout"><span class="ico">▲</span><div>Make it a <b>Cron Job</b>, <u>not</u> a Web Service. stdio MCP is on-demand/local; the cloud's job is the autonomous weekly run. (Interactive an-MCP-host-in-the-cloud would need a remote MCP transport — a later decision.)</div></div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p4-4">
+        <div class="body"><div class="title">Set env vars in the cloud dashboard</div>
+          <div class="desc"><code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>, <code>ANTHROPIC_API_KEY</code>, optional <code>EXA_API_KEY</code>. Never commit them.</div>
+        </div></label>
+
+      <label class="step"><input type="checkbox" data-id="p4-5">
+        <div class="body"><div class="title">Verify the cloud sync</div>
+          <div class="desc">Trigger the cron once manually; confirm a fresh <code>research_runs</code> row appears in Supabase. From here it runs itself weekly.</div>
+        </div></label>
+    </div>
+  </section>
+
+  <!-- PHASE 5 -->
+  <section class="phase" id="p5">
+    <div class="phead">
+      <div class="pnum">5</div>
+      <div>
+        <h2>After agent #1</h2>
+        <div class="goal">The pattern is proven once; everything else reuses it.</div>
+      </div>
+      <span class="badge b-later badge-slot">Future</span>
+    </div>
+    <div class="steps">
+      <label class="step"><input type="checkbox" data-id="p5-1">
+        <div class="body"><div class="title">Tune the prompt over a few real weeks</div>
+          <div class="desc">Let verdicts accumulate; the pull gets sharper as the agent reads its own history.</div>
+        </div></label>
+      <label class="step"><input type="checkbox" data-id="p5-2">
+        <div class="body"><div class="title">Close the outcome loop (analytics)</div>
+          <div class="desc">Fill <code>outcome_metrics</code> from downstream content performance (the later analytics agent) — Layer 2 learning.</div>
+        </div></label>
+      <label class="step"><input type="checkbox" data-id="p5-3">
+        <div class="body"><div class="title">Add the next agent — one job at a time</div>
+          <div class="desc">e.g. reply-finder or competitor-watch. Same shape: rulebook → agent → outcome loop. An orchestrator only once 2–3 workers exist.</div>
+        </div></label>
+    </div>
+  </section>
+
+  <div class="footrow">
+    <div class="legend">
+      <span class="badge b-done">Done</span>
+      <span class="badge b-now">Do now</span>
+      <span class="badge b-later">Later</span>
+    </div>
+    <button class="reset" id="resetBtn">Reset my progress</button>
+  </div>
+</div>
+
+<script>
+  var STORAGE_KEY = "hermes-setup-progress-v1";
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.step input[type=checkbox]'));
+
+  function load() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch (e) {}
+    boxes.forEach(function (b) {
+      if (b.disabled) { mark(b); return; }
+      if (saved[b.dataset.id]) b.checked = true;
+      mark(b);
+    });
+    update();
+  }
+  function mark(b) {
+    var step = b.closest('.step');
+    if (step) step.classList.toggle('checked', b.checked);
+  }
+  function save() {
+    var out = {};
+    boxes.forEach(function (b) { if (!b.disabled && b.checked) out[b.dataset.id] = 1; });
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(out)); } catch (e) {}
+  }
+  function update() {
+    var total = boxes.length;
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    var pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('barFill').style.width = pct + '%';
+    document.getElementById('pctLabel').textContent = pct + '% · ' + done + '/' + total;
+  }
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () { mark(b); save(); update(); });
+  });
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    boxes.forEach(function (b) { if (!b.disabled) b.checked = false; mark(b); });
+    update();
+  });
+
+  // Copy buttons on every command block
+  document.querySelectorAll('.cmd').forEach(function (block) {
+    var btn = document.createElement('button');
+    btn.className = 'copy'; btn.textContent = 'copy';
+    btn.addEventListener('click', function () {
+      var txt = block.textContent;
+      navigator.clipboard.writeText(txt).then(function () {
+        btn.textContent = 'copied'; btn.classList.add('ok');
+        setTimeout(function () { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 1400);
+      });
+    });
+    block.appendChild(btn);
+  });
+
+  load();
+</script>
+</body>
+</html>

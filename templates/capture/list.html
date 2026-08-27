@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Capture — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Conversations</h1>
+        <div class="actions">
+            <a class="button" href="{{ url_for('capture.capture_paste_form') }}">+ Paste conversation</a>
+            <a class="button button-secondary" href="{{ url_for('capture.capture_new_form') }}">+ Full form</a>
+            <a class="button button-secondary" href="{{ url_for('capture.capture_export') }}">Export</a>
+        </div>
+    </div>
+
+    {% if created_id %}
+        <div class="notice notice-success">
+            Saved entry #{{ created_id }}. <a href="{{ url_for('capture.capture_detail', entry_id=created_id) }}">View it →</a>
+        </div>
+    {% endif %}
+
+    <form class="filters" method="get" action="{{ url_for('capture.capture_list') }}">
+        <div class="filter-field">
+            <label for="f-tag">Tag</label>
+            <input id="f-tag" name="tag" value="{{ filters.tag }}" placeholder="e.g. broker-question">
+        </div>
+        <div class="filter-field">
+            <label for="f-source">Source</label>
+            <input id="f-source" name="source" value="{{ filters.source }}" placeholder="e.g. reddit">
+        </div>
+        <div class="filter-field">
+            <label for="f-segment">Segment</label>
+            <input id="f-segment" name="segment" value="{{ filters.segment }}" placeholder="e.g. beginner">
+        </div>
+        <div class="filter-field">
+            <label for="f-follow-up">Follow-up</label>
+            <select id="f-follow-up" name="follow_up">
+                <option value="" {% if not filters.follow_up %}selected{% endif %}>Any</option>
+                {% for opt in ['none', 'awaiting-reply', 'converted', 'lost'] %}
+                    <option value="{{ opt }}" {% if filters.follow_up == opt %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+                {% if filters.follow_up and filters.follow_up not in ['none', 'awaiting-reply', 'converted', 'lost'] %}
+                    <option value="{{ filters.follow_up }}" selected>{{ filters.follow_up }}</option>
+                {% endif %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="f-from">From</label>
+            <input id="f-from" name="from" type="date" value="{{ filters.date_from }}">
+        </div>
+        <div class="filter-field">
+            <label for="f-to">To</label>
+            <input id="f-to" name="to" type="date" value="{{ filters.date_to }}">
+        </div>
+        <div class="filter-field">
+            <label for="f-limit">Limit</label>
+            <input id="f-limit" name="limit" type="number" min="1" max="500" value="{{ filters.limit }}">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Filter</button>
+            <a class="button-link" href="{{ url_for('capture.capture_list') }}">Reset</a>
+        </div>
+    </form>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} entr{{ 'y' if rows|length == 1 else 'ies' }}.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Source</th>
+                        <th>Segment</th>
+                        <th>Handle</th>
+                        <th>Goal / pain (snippet)</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><a href="{{ url_for('capture.capture_detail', entry_id=r.id) }}">{{ r.date }}</a></td>
+                        <td>
+                            {{ r.source or '' }}
+                            {% if r.source_detail %}<br><span class="muted">{{ r.source_detail }}</span>{% endif %}
+                        </td>
+                        <td>{{ r.segment or '' }}</td>
+                        <td>{{ r.handle or '' }}</td>
+                        <td>
+                            {% set has_structured = r.stated_goal or r.pain_points or r.quotes or r.feature_implications or r.feedback_on_app or r.notes %}
+                            {% if has_structured %}
+                                {% if r.stated_goal %}{{ r.stated_goal|truncate(80) }}{% endif %}
+                                {% if r.pain_points %}<br><span class="muted">{{ r.pain_points|truncate(80) }}</span>{% endif %}
+                            {% elif r.raw_transcript %}
+                                <span class="muted">{{ r.raw_transcript|truncate(200) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.tags %}
+                                {% for t in r.tags.split(',') if t %}<a class="tag" href="{{ url_for('tag_detail', tag=t.strip()) }}">{{ t }}</a>{% endfor %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">No entries match. <a href="{{ url_for('capture.capture_new_form') }}">Add one →</a></p>
+    {% endif %}
+{% endblock %}

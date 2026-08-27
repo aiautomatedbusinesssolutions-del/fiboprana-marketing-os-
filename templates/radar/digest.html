@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Trend Digest — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Trend Digest</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('weekly_hub') }}">Weekly</a>
+            <a class="button button-secondary" href="{{ url_for('radar.radar_list') }}">Back to Radar</a>
+        </div>
+    </div>
+
+    <p class="lede">
+        The week's cutting-edge fintech story — and the AI-in-fintech story — distilled from the
+        current radar pile (HN + RSS + Exa). It reads what's already been scanned; if it looks thin,
+        run <strong>Scan all sources</strong> on <a href="{{ url_for('radar.radar_list') }}">Radar</a>
+        first, then generate. The digest is a growing journal; it never edits any canonical doc.
+    </p>
+
+    {% if gen_error %}<div class="notice notice-error">{{ gen_error }}</div>{% endif %}
+    {% if gen_success %}<div class="notice notice-success">{{ gen_success }}</div>{% endif %}
+
+    <div class="scan-controls" style="margin: 1em 0; display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
+        <form method="post" action="{{ url_for('radar.radar_digest_generate') }}" style="display:inline"
+              onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Generating…';">
+            <button type="submit" class="button">{{ "Generate this week's digest" if latest else "Generate first digest" }}</button>
+        </form>
+        <span class="muted" style="font-size: 0.85em;">
+            {{ new_count }} new radar item{{ '' if new_count == 1 else 's' }} since the last digest.
+        </span>
+    </div>
+
+    {% if latest %}
+        <section style="margin-top: 24px;">
+            <h2>Latest digest</h2>
+            <p class="hint">
+                Generated {{ latest.generated_at }} (UTC) ·
+                {{ latest.source_item_count }} item{{ '' if latest.source_item_count == 1 else 's' }} ·
+                {{ latest.model }}
+            </p>
+            <div style="white-space: pre-wrap; line-height: 1.55; max-width: 80ch; padding: 0.75em; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 4px;">{{ latest.digest_md }}</div>
+            {% if latest.sources %}
+                <div style="margin-top: 0.75em; max-width: 80ch;">
+                    <strong>Sources</strong>
+                    <ul style="margin: 0.4em 0 0; padding-left: 1.4em;">
+                        {% for s in latest.sources %}
+                            <li>
+                                <span class="muted">[#{{ s.n }}]</span>
+                                <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title or s.url }}</a>
+                                {% if s.label %}<span class="muted" style="font-size: 0.85em;"> · {{ s.label }}</span>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </section>
+    {% else %}
+        <p class="empty">
+            No digests yet. Click <strong>Generate first digest</strong> to distill the current radar pile.
+        </p>
+    {% endif %}
+
+    {% if prior %}
+        <section style="margin-top: 32px;">
+            <h2>Earlier digests</h2>
+            {% for d in prior %}
+                <details style="border: 1px solid var(--border); border-radius: 4px; margin-bottom: 0.5em; padding: 0.5em 0.75em;">
+                    <summary style="cursor: pointer;">
+                        <span class="muted">{{ d.generated_at[:16] }} (UTC)</span>
+                        · {{ d.source_item_count }} item{{ '' if d.source_item_count == 1 else 's' }}
+                    </summary>
+                    <div style="white-space: pre-wrap; line-height: 1.55; max-width: 80ch; margin-top: 0.75em;">{{ d.digest_md }}</div>
+                    {% if d.sources %}
+                        <div style="margin-top: 0.5em; max-width: 80ch;">
+                            <span class="muted" style="font-size: 0.85em;">Sources:</span>
+                            <ul style="margin: 0.3em 0 0; padding-left: 1.4em; font-size: 0.9em;">
+                                {% for s in d.sources %}
+                                    <li><span class="muted">[#{{ s.n }}]</span>
+                                        <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title or s.url }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </details>
+            {% endfor %}
+        </section>
+    {% endif %}
+{% endblock %}

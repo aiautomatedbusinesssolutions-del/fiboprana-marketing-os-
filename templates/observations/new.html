@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}{{ heading or "New observation" }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>{{ heading or "New observation" }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('observations.observations_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    <p class="lede">Capture a thread you read but didn't participate in. The URL and raw content are the core — everything below them is your interpretation and can stay short.</p>
+
+    {% if errors %}
+        <div class="notice notice-error">Please fix the errors below.</div>
+    {% endif %}
+
+    {% set ai_fields = ['segment_guess', 'pain_points', 'notable_quotes', 'feature_implications', 'content_hooks', 'tags'] %}
+
+    <form method="post" class="entry-form" action="{{ form_action or url_for('observations.observations_new_submit') }}">
+        {% for name, label, kind, hint in fields %}
+            <div class="form-field{% if errors.get(name) %} has-error{% endif %}">
+                <label for="f-{{ name }}">
+                    {{ label }}{% if name == 'date_observed' %} <span class="required">*</span>{% endif %}
+                </label>
+
+                {% if name in ai_fields %}
+                    <p class="ai-note"><em>AI may pre-fill this — review before saving.</em></p>
+                {% endif %}
+
+                {% if kind == 'textarea-big' %}
+                    <textarea id="f-{{ name }}" name="{{ name }}" rows="15" placeholder="{{ hint }}">{{ defaults.get(name, '') }}</textarea>
+                {% elif kind == 'textarea' %}
+                    <textarea id="f-{{ name }}" name="{{ name }}" rows="3" placeholder="{{ hint }}">{{ defaults.get(name, '') }}</textarea>
+                {% elif kind == 'date' %}
+                    <input id="f-{{ name }}" name="{{ name }}" type="date" value="{{ defaults.get(name, '') }}" required>
+                {% else %}
+                    <input id="f-{{ name }}" name="{{ name }}" type="text" value="{{ defaults.get(name, '') }}" placeholder="{{ hint }}">
+                {% endif %}
+
+                {% if name == 'raw_content' %}
+                    <div class="extract-row">
+                        <button type="button" id="extract-btn" class="button-secondary">Extract with AI</button>
+                        <span class="extract-hint">Paste content above, then click to pre-fill the fields below.</span>
+                        <span id="extract-status" class="extract-status" role="status" aria-live="polite"></span>
+                    </div>
+                {% endif %}
+
+                {% if name == 'tags' %}
+                    {% set tag_suggestions = existing_tags() %}
+                    {% if tag_suggestions %}
+                        <div class="tag-suggestions" data-target="f-tags">
+                            <span class="tag-suggestions-label">Reuse existing:</span>
+                            {% for t, n in tag_suggestions %}
+                                <button type="button" class="tag-chip" data-tag="{{ t }}" title="{{ n }} use{{ '' if n == 1 else 's' }}">{{ t }}</button>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {% if errors.get(name) %}
+                    <p class="field-error">{{ errors[name] }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit">{{ submit_label or "Save observation" }}</button>
+            <a class="button-link" href="{{ url_for('observations.observations_list') }}">Cancel</a>
+        </div>
+
+        <div class="extract-row" style="margin-top: 16px;">
+            <button type="button" id="copy-md-btn" class="button-secondary">Copy as markdown</button>
+            <span id="copy-md-status" class="extract-status" role="status" aria-live="polite"></span>
+        </div>
+        <textarea id="copy-md-fallback" class="copy-fallback" readonly hidden rows="10" aria-label="Markdown to copy manually"></textarea>
+    </form>
+
+    <script>
+        // Tag-chip append. Click an existing-tag chip to add it to the tags
+        // input; no-op when already present (case-insensitive, comma-aware).
+        document.querySelectorAll('.tag-suggestions').forEach(function (group) {
+            var target = document.getElementById(group.dataset.target);
+            if (!target) return;
+            group.addEventListener('click', function (e) {
+                var chip = e.target.closest('.tag-chip');
+                if (!chip) return;
+                var tag = chip.dataset.tag;
+                var current = (target.value || '').split(',').map(function (t) { return t.trim().toLowerCase(); }).filter(Boolean);
+                if (current.indexOf(tag) !== -1) return;
+                current.push(tag);
+                target.value = current.join(', ');
+                target.focus();
+            });
+        });
+
+        (function () {
+            var btn = document.getElementById('extract-btn');
+            if (!btn) return;
+            var statusEl = document.getElementById('extract-status');
+            var rawEl = document.getElementById('f-raw_content');
+            var targetIds = [
+                'f-segment_guess',
+                'f-pain_points',
+                'f-notable_quotes',
+                'f-feature_implications',
+                'f-content_hooks',
+                'f-tags'
+            ];
+
+            function setStatus(msg, kind) {
+                statusEl.textContent = msg || '';
+                statusEl.className = 'extract-status' + (kind ? ' extract-status-' + kind : '');
+            }
+
+            btn.addEventListener('click', function () {
+                var raw = (rawEl.value || '').trim();
+                if (!raw) {
+                    setStatus('Paste content first', 'error');
+                    return;
+                }
+
+                btn.disabled = true;
+                var originalLabel = btn.textContent;
+                btn.textContent = 'Extracting...';
+                setStatus('Calling Claude…', 'info');
+
+                fetch('{{ url_for("observations.observations_extract") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ raw_content: raw })
+                })
+                .then(function (res) {
+                    return res.json().then(function (body) {
+                        return { ok: res.ok, body: body };
+                    });
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        setStatus(result.body && result.body.error ? result.body.error : 'Extraction failed.', 'error');
+                        return;
+                    }
+                    targetIds.forEach(function (id) {
+                        var el = document.getElementById(id);
+                        if (!el) return;
+                        var key = id.replace(/^f-/, '');
+                        if (Object.prototype.hasOwnProperty.call(result.body, key)) {
+                            el.value = result.body[key] || '';
+                        }
+                    });
+                    setStatus('Pre-filled. Review before saving.', 'ok');
+                })
+                .catch(function (err) {
+                    setStatus('Network error: ' + err.message, 'error');
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = originalLabel;
+                });
+            });
+        })();
+
+        (function () {
+            var btn = document.getElementById('copy-md-btn');
+            if (!btn) return;
+            var statusEl = document.getElementById('copy-md-status');
+            var fallbackEl = document.getElementById('copy-md-fallback');
+            var originalLabel = btn.textContent;
+            var revertTimer = null;
+
+            function readValues() {
+                return {
+                    segment_guess:        (document.getElementById('f-segment_guess')        || {}).value || '',
+                    pain_points:          (document.getElementById('f-pain_points')          || {}).value || '',
+                    notable_quotes:       (document.getElementById('f-notable_quotes')       || {}).value || '',
+                    feature_implications: (document.getElementById('f-feature_implications') || {}).value || '',
+                    content_hooks:        (document.getElementById('f-content_hooks')        || {}).value || '',
+                    tags:                 (document.getElementById('f-tags')                 || {}).value || ''
+                };
+            }
+
+            function trimField(v) {
+                return (v || '')
+                    .replace(/\r\n/g, '\n')
+                    .trim()
+                    .replace(/\n\s*\n+/g, '\n');
+            }
+
+            function buildMarkdown() {
+                var values = readValues();
+                var sections = [
+                    ['Segment guess',        'segment_guess'],
+                    ['Pain points',          'pain_points'],
+                    ['Notable quotes',       'notable_quotes'],
+                    ['Feature implications', 'feature_implications'],
+                    ['Content hooks',        'content_hooks'],
+                    ['Tags',                 'tags']
+                ];
+                return sections.map(function (pair) {
+                    var body = trimField(values[pair[1]]);
+                    return body ? '## ' + pair[0] + '\n' + body : '## ' + pair[0];
+                }).join('\n\n');
+            }
+
+            function setStatus(msg, kind) {
+                if (!statusEl) return;
+                statusEl.textContent = msg || '';
+                statusEl.className = 'extract-status' + (kind ? ' extract-status-' + kind : '');
+            }
+
+            function showFallback(md) {
+                if (!fallbackEl) return;
+                fallbackEl.hidden = false;
+                fallbackEl.value = md;
+                fallbackEl.focus();
+                fallbackEl.select();
+            }
+
+            function hideFallback() {
+                if (!fallbackEl) return;
+                fallbackEl.hidden = true;
+                fallbackEl.value = '';
+            }
+
+            btn.addEventListener('click', function () {
+                var md = buildMarkdown();
+                hideFallback();
+                if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
+
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    showFallback(md);
+                    setStatus('Copy failed — text selected, press Ctrl+C.', 'error');
+                    return;
+                }
+
+                navigator.clipboard.writeText(md).then(function () {
+                    btn.textContent = 'Copied!';
+                    setStatus('', '');
+                    revertTimer = setTimeout(function () {
+                        btn.textContent = originalLabel;
+                        revertTimer = null;
+                    }, 2000);
+                }).catch(function () {
+                    showFallback(md);
+                    setStatus('Copy failed — text selected, press Ctrl+C.', 'error');
+                });
+            });
+        })();
+    </script>
+{% endblock %}

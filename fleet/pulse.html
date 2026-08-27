@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulse — Fiboprana marketing</title>
+<style>
+  /* Brand: Emerald-refresh (bg #0b0f14 / emerald #1db584 / amber #e8a93b).
+     Readable-text rules: >=12px floors, bright secondary grays, weight 450. */
+  :root {
+    --bg: #0b0f14; --panel: #121a26; --line: #223046;
+    --ink: #e8eef7; --ink2: #9fb0c4; --ink3: #7e8fa5;
+    --up: #1db584; --down: #e8a93b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 450 14px/1.5 system-ui, "Segoe UI", sans-serif;
+    padding: 24px 28px 60px;
+  }
+  a { color: var(--up); text-decoration: none; }
+  header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; }
+  .sub { color: var(--ink2); font-size: 13px; }
+  nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+  h2 { font-size: 15px; font-weight: 650; margin: 28px 0 4px; }
+  .note { color: var(--ink2); font-size: 12.5px; margin: 0 0 10px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 12px; }
+  .tile .lbl { color: var(--ink2); font-size: 12.5px; letter-spacing: .02em; }
+  .tile .val { font-size: 28px; font-weight: 650; line-height: 1.2; margin: 2px 0 1px; font-variant-numeric: tabular-nums; }
+  .delta { font-size: 12.5px; font-weight: 600; }
+  .delta.up   { color: var(--up); }
+  .delta.down { color: var(--down); }
+  .delta.flat { color: var(--ink3); font-weight: 450; }
+  .delta .vs { color: var(--ink3); font-weight: 450; }
+  .spark { display: block; margin-top: 8px; width: 100%; height: 34px; }
+  details { margin-top: 12px; color: var(--ink2); font-size: 12.5px; }
+  summary { cursor: pointer; }
+  table { border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 3px 10px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--ink3); font-weight: 600; }
+  .empty { color: var(--ink2); background: var(--panel); border: 1px dashed var(--line);
+           border-radius: 10px; padding: 18px; font-size: 13px; }
+  footer { color: var(--ink3); font-size: 12.5px; margin-top: 34px; border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pulse</h1>
+  <span class="sub" id="asof">loading…</span>
+  <nav>
+    <a href="/week">← this week</a>
+    <a href="/map">fleet map</a>
+    <a href="/fleet">tables</a>
+  </nav>
+</header>
+<div class="sub">Daily snapshots from the metrics agent — each tile: today's value, the change vs ~7 days back, and the shape of the last month.</div>
+
+<div id="root"><div class="empty" style="margin-top:20px">loading…</div></div>
+
+<footer>
+  Source: <code>marketing.metric_snapshots</code>, written daily by the metrics agent (dispatch).
+  Not collected yet: X follower count (Typefully has it — future agent add), email audience size,
+  TikTok / Instagram (no API on the current plans; see the shorts batch log instead).
+</footer>
+
+<script>
+// ── section + tile definitions: which metric keys become tiles ──────────────
+// get: pulls a number out of one snapshot's metrics (null = missing that day).
+const SECTIONS = [
+  { kind: "youtube_channel", title: "YouTube",
+    note: "channel lifetime totals",
+    tiles: [
+      { lbl: "Subscribers", get: m => num(m.subscriberCount) },
+      { lbl: "Total views", get: m => num(m.viewCount) },
+      { lbl: "Videos",      get: m => num(m.videoCount) },
+    ] },
+  { kind: "x_account", title: "X — rolling 28-day window",
+    note: "each day's value sums the trailing 28 days of posts+replies (via Typefully), so deltas show the window moving, not single-day activity",
+    tiles: [
+      { lbl: "Impressions",    get: m => num(m.impressions) },
+      { lbl: "Profile clicks", get: m => num(m.profile_clicks) },
+      { lbl: "Engagements",    get: m => num(m.likes) + num(m.comments) + num(m.shares) + num(m.quotes) + num(m.saves) },
+      { lbl: "Posts in window", get: m => num(m.posts_in_window) },
+    ] },
+  { kind: "app_funnel", title: "Fiboprana app funnel",
+    note: "from the app database (counts-only bridge)",
+    tiles: [
+      { lbl: "Account holders", get: m => num(m.users) },
+      { lbl: "Waitlist",        get: m => num(m.waitlist) },
+      { lbl: "Quiz leads",      get: m => num(m.quiz_leads) },
+      { lbl: "Founding members", get: m => num(m.founding_members) },
+    ] },
+];
+
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+};
+const fmt = n => n.toLocaleString("en-US");
+const day = iso => new Date(iso + "T00:00:00").toLocaleDateString([], { month: "short", day: "numeric" });
+
+// One series = [{date, value}] oldest-first, deduped last-wins per date.
+function series(rows, get) {
+  const byDate = {};
+  for (const r of rows) byDate[r.snapshot_date] = get(r.metrics || {});
+  return Object.keys(byDate).sort().map(d => ({ date: d, value: byDate[d] }));
+}
+
+// Delta vs the closest snapshot >= 6 days back (else the oldest we have).
+function delta(s) {
+  if (s.length < 2) return null;
+  const last = s[s.length - 1];
+  const target = new Date(new Date(last.date + "T00:00:00") - 6 * 864e5);
+  let base = s[0];
+  for (const p of s) if (new Date(p.date + "T00:00:00") <= target) base = p;
+  if (base.date === last.date) base = s[0];
+  return { diff: last.value - base.value, since: base.date };
+}
+
+// Single-series sparkline: 2px brand-emerald line + endpoint dot, per-point
+// <title> hover. One series per tile, so no legend and no categorical palette.
+function sparkline(s) {
+  const W = 190, H = 34, P = 4;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("class", "spark");
+  if (s.length < 2) return svg;
+  const vals = s.map(p => p.value);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const x = i => P + i * (W - 2 * P) / (s.length - 1);
+  const y = v => hi === lo ? H / 2 : H - P - (v - lo) * (H - 2 * P) / (hi - lo);
+  const pts = s.map((p, i) => `${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
+  const line = document.createElementNS(svg.namespaceURI, "polyline");
+  line.setAttribute("points", pts);
+  line.setAttribute("fill", "none");
+  line.setAttribute("stroke", "#1db584");
+  line.setAttribute("stroke-width", "2");
+  line.setAttribute("stroke-linejoin", "round");
+  svg.append(line);
+  s.forEach((p, i) => {
+    const c = document.createElementNS(svg.namespaceURI, "circle");
+    c.setAttribute("cx", x(i)); c.setAttribute("cy", y(p.value));
+    c.setAttribute("r", i === s.length - 1 ? 3 : 5);
+    c.setAttribute("fill", i === s.length - 1 ? "#1db584" : "transparent");
+    const t = document.createElementNS(svg.namespaceURI, "title");
+    t.textContent = `${day(p.date)}: ${fmt(p.value)}`;
+    c.append(t);
+    svg.append(c);
+  });
+  return svg;
+}
+
+function tile(def, rows) {
+  const s = series(rows, def.get);
+  const box = el("div", "tile");
+  box.append(el("div", "lbl", def.lbl));
+  if (!s.length) { box.append(el("div", "val", "—")); return box; }
+  box.append(el("div", "val", fmt(s[s.length - 1].value)));
+  const d = delta(s);
+  if (d) {
+    const cls = d.diff > 0 ? "up" : d.diff < 0 ? "down" : "flat";
+    const arrow = d.diff > 0 ? "▲ +" : d.diff < 0 ? "▼ " : "— ";
+    const chip = el("div", `delta ${cls}`, `${arrow}${fmt(Math.abs(d.diff)) === "0" ? "flat" : fmt(d.diff).replace("-", "")}`);
+    if (d.diff === 0) chip.textContent = "— flat";
+    chip.append(el("span", "vs", `  vs ${day(d.since)}`));
+    box.append(chip);
+  }
+  box.append(sparkline(s));
+  return box;
+}
+
+function dataTable(sec, rows) {
+  const det = el("details");
+  det.append(el("summary", "", "data table"));
+  const tbl = el("table");
+  const head = el("tr");
+  head.append(el("th", "", "day"));
+  for (const t of sec.tiles) head.append(el("th", "", t.lbl));
+  tbl.append(head);
+  const dates = [...new Set(rows.map(r => r.snapshot_date))].sort().reverse();
+  const byDate = {};
+  for (const r of rows) byDate[r.snapshot_date] = r.metrics || {};
+  for (const d of dates) {
+    const tr = el("tr");
+    tr.append(el("td", "", day(d)));
+    for (const t of sec.tiles) tr.append(el("td", "", fmt(t.get(byDate[d]))));
+    tbl.append(tr);
+  }
+  det.append(tbl);
+  return det;
+}
+
+// ── X fresh-impressions panel: impressions grouped by the day the post was
+// MADE (latest snapshot per post, last 14 days). The rolling-window tiles
+// above can cliff-drop when one old viral reply ages out of the 28 days;
+// this panel cannot lie that way, so read trends here first.
+function freshPanel(root, days) {
+  root.append(el("h2", "", "X — fresh impressions by post day"));
+  root.append(el("p", "note",
+    "what the posts MADE each day have earned so far (all-time per post, grouped by post day) — " +
+    "immune to the rolling-window cliff above; a slow day here is a real slow day"));
+  if (!days.length) {
+    root.append(el("div", "empty", "no per-post snapshots yet"));
+    return;
+  }
+  const last7 = days.slice(-7);
+  const grid = el("div", "tiles");
+  const t1 = el("div", "tile");
+  t1.append(el("div", "lbl", "Impressions, posts from last 7 days"));
+  t1.append(el("div", "val", fmt(last7.reduce((a, d) => a + d.impressions, 0))));
+  grid.append(t1);
+  const t2 = el("div", "tile");
+  t2.append(el("div", "lbl", "Posts + replies, last 7 days"));
+  t2.append(el("div", "val", fmt(last7.reduce((a, d) => a + d.posts, 0))));
+  grid.append(t2);
+  const t3 = el("div", "tile");
+  t3.append(el("div", "lbl", "Daily shape (14d)"));
+  t3.append(bars(days));
+  grid.append(t3);
+  root.append(grid);
+  const det = el("details");
+  det.append(el("summary", "", "data table"));
+  const tbl = el("table");
+  const head = el("tr");
+  for (const h of ["post day", "posts", "impressions"]) head.append(el("th", "", h));
+  tbl.append(head);
+  for (const d of [...days].reverse()) {
+    const tr = el("tr");
+    tr.append(el("td", "", day(d.day)), el("td", "", fmt(d.posts)),
+              el("td", "", fmt(d.impressions)));
+    tbl.append(tr);
+  }
+  det.append(tbl);
+  root.append(det);
+}
+
+// Tiny bar chart for the fresh panel (bars, not a line: days are discrete
+// and a missing day should read as a gap, not an interpolated slope).
+function bars(days) {
+  const W = 190, H = 44, P = 3;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("class", "spark");
+  svg.style.height = "44px";
+  const hi = Math.max(1, ...days.map(d => d.impressions));
+  const bw = (W - 2 * P) / days.length;
+  days.forEach((d, i) => {
+    const h = Math.max(1.5, d.impressions / hi * (H - 2 * P));
+    const r = document.createElementNS(svg.namespaceURI, "rect");
+    r.setAttribute("x", (P + i * bw + 1).toFixed(1));
+    r.setAttribute("y", (H - P - h).toFixed(1));
+    r.setAttribute("width", Math.max(1, bw - 2).toFixed(1));
+    r.setAttribute("height", h.toFixed(1));
+    r.setAttribute("fill", "#1db584");
+    r.setAttribute("rx", "1");
+    const t = document.createElementNS(svg.namespaceURI, "title");
+    t.textContent = `${day(d.day)}: ${fmt(d.impressions)} impressions from ${fmt(d.posts)} posts`;
+    r.append(t);
+    svg.append(r);
+  });
+  return svg;
+}
+
+fetch("/api/pulse").then(r => r.json()).then(data => {
+  const root = document.getElementById("root");
+  root.replaceChildren();
+  let newest = "";
+  for (const sec of SECTIONS) {
+    const rows = data[sec.kind] || [];
+    root.append(el("h2", "", sec.title));
+    root.append(el("p", "note", sec.note));
+    if (!rows.length) {
+      root.append(el("div", "empty", "no snapshots yet — the metrics agent writes these daily"));
+      continue;
+    }
+    newest = rows[rows.length - 1].snapshot_date > newest ? rows[rows.length - 1].snapshot_date : newest;
+    const grid = el("div", "tiles");
+    for (const t of sec.tiles) grid.append(tile(t, rows));
+    root.append(grid, dataTable(sec, rows));
+    if (sec.kind === "x_account") freshPanel(root, data.x_fresh || []);
+  }
+  document.getElementById("asof").textContent = newest ? `as of ${day(newest)}` : "no data yet";
+}).catch(e => {
+  document.getElementById("root").replaceChildren(el("div", "empty", `couldn't load — ${e.message}`));
+});
+</script>
+</body>
+</html>

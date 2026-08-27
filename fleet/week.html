@@ -1,0 +1,3564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Marketing OS — Mission Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Fiboprana Emerald-refresh palette (fiboprana-site verified) */
+  :root {
+    --bg: #0b0f14;
+    --card: #121822;
+    --card-edge: #1e2733;
+    --ink: #e6edf3;
+    --ink-dim: #a9b6c3;
+    --emerald: #1db584;
+    --amber: #e8a93b;
+    --red: #e05d5d;
+    --skip: #7d8894;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 450 15.5px/1.55 -apple-system, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    padding: 18px 20px 40px;
+  }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  header h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 22px; font-weight: 600; }
+  header h1 .s { color: var(--emerald); }
+  header .sub { color: var(--ink-dim); font-size: 14.5px; }
+  header a { color: var(--emerald); text-decoration: none; font-size: 14.5px; }
+  header a.review {
+    border: 1px solid var(--emerald); border-radius: 6px; padding: 3px 10px;
+    font-weight: 600;
+  }
+  header a.review:hover { background: var(--emerald); color: #0b0f14; }
+
+  /* ── the view switcher ── */
+  .tabs { display: inline-flex; border: 1px solid var(--card-edge); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+  .tabs a {
+    padding: 7px 16px; color: var(--ink-dim); text-decoration: none; font-size: 15px;
+    border-right: 1px solid var(--card-edge); background: var(--card);
+  }
+  .tabs a:last-child { border-right: none; }
+  .tabs a.active { color: var(--bg); background: var(--emerald); font-weight: 600; }
+  .tabs a:not(.active):hover { color: var(--ink); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .legend { display: flex; gap: 14px; margin: 8px 0 16px; font-size: 13.5px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 4px; margin-right: 5px; }
+
+  /* ── the daily-reply strip (the all-week habit, above the step sequence) ── */
+  .rstrip { background: var(--card); border: 1px solid var(--card-edge); border-radius: 10px; padding: 10px 14px; margin: 2px 0 12px; }
+  .rstrip .shead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .rstrip .stitle { font-weight: 600; }
+  .rstrip .squeue { color: var(--emerald); font-size: 14px; }
+  .rstrip .snote { color: var(--skip); font-size: 13.5px; margin-top: 6px; }
+  .rstrip a.sgo { color: var(--emerald); text-decoration: none; font-size: 14px; border: 1px solid var(--card-edge); border-radius: 6px; padding: 2px 10px; }
+  .rstrip a.sgo:hover { border-color: var(--emerald); }
+  .rstrip .sgrid { display: grid; grid-template-columns: max-content repeat(7, 26px); gap: 5px 6px; align-items: center; margin-top: 8px; }
+  .rstrip .sday { text-align: center; font-size: 12.5px; color: var(--ink-dim); }
+  .rstrip .sday.today { color: var(--amber); font-weight: 600; }
+  .rstrip .schan { font-size: 14px; color: var(--ink-dim); padding-right: 8px; }
+  .rstrip .schan.frozen { color: var(--skip); }
+  .rstrip .scell {
+    width: 26px; height: 24px; border-radius: 6px; padding: 0; cursor: pointer;
+    background: none; border: 1px solid var(--card-edge); color: var(--ink-dim);
+    font: inherit; font-size: 12.5px; line-height: 1;
+  }
+  .rstrip .scell:hover:not(:disabled):not(.on) { border-color: var(--emerald); color: var(--emerald); }
+  .rstrip .scell.on { background: var(--emerald); border-color: var(--emerald); color: #0b0f14; font-weight: 600; cursor: default; }
+  .rstrip .scell.skip { color: var(--skip); border-style: dashed; }
+  .rstrip .scell.today { box-shadow: 0 0 0 2px var(--amber); }
+  .rstrip .scell.frozen { cursor: default; opacity: .45; }
+
+  /* ── kanban boards (This Week) ── */
+  .board { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 12px; }
+  .col { min-width: 240px; max-width: 280px; flex: 1; }
+  .col > .stage {
+    font-size: 13.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-dim); padding: 6px 2px 2px;
+  }
+  .col > .stage .n { color: var(--emerald); font-family: "IBM Plex Serif", Georgia, serif; font-size: 16.5px; margin-right: 6px; }
+  .col > .why { font-size: 13.5px; color: var(--skip); padding: 0 2px 8px; min-height: 30px; }
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+  .kcard {
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 10px; padding: 10px 12px; display: block;
+    color: inherit; text-decoration: none; position: relative;
+  }
+  a.kcard:hover { border-color: var(--emerald); }
+  .kcard.done { border-left: 3px solid var(--emerald); }
+  .kcard.done .title, .kcard.done .body { color: var(--ink-dim); }
+  .kcard.next { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+  .kcard .top { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; flex-wrap: wrap; }
+  .badge {
+    font-size: 12.5px; letter-spacing: .05em; text-transform: uppercase;
+    border-radius: 4px; padding: 1px 6px; border: 1px solid var(--card-edge); color: var(--ink-dim);
+  }
+  .badge.agent { color: var(--emerald); border-color: var(--emerald); }
+  .badge.me    { color: var(--amber);   border-color: var(--amber);   }
+  .badge.todo  { color: var(--skip);    border-color: var(--skip);    }
+  .badge.here  { color: var(--bg); background: var(--amber); border-color: var(--amber); }
+  .kcard .title { font-weight: 600; margin-bottom: 3px; }
+  .kcard .body { color: var(--ink-dim); font-size: 14px; }
+  .kcard .stat { margin-top: 6px; font-size: 14px; color: var(--emerald); }
+  .kcard .stat.warn { color: var(--amber); }
+  .doneRow { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  button.mark {
+    background: none; border: 1px solid var(--card-edge); color: var(--ink);
+    border-radius: 6px; padding: 3px 10px; font: inherit; font-size: 14px; cursor: pointer;
+  }
+  button.mark:hover { border-color: var(--emerald); color: var(--emerald); }
+  .doneRow .stamp { color: var(--emerald); }
+  .dayRow { margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+  .dayRow .dayLbl { font-size: 13px; color: var(--ink-dim); margin-right: 3px; }
+  .dayRow .dot {
+    width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer;
+    background: none; border: 1px solid var(--card-edge); color: var(--ink-dim);
+    font: inherit; font-size: 12.5px; line-height: 1;
+  }
+  .dayRow .dot:hover { border-color: var(--emerald); color: var(--emerald); }
+  .dayRow .dot.on { background: var(--emerald); border-color: var(--emerald); color: #0b0f14; }
+  .dayRow .dot.today { box-shadow: 0 0 0 2px var(--amber); }
+  .doneRow .undo { background: none; border: none; color: var(--skip); font: inherit; font-size: 13.5px; cursor: pointer; padding: 0; text-decoration: underline; }
+  .doneRow .undo:hover { color: var(--amber); }
+  .doneRow input.pub {
+    flex: 1; min-width: 0; background: none; border: 1px solid var(--card-edge);
+    border-radius: 6px; padding: 3px 8px; font: inherit; font-size: 13.5px; color: var(--ink);
+  }
+  .doneRow input.pub:focus { outline: none; border-color: var(--emerald); }
+  .pubMsg { margin-top: 4px; font-size: 13.5px; color: var(--skip); }
+  .pubMsg.ok { color: var(--emerald); }
+  .progress { margin-top: 8px; }
+  .progress .bar { height: 5px; background: var(--card-edge); border-radius: 3px; overflow: hidden; }
+  .progress .fill { height: 100%; background: var(--emerald); }
+  .progress .label { font-size: 13.5px; color: var(--ink-dim); margin-top: 4px; }
+  .chip { font-size: 13px; color: var(--ink-dim); border: 1px solid var(--card-edge); border-radius: 4px; padding: 1px 6px; }
+  .chip.live { color: var(--emerald); border-color: var(--emerald); }
+  .arrow { align-self: center; color: var(--skip); font-size: 18px; padding: 0 2px; }
+  .crumb { margin: 6px 0 14px; font-size: 14.5px; }
+  .crumb a { color: var(--emerald); text-decoration: none; }
+  .crumb .sep { color: var(--skip); margin: 0 6px; }
+
+  /* ── flow graph ── */
+  .graph-wrap { overflow-x: auto; border: 1px solid var(--card-edge); border-radius: 10px; background: var(--card); }
+  svg#dag { display: block; min-width: 980px; width: 100%; height: auto; }
+  .gnode { cursor: pointer; }
+  .gnode rect { fill: var(--bg); stroke: var(--card-edge); stroke-width: 1.2; rx: 8; }
+  .gnode.kind-deployed rect { stroke: var(--emerald); }
+  .gnode.kind-agent rect { stroke: var(--emerald); stroke-opacity: .45; }
+  .gnode.kind-me rect { stroke: var(--amber); stroke-opacity: .8; }
+  .gnode.kind-todo rect { stroke: var(--skip); stroke-dasharray: 4 3; }
+  .gnode.selected rect { stroke-width: 2.5; stroke-opacity: 1; }
+  .gnode text { fill: var(--ink); font-size: 14px; font-weight: 600; }
+  .gnode text.sub { fill: var(--ink-dim); font-size: 12.5px; font-weight: 400; }
+  .gnode circle.hdot { stroke: none; }
+  .gedge { fill: none; stroke: var(--skip); stroke-width: 1.4; opacity: .75; }
+  .gedge.loop { stroke-dasharray: 5 4; }
+  .gedge.up { stroke: var(--amber); opacity: 1; stroke-width: 2; }
+  .gedge.down { stroke: var(--emerald); opacity: 1; stroke-width: 2; }
+  .gedge.dim { opacity: .18; }
+  #nodeDetail {
+    margin-top: 12px; background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 10px; padding: 12px 14px; display: none; max-width: 900px;
+  }
+  #nodeDetail.open { display: block; }
+  #nodeDetail h3 { font-size: 16.5px; margin-bottom: 4px; }
+  #nodeDetail .body { color: var(--ink-dim); font-size: 14.5px; margin: 4px 0 8px; }
+  #nodeDetail .io { display: flex; gap: 28px; flex-wrap: wrap; font-size: 14px; }
+  #nodeDetail .io .lbl { color: var(--skip); text-transform: uppercase; font-size: 12.5px; letter-spacing: .06em; }
+  #nodeDetail .io .up-list { color: var(--amber); }
+  #nodeDetail .io .down-list { color: var(--emerald); }
+  #nodeDetail .stat { margin-top: 8px; font-size: 14px; color: var(--emerald); }
+  #nodeDetail a { color: var(--emerald); }
+
+  /* ── fleet metrics ── */
+  .fleet-banner {
+    background: var(--card); border: 1px solid var(--card-edge); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 14px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  }
+  .fleet-banner .note { color: var(--ink-dim); font-size: 14px; max-width: 620px; }
+  .fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .acard {
+    background: var(--card); border: 1px solid var(--card-edge); border-radius: 10px; padding: 12px 14px;
+  }
+  .acard.paused { border-color: var(--red); }
+  .acard .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .acard .sdot { width: 9px; height: 9px; border-radius: 5px; flex: none; }
+  .acard .name { font-weight: 600; }
+  .acard .mode { margin-left: auto; }
+  .acard .stateline { font-size: 14px; color: var(--ink-dim); margin-bottom: 8px; }
+  .acard .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 13.5px; color: var(--ink-dim); }
+  .acard .metrics b { color: var(--ink); font-weight: 600; }
+  .acard .pauseRow { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-dim); }
+  .switch { position: relative; width: 34px; height: 18px; flex: none; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    position: absolute; inset: 0; background: var(--card-edge); border-radius: 10px; transition: background .15s;
+  }
+  .switch .track::after {
+    content: ""; position: absolute; width: 14px; height: 14px; border-radius: 7px;
+    background: var(--ink-dim); top: 2px; left: 2px; transition: all .15s;
+  }
+  .switch input:checked + .track { background: var(--red); }
+  .switch input:checked + .track::after { background: var(--ink); left: 18px; }
+
+  /* ── model scorecard (Fleet view) ── */
+  #modelScore h2 {
+    font-family: "IBM Plex Serif", Georgia, serif; font-size: 16px; font-weight: 600;
+    margin: 20px 0 4px; padding-top: 12px; border-top: 1px solid var(--card-edge);
+  }
+  #modelScore .sub { color: var(--ink-dim); font-size: 14px; margin-bottom: 10px; }
+  .mtable { border-collapse: collapse; font-size: 14px; margin-bottom: 16px; min-width: 560px; }
+  .mtable th {
+    text-align: left; color: var(--ink-dim); text-transform: uppercase; font-size: 12.5px;
+    letter-spacing: .06em; padding: 4px 14px 4px 0; border-bottom: 1px solid var(--card-edge);
+  }
+  .mtable td { padding: 5px 14px 5px 0; border-bottom: 1px solid var(--card-edge); }
+  .mtable td.num { font-variant-numeric: tabular-nums; }
+  .mtable .good { color: var(--emerald); }
+  .mtable .warn { color: var(--amber); }
+  .mtable-wrap { overflow-x: auto; }
+
+  /* ── org chart (Mermaid) ── */
+  .org-wrap { padding: 14px; }
+  #orgChart svg { display: block; margin: 0 auto; }
+  #orgChart .orgmsg { color: var(--ink-dim); font-size: 14.5px; padding: 20px; }
+  #orgChart .orgmsg.err { color: var(--red); }
+  #orgChart small { color: var(--ink-dim); font-size: 12.5px; font-weight: 400; }
+
+  footer { margin-top: 14px; color: var(--skip); font-size: 13.5px; max-width: 900px; }
+
+  /* ── overlays: research reader + post-research Q&A ── */
+  .overlay { position: fixed; inset: 0; background: rgba(4,7,10,.78); display: none; z-index: 40; padding: 4vh 12px; overflow-y: auto; }
+  .overlay.open { display: block; }
+  .overlay .panel { max-width: 740px; margin: 0 auto; background: var(--card); border: 1px solid var(--card-edge); border-radius: 12px; padding: 16px 18px 26px; }
+  .overlay .panel.wide { max-width: 980px; }
+  .overlay .deckframe { width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--card-edge); border-radius: 10px; background: #000; display: block; }
+  .overlay .decklink { display: inline-block; margin: 10px 0 14px; color: var(--emerald); font-size: 14.5px; text-decoration: none; }
+  .overlay .decklink:hover { text-decoration: underline; }
+  .overlay .rhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .overlay .rhead h2 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 18px; }
+  .overlay .rhead .meta { color: var(--ink-dim); font-size: 14px; }
+  .overlay .rhead .close { margin-left: auto; background: none; border: 1px solid var(--card-edge); color: var(--ink); border-radius: 6px; padding: 3px 12px; font: inherit; font-size: 14.5px; cursor: pointer; }
+  .overlay .rhead .close:hover { border-color: var(--amber); color: var(--amber); }
+  .overlay .pull { border: 1px solid var(--card-edge); border-radius: 10px; padding: 12px 14px 4px; margin-bottom: 16px; }
+  .overlay .pull .lbl { color: var(--emerald); text-transform: uppercase; font-size: 12.5px; letter-spacing: .06em; margin-bottom: 2px; }
+  .overlay .pull .lbl .hint { color: var(--skip); text-transform: none; letter-spacing: 0; font-size: 13px; margin-left: 8px; }
+  .overlay .pull .val { font-size: 15px; margin-bottom: 10px; }
+  /* Overlay text readability (founder-approved on the worked-example card
+     2026-08-05, promoted to every overlay): bigger body on taller lines, a hair
+     of letter-spacing so glyphs stop touching, bold capped at semibold + pure
+     white — 700-weight light-on-dark smears. Font swap still on the table. */
+  .overlay .md { font-size: 20.5px; line-height: 1.7; letter-spacing: 0.012em; overflow-wrap: break-word; }
+  .overlay .md strong, .overlay .md b { font-weight: 600; color: #fff; letter-spacing: 0.015em; }
+  .overlay .md h1, .overlay .md h2, .overlay .md h3, .overlay .md h4 { font-family: "IBM Plex Serif", Georgia, serif; margin: 20px 0 8px; }
+  .overlay .md h2, .overlay .md h3 { color: #fff; }
+  .overlay .md h1 { font-size: 25px; } .overlay .md h2 { font-size: 23px; }
+  .overlay .md h3 { font-size: 21px; } .overlay .md h4 { font-size: 20px; }
+  .overlay .md p { margin: 10px 0; }
+  .overlay .md ul, .overlay .md ol { margin: 8px 0 8px 22px; }
+  .overlay .md li { margin: 6px 0; }
+  .overlay .md a { color: var(--emerald); }
+  .overlay .md code { background: var(--bg); border: 1px solid var(--card-edge); border-radius: 4px; padding: 0 4px; font-size: 17px; }
+  .overlay .md hr { border: none; border-top: 1px solid var(--card-edge); margin: 14px 0; }
+  .overlay .md blockquote { border-left: 3px solid var(--card-edge); padding-left: 10px; color: var(--ink-dim); margin: 8px 0; }
+  .overlay .q { margin-bottom: 14px; }
+  .overlay .q .qt { font-weight: 600; margin-bottom: 2px; }
+  .overlay .q .qh { color: var(--ink-dim); font-size: 13.5px; margin-bottom: 6px; }
+  .overlay textarea { width: 100%; background: var(--bg); border: 1px solid var(--card-edge); border-radius: 8px; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 10px; min-height: 64px; resize: vertical; }
+  .overlay textarea:focus { outline: none; border-color: var(--emerald); }
+  .overlay .vrow { display: flex; gap: 8px; align-items: center; margin: 4px 0 16px; flex-wrap: wrap; }
+  .overlay .vrow .vlbl { color: var(--ink-dim); font-size: 14px; margin-right: 4px; }
+  .overlay .vrow .vbtn { background: none; border: 1px solid var(--card-edge); color: var(--ink); border-radius: 6px; padding: 4px 14px; font: inherit; font-size: 14.5px; cursor: pointer; }
+  .overlay .vrow .vbtn.sel { border-color: var(--emerald); color: var(--emerald); font-weight: 600; }
+  .overlay .themeChip {
+    background: none; border: 1px solid var(--emerald); color: var(--emerald);
+    border-radius: 14px; padding: 3px 12px; margin: 0 8px 8px 0; font: inherit;
+    font-size: 14px; cursor: pointer; text-align: left;
+  }
+  .overlay .themeChip:hover { background: var(--emerald); color: #0b0f14; }
+  .overlay .evRow { font-size: 14px; color: var(--ink-dim); margin: 4px 0 8px; }
+  .overlay .evRow a { color: var(--ink); text-decoration: none; }
+  .overlay .evRow a:hover { color: var(--emerald); }
+  .overlay .evRow .evWhy { color: var(--skip); font-size: 13.5px; }
+  .overlay .evMore { background: none; border: none; color: var(--emerald); font: inherit; font-size: 13.5px; cursor: pointer; padding: 0; text-decoration: underline; margin-bottom: 10px; }
+  .overlay input.painIn {
+    flex: 1; min-width: 0; background: none; border: 1px solid var(--card-edge);
+    border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 15px; color: var(--ink);
+  }
+  .overlay input.painIn:focus { outline: none; border-color: var(--emerald); }
+  .overlay .saveRow { display: flex; gap: 10px; align-items: center; }
+  .overlay .saveRow .msg { font-size: 14px; color: var(--ink-dim); }
+  .overlay .saveRow .msg.ok { color: var(--emerald); }
+  .overlay .saveRow .msg.err { color: var(--red); }
+  .overlay .idea { border: 1px solid var(--card-edge); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  /* Week chips: which week's feature is this? Current week = bright emerald. */
+  .wkchip { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 12.5px;
+            font-weight: 650; white-space: nowrap; vertical-align: middle; margin-right: 6px;
+            border: 1px solid var(--card-edge); color: var(--ink); background: rgba(255,255,255,.06); }
+  .wkchip.now { background: var(--emerald); border-color: var(--emerald); color: #06130e; }
+  .overlay .idea.starred { border-color: var(--amber); }
+  .overlay .idea.chosen { border-color: var(--emerald); box-shadow: 0 0 0 1px var(--emerald); }
+  .overlay .idea .ihead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .overlay .idea .ihead .ititle { font-weight: 600; font-size: 16px; }
+  .overlay .idea .sec { font-size: 14.5px; margin: 6px 0; }
+  .overlay .idea .sec .seclbl { color: var(--emerald); font-weight: 600; }
+  .overlay .idea .sr { font-size: 13.5px; color: var(--ink-dim); margin: 6px 0; }
+  .overlay .idea .why { font-size: 14px; color: var(--amber); margin: 6px 0; }
+  .overlay .idea .pickRow { margin-top: 8px; }
+  button.mark.read { color: var(--emerald); border-color: var(--emerald); }
+  button.mark.read:hover { color: var(--ink); background: var(--emerald); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="s">S</span>tackivate — Mission Control</h1>
+  <span class="sub" id="weekLabel"></span>
+  <a href="/review" class="review">💬 daily review</a>
+  <a href="/pulse">📈 pulse</a>
+  <a href="#" onclick="openLimits();return false">🛑 limits</a>
+  <a href="/flow">the loop →</a>
+  <a href="/kanban">reply pipeline →</a>
+  <a href="/map">fleet map →</a>
+  <a href="/fleet">tables →</a>
+</header>
+
+<div class="tabs" id="tabs">
+  <a href="#" data-tab="week">📋 This Week</a>
+  <a href="#graph" data-tab="graph">🕸 Flow Graph</a>
+  <a href="#org" data-tab="org">🏛 Org Chart</a>
+  <a href="#fleet" data-tab="fleet">⚙ Fleet</a>
+</div>
+
+<!-- ═══ VIEW 1: This Week (kanban) ═══ -->
+<div class="view" id="view-week">
+  <div class="rstrip" id="replyStrip"></div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--emerald)"></span>agent runs it (you kick it off in chat)</span>
+    <span><span class="dot" style="background:var(--amber)"></span>you — the moat or the face</span>
+    <span><span class="dot" style="background:var(--skip)"></span>not built yet</span>
+    <span><span class="dot" style="background:var(--amber); box-shadow: 0 0 0 2px rgba(232,169,59,.3)"></span>amber outline = you are here</span>
+  </div>
+  <div class="crumb" id="crumb"></div>
+  <div class="board" id="board"></div>
+  <footer>
+    Mark done stamps the time and advances the amber "you are here" pointer. The board keys
+    itself to the Monday of the current week, so it resets fresh every Monday — history stays
+    in <code>fleet/flow_state.json</code>. Click a video card to open that video's workflow.
+  </footer>
+</div>
+
+<!-- ═══ VIEW 2: Flow Graph ═══ -->
+<div class="view" id="view-graph">
+  <div class="legend">
+    <span><span class="dot" style="background:var(--emerald)"></span>deployed agent (solid) / in-session agent (faint)</span>
+    <span><span class="dot" style="background:var(--amber)"></span>you</span>
+    <span><span class="dot" style="background:var(--skip)"></span>dashed = not built</span>
+    <span>click a node → its inputs (amber) and outputs (emerald)</span>
+  </div>
+  <div class="graph-wrap"><svg id="dag" viewBox="0 0 1160 575" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div id="nodeDetail"></div>
+  <footer>
+    The real pipeline, not an aspiration: nodes are the agents/steps that exist today (dashed =
+    on the build queue), edges are how data actually flows — research fans out to the videos and
+    the X batch, the reply lane runs independent of it, and the outcome checker closes the loop
+    back into next week's research.
+  </footer>
+</div>
+
+<!-- ═══ VIEW 3: Fleet ═══ -->
+<div class="view" id="view-fleet">
+  <div class="fleet-banner">
+    <label class="switch"><input type="checkbox" id="fleetPause"><span class="track"></span></label>
+    <b>Pause entire fleet</b>
+    <span class="note">Switches write <code>fleet/fleet_controls.json</code>. The Railway dispatcher
+    runs the fleet daily but doesn't read these switches yet, so a pause here is a standing
+    instruction, not a live brake. Roster comes from <code>fleet/roster.json</code> — edit that
+    file when the fleet changes, then <code>python -m fleet.roster</code> to check it.</span>
+  </div>
+  <div class="fleet-grid" id="fleetGrid"></div>
+  <div id="modelScore"></div>
+  <footer>
+    Telematics come straight from <code>marketing.agent_execution_logs</code> + the
+    <code>agent_heartbeat</code> view (7-day window). Token / cost columns exist in the log
+    schema — agents that don't fill them yet show "not logged," and start reporting the moment
+    their store calls pass tokens + cost.
+  </footer>
+</div>
+
+<!-- ═══ VIEW 4: Org Chart (Mermaid) ═══ -->
+<div class="view" id="view-org">
+  <div class="legend">
+    <span><span class="dot" style="background:var(--emerald)"></span>ran on schedule</span>
+    <span><span class="dot" style="background:var(--amber)"></span>getting stale</span>
+    <span><span class="dot" style="background:var(--red)"></span>overdue — check it</span>
+    <span><span class="dot" style="background:var(--skip)"></span>no heartbeat yet</span>
+    <span>faint outline = in-session / manual (runs when you run it)</span>
+  </div>
+  <div class="graph-wrap org-wrap"><div id="orgChart"><div class="orgmsg">loading chart…</div></div></div>
+  <footer>
+    The fleet as an org chart: you at the top (every gate is yours), the four lanes as teams,
+    the dispatcher off to the side — an alarm clock, not a manager (no-orchestrator is a locked
+    decision). Node borders are live: colored from <code>agent_heartbeat</code> against each
+    job's own cadence, so a glance shows who has already run this cycle. Lanes and seats come
+    from <code>fleet/roster.json</code> — the same file the Fleet cards render — so one edit
+    there updates both views (<code>python -m fleet.roster</code> checks it against the cron).
+  </footer>
+</div>
+
+<!-- ═══ Research reader — the digest + content pull, readable in place ═══ -->
+<div id="reader" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>This week's research</h2>
+      <span class="meta" id="readerMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="readerBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Video idea picker — the week's drafted options, pick in place ═══ -->
+<div id="gateview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Feature gate — the evidence</h2>
+      <span class="meta" id="gateMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="gateBody"></div>
+  </div>
+</div>
+
+<div id="ideas" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Story ideas</h2>
+      <span class="meta" id="ideasMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="ideasBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Fact verification report — read before scripting ═══ -->
+<div id="facts" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Fact verification</h2>
+      <span class="meta" id="factsMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="factsBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Upload package — title, description, tags, community post ═══ -->
+<div id="pkgview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Upload package</h2>
+      <span class="meta" id="pkgMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="pkgBody"></div>
+  </div>
+</div>
+
+<!-- ═══ X batch — the week's short posts, read + react in place ═══ -->
+<div id="xbatchview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>X weekly batch</h2>
+      <span class="meta" id="xbatchMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="xbatchBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Email broadcast — the week's "Notice" issue, read + react in place ═══ -->
+<div id="emailview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Email broadcast — "Notice"</h2>
+      <span class="meta" id="emailMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="emailBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Hard limits — every cap the fleet runs under, three trust tiers ═══ -->
+<div id="limitsview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Hard limits</h2>
+      <span class="meta" id="limitsMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="limitsBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Thumbnail prompts — copy, generate, bring back to chat ═══ -->
+<div id="thumbs" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Thumbnail prompts</h2>
+      <span class="meta" id="thumbsMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="thumbsBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Deck viewer + feedback — the visual aid deck, embedded ═══ -->
+<div id="deckview" class="overlay">
+  <div class="panel wide">
+    <div class="rhead">
+      <h2>Visual aid deck</h2>
+      <span class="meta" id="deckMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="deckBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Worked example — the recommended demo run, read before recording ═══ -->
+<div id="example" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Worked example — the demo run</h2>
+      <span class="meta" id="exampleMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="exampleBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Script reader + feedback — read the draft, react in place ═══ -->
+<div id="script" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Script draft</h2>
+      <span class="meta" id="scriptMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="scriptBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Post-research Q&A — the react step, answered in place ═══ -->
+<div id="qa" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Post-research Q&amp;A</h2>
+      <span class="meta" id="qaMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="qaBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Pain report — the machine's hypothesis vs what you heard, your call ═══ -->
+<div id="painview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>The week's pain</h2>
+      <span class="meta" id="painMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="painBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Close the week — founder verdicts on the pick + the videos ═══ -->
+<div id="closeview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Close the week</h2>
+      <span class="meta" id="closeMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="closeBody"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// Boards + graph + roster ARE the data below. Edit freely; render code follows.
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── VIEW 1 data: the weekly kanban ──────────────────────────────────────────
+const OVERVIEW = [
+  {
+    n: "1", title: "Research", why: "The heartbeat — one run feeds the whole week.",
+    cards: [
+      { info: true, tag: "agent", title: "Run the research",
+        body: "Sunday cron on Railway: HN + RSS + Exa scan → digest → content pull, all one run. This card just confirms it happened.", stat: "lastRun" },
+      { key: "research/run", tag: "me", title: "Read the research + content pull",
+        body: "The full digest plus the 5-item hand-off (headline · video angle · competitor note · Reddit themes · feature seed). Read it, then mark done.",
+        read: "read the research" },
+      { key: "research/qa", tag: "me", title: "Post-research Q&A (the react step)",
+        body: "5 questions + your verdict, saved onto the run. Next Sunday's agent reads your answers before it picks. Marking this done also wakes the X-batch agent (lane 2).",
+        qa: true },
+    ],
+  },
+  {
+    n: "2", title: "Distribute", why: "Digest-only quick wins — nothing here waits on a video pick. Approve the batch and the email early, then they ship themselves. Reddit is never a repurpose target.",
+    cards: [
+      { key: "dist/xbatch", tag: "agent", title: "X weekly batch",
+        body: "Drafts itself the moment you mark the post-research Q&A done — your done-click is the agent's go signal; no asking in session. (This is the pattern every artifact agent will follow.) 14 short posts from the digest + pillars, two a day. Click into any post to edit it directly (edits train the drafter); the feedback box is for batch-level notes. MARK DONE = SHIP: the scheduler agent queues the batch into Typefully (2/day Tue→Mon, CTA links as self-replies, each draft verified by reading the queue back). Un-marking done never unschedules — pull posts back in Typefully itself.",
+        doneLabel: "✓ mark done = approve & schedule",
+        xbatch: true },
+      { info: true, tag: "agent", title: "Daily posts ship themselves",
+        body: "Nothing to do here — this is a reminder, not a step. Once you approve the batch, Typefully auto-posts two a day at the scheduled times (links ride as a self-reply). Only step in if the day's news makes a queued post wrong: edit or delete it in Typefully before it goes out." },
+      { key: "dist/email", tag: "me", title: "Email broadcast — \"Notice\"",
+        body: "The weekly pattern note to the owned list (Loop 3). Drafts itself the moment you mark the post-research Q&A done — same go-signal as the X batch, since both need only the digest. Read it here, leave feedback, mark done. The done-click IS the approval — the send schedules itself for Thursday 9am MT (wire 6). If the week's build ships before Thursday, swap the CTA before it goes out.",
+        doneLabel: "✓ mark done = approve (sends Thu 9am MT)",
+        email: true },
+      { key: "dist/shorts", tag: "me", title: "Shorts → YouTube + TikTok + IG",
+        body: "Plan: one short a day per platform. The overlay shows coverage — YouTube read LIVE from the API, TikTok + IG from the batch log (Publer's free plan has no API, so scheduling writes the counts). Mark done when the week ahead is covered; when an agent takes over scheduling, it will tick this itself.",
+        shorts: true },
+    ],
+  },
+  {
+    n: "3", title: "News video", why: "Perishable — it ships first of the videos. Click the card to open its workflow.",
+    cards: [
+      { video: "news",    title: "News video",     body: "“This week in fintech, translated for beginners.” Digest headline = the opener." },
+    ],
+  },
+  {
+    n: "4", title: "Decide", why: "The build decision — gate on the research pick, the open candidates, and the pain named at the end of LAST week (this week's pain call ripens later, down in Measure).",
+    cards: [
+      { key: "decide/gate", tag: "me", title: "Feature gate — record the call",
+        body: "Your weekly build-or-content decision, one feature. Open the gate, read the evidence (the research agent's pick, the Reddit pain, the open candidates), then one click records the call and marks this done. Claude fills the gate paperwork after — content-instead is a valid outcome.",
+        gate: true },
+      // Build ownership (founder call 2026-08-19): Claude builds the tool
+      // in-session until an autonomous agent takes the step over. No time
+      // estimate on cards — runtime/cost lives on the agent screens.
+      { key: "decide/build", tag: "agent", title: "Build the tool",
+        body: "Only if the gate passed — Claude builds it in-session, you review: real component + on-brand FAQs + quiz/Pro hook + sitemap entry + its proxy.ts allowlist line (the page 307s without it)." },
+    ],
+  },
+  {
+    n: "5", title: "Feature + Own-Practice videos", why: "After the gate — the feature is the answer in product form. The own-practice video is optional; a skipped week never parks the pointer here.",
+    cards: [
+      { video: "feature", title: "Feature video",  body: "The feature is the answer in product form. OK if it lags a week." },
+      { video: "ascent",  title: "Own Practice",   body: "The practice-and-signals question lived by its own founder — what was noticed, never a verdict." },
+    ],
+  },
+  {
+    n: "6", title: "Measure", why: "What worked feeds next week's research — the flywheel's return edge. The pain call lives here now (founder move 2026-08-24): it's a listening deliverable, and listening takes the week.",
+    cards: [
+      { key: "decide/pain", tag: "me", title: "Name the week's pain",
+        body: "The weekly deliverable of the daily reply reps (the strip at the top of the board) — answer once the week's replies have piled up, not on Monday. Open the report: the machine's proposed pain from Sunday's research, checked against what you actually heard replying this week. Agree in one click, or override it in your own words — recording the call marks this done. Next Sunday's research agent reads your call, and it's evidence at next week's feature gate.",
+        pain: true, stat: "weekPain" },
+      { info: true, tag: "agent", title: "Outcome checks close themselves",
+        body: "Nothing to do here — video windows close daily with real YouTube numbers (dispatch checks job), X replies close Saturdays via Typefully. All the numbers live on pulse; this card only speaks up when a check is stuck past its closer's own cycle — that's the one case that needs a hand.",
+        stat: "checksHealth", go: "/pulse", goLabel: "📈 open pulse — the numbers page" },
+      { key: "measure/close", tag: "me", title: "Close the week — your verdicts",
+        body: "The one judgment step no agent takes over: strong / ok / off on each of the week's videos, one sentence each, recorded right on the card (~5 min). Basic sentences are fine — you're training taste, not writing reviews. The research pick keeps its one grade from Monday's Q&A. Next Sunday's research run reads all of it before it picks. Mark done once you've said what you want to say.",
+        close: true },
+    ],
+  },
+];
+
+// Per-video workflows. Shared production order (news template; reordered by
+// founder 2026-07-27): prep → script → deck → RECORD → package (thumbnail +
+// description + community post) → ship.
+const VIDEOS = {
+  news: {
+    title: "News video", sub: "perishable — ships first · 10–15 min",
+    stages: [
+      { n: "a", title: "Prep", why: "Never script off the digest blurb alone.",
+        cards: [
+          { key: "news/topic", tag: "me", title: "Pick the story",
+            body: "Three options draft themselves the moment the post-research Q&A is marked done (wire 10) — the agent reads the digest AND your Q&A answers, so your standout pick steers the ★ recommendation. Pick one, then mark done — that click fires the facts agent.",
+            ideas: "news" },
+          { key: "news/facts", tag: "agent", title: "Verify the facts",
+            body: "Confirm against real sources before scripting — public, regulatory-adjacent content. The report lands here when the check is done.",
+            facts: "news" },
+        ] },
+      { n: "b", title: "Script", why: "Hook verbatim; beats 2+ stay outline-to-ad-lib.",
+        cards: [
+          { key: "news/script", tag: "me", title: "Script: rundown + outline",
+            body: "Agent drafts the full-story rundown + 7 beats (brand-thread close before the CTA). Read it, leave feedback until it sounds like you, then mark done — that click IS the approval: deck, thumbnails, package and the long-form X post generate themselves from it. The script stays right here for recording.",
+            script: "news" },
+        ] },
+      { n: "c", title: "Deck", why: "OBS background; the deck carries the data so the outline stays lean.",
+        cards: [
+          { key: "news/deck", tag: "agent", title: "Visual aid deck",
+            body: "Self-contained branded HTML (videos/aids/), keyboard-nav, OBS background. View it here, leave feedback, mark done when it's right.",
+            deck: "news" },
+        ] },
+      { n: "d", title: "Record", why: "You're the face.",
+        cards: [
+          { key: "news/record", tag: "me", title: "Record with the deck",
+            body: "OBS + the aid deck as background. Hook word-for-word, then ad-lib the beats." },
+        ] },
+      { n: "e", title: "Package", why: "Everything the upload needs: thumbnail + locked description format; no em dashes anywhere.",
+        cards: [
+          { key: "news/thumb", tag: "me", title: "Thumbnail",
+            body: "6 prompts (2 proven styles + 1 experiment; each with/without face space). You generate, bring results to chat, we pick + iterate there.",
+            thumbs: "news" },
+          { key: "news/desc", tag: "agent", title: "Description + tags + community post",
+            body: "youtube_description.md format — carries the video, bridges to Fiboprana. View the whole upload package here, leave feedback, mark done.",
+            pkg: "news" },
+        ] },
+      { n: "f", title: "Ship", why: "Edit is mechanical-only — no retake surgery.",
+        cards: [
+          { key: "news/edit", tag: "agent", title: "Silence-cut + transcribe",
+            body: "One hand-off: recording in → cut video (silence_cut.py, mechanical only) + corpus transcript (transcribe.py → content/videos/ — feeds repurposing + the voice record)." },
+          { key: "news/publish", tag: "me", title: "Publish + log it",
+            body: "Schedule on YouTube — this card notices the upload by itself (it checks the channel when you open this page) and logs everything: marketing.videos, outcome checks, this + thumbnail + description done. The paste box is the fallback if the auto-notice can't find a clear match.",
+            pub: true },
+          { key: "news/community", tag: "me", title: "Community post scheduled",
+            body: "Schedule it in Studio for the video's go-live day. The API can't see community posts, so this click IS the record.",
+            cp: "news" },
+          { key: "news/xpost", tag: "agent", title: "Long-form X post",
+            body: "One long-form post tied to the video. Review it here, leave feedback or mark it ready — once the video is on YouTube it schedules itself for go-live day (link rides as a self-reply) and this card marks itself done.",
+            xp: "news" },
+        ] },
+    ],
+  },
+  feature: {
+    title: "Feature video", sub: "tool must be LIVE first · ~8–12 min",
+    stages: [
+      { n: "a", title: "Prep", why: "The screens have to exist to film them.",
+        cards: [
+          { key: "feature/live", tag: "me", title: "Tool is live",
+            body: "Blocks everything below. Auto-checks the ideas registry: once the idea's Build gate says live, this flips done by itself.",
+            livecheck: true },
+          { key: "feature/example", tag: "me", title: "Pick the worked example",
+            body: "One run of the tool that best shows the payoff — narration matches the screen. Proposes itself the moment the build is marked done (wire 12), built from the tool's own source so the on-screen copy is exact. View it here, leave feedback if you want a different run, then mark done — that click fires the script agent.",
+            example: "feature" },
+        ] },
+      { n: "b", title: "Script", why: "Written against the real, built tool — never the build brief.",
+        cards: [
+          { key: "feature/script", tag: "agent", title: "Rundown + outline",
+            body: "Agent scripts from the shipped page's real copy, read straight from the product repo. Brand-thread close. Read it, leave feedback until it sounds like you — and glance at the demo beat against the live tool once (the worked-example run makes you do this anyway) — then mark done. Your done here IS the founder pass: deck, thumbnails, package and the long-form X post generate themselves from it, and the script stays right here for recording.",
+            script: "feature" },
+        ] },
+      { n: "c", title: "Deck", why: "Same kit as the news video.",
+        cards: [
+          { key: "feature/deck", tag: "agent", title: "Visual aid deck",
+            body: "Branded HTML deck for the non-demo beats (the demo IS the screen). View it here, flip through with arrow keys, leave feedback, mark done when it's right.",
+            deck: "feature" },
+        ] },
+      { n: "d", title: "Record", why: "Demo the real tool on screen.",
+        cards: [
+          { key: "feature/record", tag: "me", title: "Record the video",
+            body: "Screen-capture the worked example run for the demo beat; the deck carries the rest. Mark done when it's recorded — that moves the flow to Package." },
+        ] },
+      { n: "e", title: "Package", why: "",
+        cards: [
+          { key: "feature/thumb", tag: "me", title: "Thumbnail",
+            body: "Prompts (2 proven styles + 1 experiment; with/without face space); you generate, bring results to chat, we pick + iterate there.",
+            thumbs: "feature" },
+          { key: "feature/desc", tag: "agent", title: "Description + tags + community post",
+            body: "Description links the live tool — that's the SEO landing. View the whole upload package here, leave feedback, mark done.",
+            pkg: "feature" },
+        ] },
+      { n: "f", title: "Ship", why: "",
+        cards: [
+          { key: "feature/edit", tag: "agent", title: "Silence-cut + transcribe",
+            body: "One hand-off: cut video + corpus transcript (content/videos/)." },
+          { key: "feature/publish", tag: "me", title: "Publish + log it",
+            body: "Schedule on YouTube — the card notices the upload by itself and logs everything (marketing.videos, outcome checks, this + thumbnail + description). Paste the URL only if the auto-notice can't find a clear match.",
+            pub: true },
+          { key: "feature/community", tag: "me", title: "Community post scheduled",
+            body: "Schedule it in Studio for the video's go-live day. The API can't see community posts, so this click IS the record.",
+            cp: "feature" },
+          { key: "feature/xpost", tag: "agent", title: "Long-form X post", body: "Review, leave feedback, or mark ready — once the video is on YouTube it schedules itself for go-live day (link as self-reply) and marks itself done.", xp: "feature" },
+        ] },
+    ],
+  },
+  ascent: {
+    title: "Own Practice", sub: "OPTIONAL each week · the week's practice notes ARE the episode skeleton",
+    stages: [
+      { n: "a", title: "Prep", why: "What was practiced + what the signals did + what was noticed — never a verdict, never an outcome claim.",
+        cards: [
+          { key: "ascent/session", tag: "me", title: "A real week of practice",
+            body: "The founder's own practice next to his own signals — the honest is-it-working question, lived." },
+          { key: "ascent/journal", tag: "me", title: "Jot the week's notes",
+            body: "The reflection beats: what was practiced · what the body's signals did · what was noticed · what stays uncertain." },
+        ] },
+      { n: "b", title: "Script", why: "The notes outline the episode; recap last week's arc.",
+        cards: [
+          { key: "ascent/script", tag: "agent", title: "Outline from the notes",
+            body: "Recap → this week's practice → what the signals showed → what it does and doesn't mean. Honest-about-uncertainty close." },
+          { key: "ascent/script_ok", tag: "me", title: "Your pass on the script",
+            body: "It's your story — make sure it reads that way. Marking done IS the approval: stills, thumbnails, package and the long-form X post generate themselves from it." },
+        ] },
+      { n: "c", title: "Visuals", why: "",
+        cards: [
+          { key: "ascent/deck", tag: "agent", title: "Beat visuals (Quiet Earth)",
+            body: "Stills prompts in the style kit; any product/data screens stay gentle — trends, never scores." },
+        ] },
+      { n: "d", title: "Produce", why: "",
+        cards: [
+          { key: "ascent/record", tag: "me", title: "Run the faceless chain",
+            body: "Narrate (voice clone) → stills → animate → timeline → render, in the sibling repo. No camera, no editor." },
+        ] },
+      { n: "e", title: "Package", why: "",
+        cards: [
+          { key: "ascent/thumb", tag: "me", title: "Thumbnail",
+            body: "Prompts (2 proven + 1 experiment; Quiet Earth, no faces needed); episodic look so the series reads as a series." },
+          { key: "ascent/desc", tag: "agent", title: "Description + tags + community post",
+            body: "Series framing + soft waitlist / lead-magnet CTA + disclosure + disclaimer." },
+        ] },
+      { n: "f", title: "Ship", why: "",
+        cards: [
+          { key: "ascent/edit", tag: "agent", title: "Transcript to corpus",
+            body: "One hand-off: rendered master + corpus transcript (content/videos/)." },
+          { key: "ascent/publish", tag: "me", title: "Publish + log it",
+            body: "Schedule on YouTube — the card notices the upload by itself and logs everything (marketing.videos, outcome checks, this + thumbnail + description). Paste the URL only if the auto-notice can't find a clear match.",
+            pub: true },
+          { key: "ascent/community", tag: "me", title: "Community post scheduled",
+            body: "Schedule it in Studio for the video's go-live day. The API can't see community posts, so this click IS the record.",
+            cp: "ascent" },
+          { key: "ascent/xpost", tag: "agent", title: "Long-form X post", body: "Review, leave feedback, or mark ready — once the video is on YouTube it schedules itself for go-live day (link as self-reply) and marks itself done.", xp: "ascent" },
+        ] },
+    ],
+  },
+};
+
+// True weekly running order → the "you are here" pointer. The digest-only
+// distribution steps (X batch, email, shorts) come right after research —
+// founder call 2026-08-10: none of them waits on a video pick, so they're the
+// Monday quick wins. The own-practice video is OPTIONAL (founder call 2026-07-30):
+// its cards stay on the board and check off normally, but they're out of this
+// list so a skipped week never parks the amber pointer on them. The daily
+// reply habit is out too (founder call 2026-08-14): it's an all-week lane,
+// not a step, so it lives in the top-of-board strip — only its weekly
+// deliverable ("decide/pain") is sequenced — in Measure, since the founder
+// moved it there 2026-08-24: the call ripens only after a week of replies,
+// so it feeds NEXT week's gate and Sunday's research, not this week's.
+const ORDER = [
+  "research/run", "research/qa",
+  "dist/xbatch", "dist/email", "dist/shorts",
+  ...VIDEOS.news.stages.flatMap(s => s.cards.map(c => c.key)),
+  "decide/gate", "decide/build",
+  ...VIDEOS.feature.stages.flatMap(s => s.cards.map(c => c.key)),
+  "decide/pain", "measure/close",
+];
+
+// ── VIEW 2 data: the pipeline DAG (col/row grid → px in render) ─────────────
+// kind: deployed | agent (in-session) | me | todo
+const NODES = [
+  { id: "research",  col: 0, row: 1,   kind: "deployed", label: "Research (radar)", sub: "Railway · weekly cron",
+    body: "HN + RSS + Exa scan → brand-voiced trend digest, deduped vs last week. The only agent running unattended today.",
+    statKey: "lastRun" },
+  { id: "pull",      col: 1, row: 0.5, kind: "agent", label: "Content pull", sub: "in-session",
+    body: "Reads the digest, hands back 5 items: headline · video angle · competitor note · Reddit themes · feature seed." },
+  { id: "qa",        col: 2, row: 0.5, kind: "me", label: "Founder Q&A", sub: "the react step",
+    body: "5 structured questions; your verdict is logged via log_outcome — the learning signal the next run reads." },
+  { id: "newsvid",   col: 3, row: 0,   kind: "me", label: "News video", sub: "script → record → ship",
+    body: "Perishable reach play; ships first. Digest headline is the opener.", statKey: "vidNews", href: "#news" },
+  { id: "gatebuild", col: 3, row: 1.2, kind: "me", label: "Feature gate + build", sub: "build-or-content call",
+    body: "Inputs: research feature seed + the week's Reddit pain. Registry → demand → differentiation → quality bar; then Claude builds it in-session if it passes." },
+  { id: "featvid",   col: 4, row: 1.2, kind: "me", label: "Feature video", sub: "tool live first",
+    body: "The tool demoed as the answer in product form.", statKey: "vidFeature", href: "#feature" },
+  { id: "journal",   col: 1, row: 2.4, kind: "me", label: "Practice notes", sub: "the week's jottings",
+    body: "What was practiced · what the signals did · what was noticed · what stays uncertain. The notes ARE the episode outline." },
+  { id: "ascentvid", col: 3, row: 2.4, kind: "me", label: "Own-practice video", sub: "the differentiator, faceless",
+    body: "The is-it-working question lived by its own founder — what was noticed, never a verdict.", statKey: "vidAscent", href: "#ascent" },
+  { id: "xposts",    col: 5, row: 0.6, kind: "me", label: "Per-video X posts", sub: "long-form",
+    body: "One long-form post per video, tied to it, scheduled with the batch." },
+  { id: "xbatch",    col: 2, row: 3.1, kind: "agent", label: "X batch gen", sub: "content/x_run.py",
+    body: "2/day short-form (14/week) from digest + pillars. You approve voice before anything schedules." },
+  { id: "typefully", col: 5, row: 2.6, kind: "agent", label: "Typefully", sub: "scheduler",
+    body: "Queued posts ship themselves; links ride as a self-reply." },
+  { id: "rfinder",   col: 0, row: 4.2, kind: "agent", label: "Reply finder", sub: "reddit RSS + X via Grok",
+    body: "Scans + ranks flip-shaped beginner questions into the queue. X channel activates with XAI_API_KEY + REPLY_CHANNELS=reddit,x.", statKey: "redditQueue", href: "/kanban" },
+  { id: "judge",     col: 1, row: 4.2, kind: "agent", label: "Reply judge", sub: "thin gate",
+    body: "Scores candidates: worth a reply or skip.", href: "/kanban" },
+  { id: "drafter",   col: 2, row: 4.2, kind: "agent", label: "Reply drafter", sub: "2–3 gated variants",
+    body: "Drafts variants in brand voice; your edits are its training set.", href: "/kanban" },
+  { id: "yousend",   col: 3, row: 4.2, kind: "me", label: "You send replies", sub: "the moat",
+    body: "Hand-rewritten from the drafts; final + edit diff logged to the ledger.", statKey: "sent" },
+  { id: "checker",   col: 4.4, row: 3.6, kind: "agent", label: "Outcome checker", sub: "Saturdays · dispatch",
+    body: "Weekly: Reddit outcomes via permalink JSON (free), X via Typefully analytics (free — impressions, profile clicks, live URLs). Closes the loop into next week's research.", statKey: "awaiting" },
+];
+
+const EDGES = [
+  ["research", "pull"], ["pull", "qa"],
+  ["qa", "newsvid"], ["qa", "gatebuild"], ["gatebuild", "featvid"],
+  ["journal", "ascentvid"],
+  ["newsvid", "xposts"], ["featvid", "xposts"], ["ascentvid", "xposts"],
+  ["pull", "xbatch"], ["xbatch", "typefully"], ["xposts", "typefully"],
+  ["rfinder", "judge"], ["judge", "drafter"], ["drafter", "yousend"],
+  ["yousend", "checker"], ["typefully", "checker"],
+  ["checker", "research", "loop"],
+];
+
+// ── VIEW 3 + VIEW 4 data: the fleet roster ──────────────────────────────────
+// One source of truth, fetched from /api/roster (fleet/roster.json): the Fleet
+// cards render its `agents`, the Org Chart its `lanes`. Edit the JSON when the
+// fleet changes; `python -m fleet.roster` checks it against the dispatcher
+// schedule so this page can't silently disagree with the cron.
+
+// ════════════════════════════════════════════════════════════════════════════
+// Data layer — fetch once into DB, views render from cache (tab switches are
+// instant; a 60s interval + tab-refocus refreshes everything in place).
+// ════════════════════════════════════════════════════════════════════════════
+const DB = { flow: {}, controls: { paused: {} }, runs: [], cands: [], ledger: [],
+             vids: [], heartbeat: [], logs: [],
+             checksHealth: { open: null, video_stuck: 0, reply_stuck: 0, reddit_frozen: 0 },
+             drafts: [], evals: [], synth: [], roster: { agents: [], lanes: [] },
+             replyDays: { channels: [], sent: {} } };
+
+const WEEK = (() => {
+  const d = new Date();
+  const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7));  // back to Monday
+  const p = x => String(x).padStart(2, "0");
+  return `${m.getFullYear()}-${p(m.getMonth() + 1)}-${p(m.getDate())}`;
+})();
+
+const weekState = () => DB.flow[WEEK] || {};
+const isDone = key => !!weekState()[key];
+const nextKey = () => ORDER.find(k => !isDone(k)) || null;
+
+async function api(table, params) {
+  const r = await fetch(`/api/${table}?${new URLSearchParams(params)}`);
+  if (!r.ok) throw new Error(`${table}: HTTP ${r.status}`);
+  return r.json();
+}
+
+async function refreshData() {
+  const grab = async (fn, fallback) => { try { return await fn(); } catch (e) { return fallback; } };
+  [DB.flow, DB.controls, DB.runs, DB.cands, DB.ledger, DB.vids, DB.heartbeat, DB.logs, DB.checksHealth,
+   DB.drafts, DB.evals, DB.synth, DB.roster, DB.replyDays] =
+    await Promise.all([
+      grab(() => fetch("/api/flow_state").then(r => r.json()), DB.flow),
+      grab(() => fetch("/api/fleet_controls").then(r => r.json()), DB.controls),
+      grab(() => api("research_runs", { select: "created_at,model,status,outcome_verdict,outcome_note",
+        order: "created_at.desc", limit: 30 }), DB.runs),
+      grab(() => api("reply_candidates", { select: "platform,status", limit: 500 }), DB.cands),
+      grab(() => api("reply_ledger", { select: "platform,outcome_checked_at", limit: 500 }), DB.ledger),
+      grab(() => api("videos", { select: "pillar,status,created_at", order: "created_at.desc", limit: 20 }), DB.vids),
+      grab(() => api("agent_heartbeat", {}), DB.heartbeat),
+      grab(() => api("agent_execution_logs",
+        { select: "agent_name,event,status,tokens_input,tokens_output,cost_usd,duration_ms,message,created_at",
+          order: "created_at.desc", limit: 400 }), DB.logs),
+      grab(() => fetch("/api/checks_health").then(r => r.json()), DB.checksHealth),
+      grab(() => api("reply_drafts", { select: "model,chosen,gate_status", limit: 500 }), DB.drafts),
+      grab(() => fetch("/api/eval_results").then(r => r.json()), DB.evals),
+      grab(() => fetch("/api/synth_eval_results").then(r => r.json()), DB.synth),
+      grab(() => fetch("/api/roster").then(r => r.json()), DB.roster),
+      grab(() => fetch("/api/reply_days").then(r => r.json()), DB.replyDays),
+    ]);
+  DB.controls.paused ||= {};
+  DB.roster.agents ||= []; DB.roster.lanes ||= [];
+}
+
+async function markStep(key, done) {
+  const r = await fetch("/api/flow_state", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ week: WEEK, key, done }),
+  });
+  if (r.ok) { DB.flow[WEEK] = await r.json(); renderActive(); }
+}
+
+// The publish card's one click: logs the video in marketing.videos (creating
+// this week's row if the by-hand logging hasn't happened), opens the outcome
+// checks, and stamps the step done — all server-side in /api/week_publish.
+async function logPublish(key, fields, btn, msg) {
+  if (!fields.youtube.trim()) { msg.className = "pubMsg"; msg.textContent = "paste the YouTube URL first"; return; }
+  btn.disabled = true; msg.className = "pubMsg"; msg.textContent = "logging…";
+  try {
+    const r = await fetch("/api/week_publish", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week: WEEK, video: key.split("/")[0], youtube: fields.youtube.trim(),
+                             live: fields.live || "", title: (fields.title || "").trim() }),
+    });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+    msg.className = "pubMsg ok";
+    const when = b.live ? new Date(b.live).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "unknown";
+    msg.textContent = `logged ✓ "${b.title || b.slug}" · live ${when} · ${b.checks_opened} outcome checks opened`;
+    DB.flow[WEEK] = b.steps;
+    await refreshData();   // the "logged: published" chip goes live
+    renderActive();
+  } catch (e) {
+    btn.disabled = false;
+    msg.className = "pubMsg"; msg.textContent = e.message;
+  }
+}
+
+async function setPause(agent, paused) {
+  const r = await fetch("/api/fleet_controls", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ agent, paused }),
+  });
+  if (r.ok) { DB.controls = await r.json(); DB.controls.paused ||= {}; renderActive(); }
+}
+
+// ── feature-gate overlay ────────────────────────────────────────────────────
+// The evidence for the weekly build-or-content call, read-only: the research
+// run's feature seed (the agent's pick), the Reddit pain themes, and the open
+// candidates in the ideas registry (/api/gate_candidates). Wire 7 (founder
+// call 2026-08-19): the call is recorded HERE in one click (/api/gate_record
+// sets build_stage + stamps decide/gate); Claude fills the gate paperwork
+// after. The idea's page is for browsing/amending, not a required step.
+async function openGate() {
+  const overlay = document.getElementById("gateview");
+  const body = document.getElementById("gateBody");
+  const meta = document.getElementById("gateMeta");
+  overlay.classList.add("open");
+  meta.textContent = "";
+  body.textContent = "loading…";
+  let run = {};
+  try { run = await loadRun(); } catch (e) { /* seed section says so below */ }
+  let reg = { candidates: [], in_build: [] };
+  try { reg = await fetch("/api/gate_candidates").then(r => r.json()); }
+  catch (e) { /* registry section says so below */ }
+  if (run.created_at) meta.textContent = `research run ${daysAgo(run.created_at)}`;
+  body.replaceChildren();
+
+  const label = (text, hint) => {
+    const l = el("div", "lbl", text);
+    if (hint) l.append(el("span", "hint", hint));
+    return l;
+  };
+
+  // One-click gate call (wire 7): build / content-instead buttons for an idea
+  // already in the registry. Recording marks decide/gate done and re-renders.
+  const gateRow = (ideaId) => {
+    const row = el("div", "pickRow");
+    const msg = el("span", "msg", "");
+    const send = async (btn, stage) => {
+      btn.disabled = true;
+      msg.textContent = "recording…";
+      try {
+        const r = await fetch("/api/gate_record", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idea_id: ideaId, week: WEEK, stage }),
+        });
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+        DB.flow[WEEK] = b.steps;
+        await refreshData();
+        openGate();   // re-render: the call now leads the overlay
+      } catch (e) {
+        btn.disabled = false;
+        msg.textContent = `couldn't record — ${e.message}`;
+      }
+    };
+    const build = el("button", "mark", "✓ gate it — this week's build");
+    build.onclick = () => send(build, "gated");
+    const content = el("button", "mark read", "content instead");
+    content.onclick = () => send(content, "content-instead");
+    row.append(build, content, msg);
+    return row;
+  };
+
+  // THIS WEEK'S CALL leads — once a gate decision exists it is unmissable,
+  // whatever stage the pick has moved to (founder confusion 2026-08-11: the
+  // live pick had vanished from mid-build and the overlay looked undecided).
+  const called = (reg.this_week || []).length > 0;
+  if (called) {
+    body.append(label("This week's call — recorded",
+      "the gate decision is in the ideas registry; next Sunday's research dedups against it"));
+    for (const c of reg.this_week) {
+      const card = el("div", "idea");
+      const rejected = c.status === "rejected";
+      if (!rejected) card.classList.add("chosen");
+      const title = el("div", "title");
+      title.append(el("span", `wkchip${rejected ? "" : " now"}`,
+        rejected ? "REJECTED AT THE GATE" : "THIS WEEK'S FEATURE"));
+      title.append(`#${c.id} — ${c.title}`);
+      card.append(title);
+      const bits = [rejected ? "did not pass (see the why on its page)" : `stage: ${c.build_stage || "approved, build pending"}`];
+      card.append(el("div", "sr", bits.join(" · ")));
+      const a = el("a", null, "open its page ↗");
+      a.href = `/ideas/${c.id}`; a.target = "_blank"; a.style.color = "var(--emerald)";
+      card.append(a);
+      if (c.build_stage === "live" && c.app_url) {
+        const live = el("a", null, " · view the live tool ↗");
+        live.href = c.app_url; live.target = "_blank"; live.style.color = "var(--emerald)";
+        card.append(live);
+      }
+      body.append(card);
+    }
+  }
+
+  const pull = (run.content_pull && typeof run.content_pull === "object") ? run.content_pull : {};
+  const box = el("div", "pull");
+  box.append(label("The research agent's pick", "its suggestion from Sunday's run — the call stays yours"));
+  const seed = pull.feature_seed;
+  if (seed) {
+    const v = typeof seed === "object"
+      ? [seed.tool, seed.description, seed.search_phrase && `(search: "${seed.search_phrase}")`]
+          .filter(Boolean).join("  ·  ")
+      : String(seed);
+    box.append(el("div", "val", v));
+    // The seed lives only inside the run until it's captured as a registry
+    // idea — this button creates that row (idempotent) and opens its gate.
+    // If a registry row already carries this title, the pick already happened:
+    // show its status instead of re-offering the button.
+    const title = typeof seed === "object" ? (seed.tool || "") : String(seed);
+    const desc = typeof seed === "object"
+      ? [seed.description, seed.search_phrase && `Search phrase: "${seed.search_phrase}"`]
+          .filter(Boolean).join(" ")
+      : "";
+    const known = [...(reg.decided || []), ...(reg.in_build || []), ...(reg.candidates || [])]
+      .find(r => r.title === title);
+    if (known) {
+      const st = el("div", "val");
+      // The week binding is the label that answers "is this the current
+      // feature?" — stamped on the row when its gate was recorded.
+      if (known.gate_week === WEEK) st.append(el("span", "wkchip now", "THIS WEEK'S FEATURE"));
+      else if (known.gate_week) st.append(el("span", "wkchip", `wk of ${known.gate_week}`));
+      const a = el("a", null,
+        `✓ picked — idea #${known.id}${known.build_stage ? ` · stage: ${known.build_stage}` : " · awaiting gate"} · open its page ↗`);
+      a.href = `/ideas/${known.id}`;
+      a.target = "_blank";
+      a.style.color = "var(--emerald)";
+      st.append(a);
+      if (known.build_stage === "live" && known.app_url) {
+        const live = el("a", null, "view the live tool ↗");
+        live.href = known.app_url;
+        live.target = "_blank";
+        live.style.color = "var(--emerald)";
+        live.style.marginLeft = "10px";
+        st.append(live);
+      }
+      box.append(st);
+      // Captured but no gate call yet — offer the one-click call right here.
+      if (!known.build_stage && !called) box.append(gateRow(known.id));
+    } else if (called) {
+      box.append(el("div", "sr",
+        "not picked — this week's call is recorded above; capture this seed only if you mean to gate a second idea this week"));
+    } else {
+      // One click does the whole call: capture the seed into the registry,
+      // then record the gate (wire 7). No detour through the idea's page.
+      const cap = el("button", "mark", "✓ pick + gate this — records the call, marks the card done");
+      cap.onclick = async () => {
+        cap.disabled = true;
+        cap.textContent = "recording…";
+        try {
+          let r = await fetch("/api/gate_capture", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, description: desc,
+                                   source: `research feature seed · week of ${WEEK}` }),
+          });
+          let b = await r.json();
+          if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+          r = await fetch("/api/gate_record", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idea_id: b.id, week: WEEK, stage: "gated" }),
+          });
+          b = await r.json();
+          if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+          DB.flow[WEEK] = b.steps;
+          await refreshData();
+          openGate();
+        } catch (e) {
+          cap.disabled = false;
+          cap.textContent = `couldn't record — ${e.message} (retry)`;
+        }
+      };
+      const pickRow = el("div", "pickRow");
+      pickRow.append(cap);
+      box.append(pickRow);
+    }
+  } else {
+    box.append(el("div", "val", "no feature seed in the latest run"));
+  }
+  const themes = pull.reddit_themes;
+  box.append(label("The pain evidence", "Reddit themes from the run — weigh them against what you heard replying this week"));
+  box.append(el("div", "val",
+    themes == null ? "none recorded"
+      : Array.isArray(themes) ? themes.join("  ·  ") : String(themes)));
+  // The pain card lives in Measure (founder move 2026-08-24), so at gate time
+  // this week's call is usually not recorded yet — that's normal, not a gap.
+  // Show last week's recorded call as the standing evidence instead.
+  const painCall = weekPainOf(run.outcome_note);
+  const priorPain = (DB.runs || []).filter(r => r.created_at < run.created_at)
+    .map(r => weekPainOf(r.outcome_note)).find(Boolean);
+  box.append(el("div", "val", painCall
+    ? `your call: "${painCall}"`
+    : priorPain
+      ? `last week's call: "${priorPain}" (this week's ripens at the Name-the-week's-pain card, down in Measure)`
+      : "no pain call recorded yet — normal at gate time; the Name-the-week's-pain card (in Measure) is where you make it after a week of replies"));
+  body.append(box);
+
+  body.append(label("Open candidates in the ideas registry",
+    called ? "the backlog for FUTURE weeks — this week's call is already recorded above"
+           : "no build call recorded yet · newest first · dated so you can see what's stacking up · click through to record yours"));
+  if (!reg.candidates.length) {
+    body.append(el("div", "val",
+      "no open candidates — if this week's pain deserves a tool, capture it at /ideas first, then gate it."));
+  }
+  // "captured 2026-05-26 (10 weeks old)" — so stale backlog is visible at a glance.
+  function ideaAge(created) {
+    if (!created) return null;
+    const d = new Date(String(created).replace(" ", "T") + "Z");
+    if (isNaN(d)) return `captured ${String(created).slice(0, 10)}`;
+    const w = Math.floor((Date.now() - d.getTime()) / 6048e5);
+    const age = w < 1 ? "this week" : w === 1 ? "1 week old" : `${w} weeks old`;
+    return `captured ${String(created).slice(0, 10)} (${age})`;
+  }
+  for (const c of reg.candidates) {
+    const card = el("div", "idea");
+    card.append(el("div", "title", `#${c.id} — ${c.title}`));
+    if (c.description) card.append(el("div", "sr", c.description));
+    card.append(el("div", "sr",
+      [ideaAge(c.created_at), c.proposed_by && `proposed by ${c.proposed_by}`, c.source, c.tags]
+        .filter(Boolean).join(" · ")));
+    if (!called) card.append(gateRow(c.id));
+    const go = el("a", null, "open its page ↗");
+    go.href = `/ideas/${c.id}`;
+    go.target = "_blank";
+    go.style.color = "var(--emerald)";
+    card.append(go);
+    body.append(card);
+  }
+
+  if (reg.in_build.length) {
+    body.append(label("Mid-build", "this week's pick is badged; anything unbadged from earlier weeks — finish or demote before opening a new front"));
+    for (const c of reg.in_build) {
+      const card = el("div", "idea");
+      if (c.gate_week === WEEK) card.classList.add("chosen");
+      const title = el("div", "title");
+      if (c.gate_week === WEEK) title.append(el("span", "wkchip now", "THIS WEEK'S FEATURE"));
+      else if (c.gate_week) title.append(el("span", "wkchip", `wk of ${c.gate_week}`));
+      title.append(`#${c.id} — ${c.title}`);
+      card.append(title);
+      card.append(el("div", "sr",
+        [`stage: ${c.build_stage}`,
+         c.gate_week ? `gated wk of ${c.gate_week}` : (c.updated_at && `gated ${c.updated_at.slice(0, 10)}`),
+         ideaAge(c.created_at),
+         c.target_query && `query: ${c.target_query}`, c.app_url]
+          .filter(Boolean).join(" · ")));
+      body.append(card);
+    }
+  }
+
+  body.append(el("div", "body",
+    "The gate, in order: (1) registry — does the app already have this tool? then content instead. "
+    + "(2) demand — one distinct search query it can own. (3) differentiation — prefer the "
+    + "know-yourself angle over a generic calculator. (4) quality bar — only build if it can be a real "
+    + "interactive component with on-brand FAQs and the quiz/Pro hook. Your click above records the "
+    + "call and marks this card done — Claude fills the gate paperwork (registry match, query, "
+    + "angle, quality bar) on the idea's page after."));
+}
+
+// ── research reader + Q&A ───────────────────────────────────────────────────
+// Fetched on first open, cached for the page's life (the digest is big; no need
+// to re-pull it on the 60s refresh cycle — reload the page for a fresh run).
+let READER_RUN = null;
+
+async function loadRun() {
+  if (!READER_RUN) {
+    const rows = await api("research_runs", {
+      select: "id,created_at,model,digest_md,content_pull,reasoning,outcome_verdict,outcome_note",
+      order: "created_at.desc", limit: 1,
+    });
+    READER_RUN = rows[0] || {};
+  }
+  return READER_RUN;
+}
+
+async function openReader() {
+  const overlay = document.getElementById("reader");
+  const body = document.getElementById("readerBody");
+  const meta = document.getElementById("readerMeta");
+  overlay.classList.add("open");
+  body.textContent = "loading…";
+  let run;
+  try { run = await loadRun(); }
+  catch (e) { body.textContent = `couldn't load the run — ${e.message}`; return; }
+  if (!run.id) { body.textContent = "no research runs on record yet."; return; }
+  meta.textContent = `run ${daysAgo(run.created_at)}${run.model ? ` · ${run.model}` : ""}`;
+  body.replaceChildren();
+  const pull = run.content_pull;
+  if (pull && typeof pull === "object") {
+    const box = el("div", "pull");
+    const FIELDS = [
+      ["headline", "Headline", "the week's single most important development · becomes the news-video topic"],
+      ["video_angle", "Video angle", "the news video's beginner translation — just that one video"],
+      ["competitor_note", "Competitor note", "a rival or industry move worth watching"],
+      ["reddit_themes", "Reddit themes", "beginner pains to listen for on Reddit this week"],
+      ["feature_seed", "Feature seed", "candidate tool for the weekly feature gate (build-or-content call)"],
+    ];
+    for (const [k, label, hint] of FIELDS) {
+      let v = pull[k];
+      if (v == null || (Array.isArray(v) && !v.length)) continue;
+      if (Array.isArray(v)) v = v.join("  ·  ");
+      else if (k === "feature_seed" && typeof v === "object") {
+        v = [v.tool, v.description, v.search_phrase && `(search: "${v.search_phrase}")`]
+          .filter(Boolean).join("  ·  ");
+      } else if (typeof v === "object") v = JSON.stringify(v);
+      const lbl = el("div", "lbl", label);
+      lbl.append(el("span", "hint", hint));
+      box.append(lbl, el("div", "val", String(v)));
+    }
+    if (run.reasoning) {
+      const lbl = el("div", "lbl", "Why these picks");
+      lbl.append(el("span", "hint", "the agent's own reasoning, logged with the run"));
+      box.append(lbl, el("div", "val", run.reasoning));
+    }
+    body.append(box);
+  }
+  const md = el("div", "md");
+  md.innerHTML = mdToHtml(run.digest_md || "(no digest stored on this run)");
+  body.append(md);
+  document.querySelector("#reader .panel").scrollIntoView({ block: "start" });
+}
+
+function closeOverlays() {
+  // Blur first: a focused post editor saves on blur, so no close path
+  // (Escape, ✕, click outside) can drop an in-progress edit.
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  for (const o of document.querySelectorAll(".overlay")) o.classList.remove("open");
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeOverlays(); });
+document.addEventListener("click", e => {
+  if (e.target.classList && e.target.classList.contains("overlay")) closeOverlays();
+});
+
+// ── the video idea picker ───────────────────────────────────────────────────
+// Ideas are drafted in session (from the full digest) into fleet/video_ideas.json;
+// this overlay shows the week's options and records the founder's pick.
+async function openIdeas(video) {
+  const overlay = document.getElementById("ideas");
+  const body = document.getElementById("ideasBody");
+  const meta = document.getElementById("ideasMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load ideas — ${e.message}`; return; }
+  const slot = (all[WEEK] || {})[video];
+  if (!slot || !(slot.ideas || []).length) {
+    body.textContent = (slot || {}).ideas_generating_since
+      ? "the ideas agent is drafting the three story options right now — reopen this card in a minute or two."
+      : video === "news"
+        ? "no options yet — they draft themselves the moment the post-research Q&A is marked done (give it a minute or two after that click, then reopen). If the Q&A has been done a while and this stays empty, check fleet/logs/news_ideas_auto.log or ask in session."
+        : "no ideas drafted for this week yet — ask for them in session and they'll show up here.";
+    return;
+  }
+  renderIdeas(body, video, slot);
+}
+
+function renderIdeas(body, video, slot) {
+  body.replaceChildren();
+  for (const idea of slot.ideas) {
+    const card = el("div", "idea");
+    if (idea.id === slot.starred) card.classList.add("starred");
+    if (idea.id === slot.picked) card.classList.add("chosen");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", idea.title));
+    if (idea.id === slot.starred) head.append(el("span", "badge me", "★ recommended"));
+    if (idea.id === slot.picked) head.append(el("span", "badge agent", "✓ your pick"));
+    card.append(head, el("div", "sec", idea.story));
+    const angle = el("div", "sec");
+    angle.append(el("span", "seclbl", "Route to the flip: "), document.createTextNode(idea.angle));
+    card.append(angle);
+    card.append(el("div", "sr", `Strength: ${idea.strength}  ·  Risk: ${idea.risk}`));
+    if (idea.id === slot.starred && slot.why_star)
+      card.append(el("div", "why", `★ why: ${slot.why_star}`));
+    if (idea.id !== slot.picked) {
+      const row = el("div", "pickRow");
+      const b = el("button", "mark", slot.picked ? "switch to this one" : "✓ pick this one");
+      b.onclick = async () => {
+        b.textContent = "saving…";
+        try {
+          const r = await fetch("/api/video_ideas", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ week: WEEK, video, picked: idea.id }),
+          });
+          const s = await r.json();
+          if (!r.ok) throw new Error(s.error || `HTTP ${r.status}`);
+          renderIdeas(body, video, s);
+        } catch (e) { b.textContent = `failed: ${e.message}`; }
+      };
+      row.append(b);
+      card.append(row);
+    }
+    body.append(card);
+  }
+}
+
+// ── the fact-verification report ────────────────────────────────────────────
+// Written into video_ideas.json under <video>.facts by the verifying agent
+// (in-session today; a dispatched fleet agent once the drain job exists).
+async function openFacts(video) {
+  const overlay = document.getElementById("facts");
+  const body = document.getElementById("factsBody");
+  const meta = document.getElementById("factsMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const facts = ((all[WEEK] || {})[video] || {}).facts;
+  if (!facts || !facts.report_md) {
+    body.textContent = "not verified yet — the check runs after you pick the story; ask in session if it hasn't landed.";
+    return;
+  }
+  meta.textContent += ` · ${facts.status} · checked ${daysAgo(facts.checked_at)}`
+    + (facts.checked_by ? ` by ${facts.checked_by}` : "");
+  body.replaceChildren();
+  const md = el("div", "md");
+  md.innerHTML = mdToHtml(facts.report_md);
+  body.append(md);
+}
+
+// ── the worked example — the agent's recommended demo run ───────────────────
+// Written into video_ideas.json under <video>.example by the scripting agent
+// (wire 12: content/example_run.py, spawned by the build done-click).
+// Read-only walkthrough + feedback.
+async function openExample(video) {
+  const overlay = document.getElementById("example");
+  const body = document.getElementById("exampleBody");
+  const meta = document.getElementById("exampleMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const ex = ((all[WEEK] || {})[video] || {}).example;
+  if (!ex || !ex.example_md) {
+    body.textContent = ((all[WEEK] || {})[video] || {}).example_generating_since
+      ? "the worked-example agent is proposing the demo run right now — reopen this card in a minute or two."
+      : "no run proposed yet — it drafts itself the moment the build is marked done (wire 12; give it a minute or two after that click). If the build's been done a while and this stays empty, check fleet/logs/example_run_auto.log or ask in session.";
+    return;
+  }
+  meta.textContent += ex.written_at ? ` · proposed ${daysAgo(ex.written_at)}` : "";
+  body.replaceChildren();
+  const md = el("div", "md");
+  md.innerHTML = mdToHtml(ex.example_md);
+  body.append(md);
+  body.append(feedbackBox(ex.feedback || [],
+    "Want a different run? Say what the demo should show instead…",
+    videoFeedback(video, "example")));
+}
+
+// ── the script reader + feedback box ────────────────────────────────────────
+// Script drafts live in video_ideas.json under <video>.script (also written to
+// videos/scripts/ as the production file). Feedback saved here is read in
+// session; the agent revises and the draft updates in place.
+async function openScript(video) {
+  const overlay = document.getElementById("script");
+  const body = document.getElementById("scriptBody");
+  const meta = document.getElementById("scriptMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const vslot = (all[WEEK] || {})[video] || {};
+  const script = vslot.script;
+  if (!script || !script.script_md) {
+    // Per-lane empty states (founder confusion 2026-08-24: the old shared
+    // message said "after the facts check", but only the NEWS lane has a
+    // facts agent — the feature lane's verified artifact is the tool itself).
+    body.textContent = vslot.script_generating_since
+      ? "the script agent is drafting right now — reopen this card in a minute or two."
+      : video === "news"
+        ? "no script drafted yet — it drafts itself the moment the verified facts report is approved (the Verify-the-facts card). Give it a minute or two after that click."
+        : video === "feature"
+          ? "no script drafted yet — it drafts itself the moment the worked example is marked done. (No separate fact check in this lane: the example is built from the tool's own source code, so the live tool IS the verified artifact.) Give it a minute or two after that click."
+          : "no script drafted yet — ask for it in session.";
+    return;
+  }
+  meta.textContent += ` · ${script.status} · written ${daysAgo(script.written_at)}`
+    + (script.written_by ? ` by ${script.written_by}` : "");
+  body.replaceChildren();
+  const md = el("div", "md");
+  md.innerHTML = mdToHtml(script.script_md);
+  body.append(md);
+
+  body.append(feedbackBox(script.feedback || [],
+    "What should change so it sounds like you? Anything goes: cut a beat, reword the hook, wrong emphasis…",
+    videoFeedback(video, "script")));
+}
+
+// Shared feedback box for the drafted artifacts (script, deck, pkg, X batch).
+// `send(text)` posts the note to the right endpoint and throws on failure; the
+// saved notes reach the agent in session.
+function feedbackBox(fb, placeholder, send) {
+  const box = el("div", "pull");
+  const lbl = el("div", "lbl", "Your feedback");
+  lbl.append(el("span", "hint",
+    "saved onto the draft; the agent revises from these notes. Best notes name: " +
+    "WHERE (which part) + WHAT's wrong + WHY it matters. What-instead is optional — proposing the fix is the agent's job"));
+  box.append(lbl);
+  for (const f of fb) box.append(el("div", "val", `• ${f.text} (${daysAgo(f.at)})`));
+  const ta = document.createElement("textarea");
+  ta.placeholder = placeholder;
+  box.append(ta);
+  const saveRow = el("div", "saveRow");
+  const save = el("button", "mark", "💾 save feedback");
+  const msg = el("span", "msg", "");
+  save.onclick = async () => {
+    const text = ta.value.trim();
+    if (!text) { msg.className = "msg err"; msg.textContent = "write something first"; return; }
+    msg.className = "msg"; msg.textContent = "saving…";
+    try {
+      await send(text);
+      box.insertBefore(el("div", "val", `• ${text} (today)`), ta);
+      ta.value = "";
+      msg.className = "msg ok"; msg.textContent = "saved ✓ — I'll revise from this in session";
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+  };
+  saveRow.append(save, msg);
+  box.append(saveRow);
+  return box;
+}
+
+// send() for the video artifacts: appends to <video>.<target>.feedback.
+function videoFeedback(video, target) {
+  return async (text) => {
+    const r = await fetch("/api/video_ideas", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week: WEEK, video, feedback: text, target }),
+    });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+  };
+}
+
+// ── the upload package (title / description / tags / community post) ────────
+// Everything the YouTube upload needs in one overlay, each section with a copy
+// button for pasting into Studio. Feedback appends to <video>.pkg.feedback.
+function copyBtn(text) {
+  // text: a string, or a function returning one (live sources like an editor).
+  const b = el("button", "mark", "⧉ copy");
+  b.onclick = async () => {
+    const v = typeof text === "function" ? text() : text;
+    try { await navigator.clipboard.writeText(v); b.textContent = "copied ✓"; }
+    catch (e) { b.textContent = "copy failed"; }
+    setTimeout(() => { b.textContent = "⧉ copy"; }, 1500);
+  };
+  return b;
+}
+
+async function openPkg(video) {
+  const overlay = document.getElementById("pkgview");
+  const body = document.getElementById("pkgBody");
+  const meta = document.getElementById("pkgMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const pkg = ((all[WEEK] || {})[video] || {}).pkg;
+  if (!pkg || !pkg.description) {
+    body.textContent = ((all[WEEK] || {})[video] || {}).artifacts_generating_since
+      ? "the artifact agents are drafting the package right now — reopen in a couple of minutes."
+      : "no package yet — it generates (with the deck + thumbnails) the moment the script is marked done. If the script's already approved and this stays empty, check fleet/logs/video_artifacts_auto.log or ask in session.";
+    return;
+  }
+  meta.textContent += ` · ${pkg.status} · written ${daysAgo(pkg.written_at)}`
+    + (pkg.written_by ? ` by ${pkg.written_by}` : "");
+  body.replaceChildren();
+
+  const section = (label, hint, text, pre) => {
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", label), copyBtn(text));
+    card.append(head);
+    if (hint) card.append(el("div", "sr", hint));
+    const t = el("div", "sec", text);
+    if (pre) t.style.whiteSpace = "pre-wrap";
+    card.append(t);
+    return card;
+  };
+
+  if ((pkg.title_options || []).length) {
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", "Title options"));
+    card.append(head);
+    for (const t of pkg.title_options) {
+      const row = el("div", "sec");
+      row.style.display = "flex"; row.style.gap = "8px"; row.style.alignItems = "center";
+      const btn = copyBtn(t);
+      row.append(btn, document.createTextNode(t));
+      card.append(row);
+    }
+    body.append(card);
+  }
+  body.append(section("Description", "paste into the YouTube description field", pkg.description, true));
+  if (pkg.tags) body.append(section("Tags", "paste into Studio's tags field (comma separated)", pkg.tags, false));
+  if (pkg.community_post) body.append(section("Community post", "post on the channel community tab when the video goes live", pkg.community_post, true));
+  if (pkg.community_image_prompt) body.append(section("Community post image prompt",
+    "1:1 square (community posts crop 16:9 thumbnails) — same visual family as the thumbnail, different composition; generate like the thumbnail prompts", pkg.community_image_prompt, true));
+  if (pkg.thumb_note) body.append(el("div", "sr", pkg.thumb_note));
+  body.append(feedbackBox(pkg.feedback || [],
+    "Anything to change in the title, description, tags, or community post?",
+    videoFeedback(video, "pkg")));
+}
+
+// ── shorts coverage (YouTube live via API; TikTok/IG from the batch log) ────
+async function openShorts() {
+  const overlay = document.getElementById("pkgview");
+  const body = document.getElementById("pkgBody");
+  const meta = document.getElementById("pkgMeta");
+  overlay.classList.add("open");
+  meta.textContent = "shorts coverage · YouTube live from the API · TikTok/IG from the batch log";
+  body.textContent = "loading… (asking YouTube)";
+  let cov;
+  try { cov = await fetch("/api/shorts_coverage").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  body.replaceChildren();
+
+  const yt = el("div", "idea");
+  const yhead = el("div", "ihead");
+  yhead.append(el("span", "ititle", "YouTube (live)"));
+  const today = new Date().toISOString().slice(0, 10);
+  const ahead = (cov.youtube || []).filter(s => s.date >= today);
+  yhead.append(el("span", "sr", cov.youtube_error
+    ? "API error" : `${ahead.length} scheduled ahead · ${(cov.youtube || []).length} recent total`));
+  yt.append(yhead);
+  if (cov.youtube_error) {
+    yt.append(el("div", "sec", `couldn't read the channel: ${cov.youtube_error}`));
+  } else {
+    for (const s of cov.youtube || []) {
+      const line = el("div", "sec",
+        `${s.date} ${s.time} MT · ${s.privacy === "public" ? "live" : "scheduled"} · ${s.title}`);
+      if (s.date < today) line.style.opacity = 0.55;
+      yt.append(line);
+    }
+  }
+  body.append(yt);
+
+  const p = cov.publer || {};
+  // Pending drafts are WORK WAITING, not a footnote (founder missed the dim
+  // version 2026-08-10): when any exist, lead with a loud amber banner.
+  const pending = ["tiktok", "instagram"].reduce((n, k) => n + ((p[k] || {}).drafts_pending || 0), 0);
+  if (pending) {
+    const warn = el("div", "idea");
+    warn.style.borderColor = "var(--amber)";
+    const wh = el("div", "ihead");
+    wh.append(el("span", "ititle", `⚠ ${pending} draft${pending > 1 ? "s" : ""} NOT scheduled yet`));
+    warn.append(wh);
+    warn.append(el("div", "sec",
+      "Publer's free plan caps 10 scheduled posts per account, so batches longer than that "
+      + "leave the tail as dated drafts inside Publer. They do NOT post on their own. "
+      + (p.drafts_note ? p.drafts_note + " " : "")
+      + "Ask in session to promote them (no API on the free plan, so it's a browser job)."));
+    body.append(warn);
+  }
+  for (const plat of ["tiktok", "instagram"]) {
+    if (!p[plat]) continue;
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", plat === "tiktok" ? "TikTok (Publer)" : "Instagram (Publer)"));
+    const n = p[plat].drafts_pending || 0;
+    const stat = el("span", "sr", `${p[plat].scheduled} scheduled · ${n} drafts pending`);
+    if (n) stat.style.color = "var(--amber)";
+    head.append(stat);
+    card.append(head);
+    if (p.batch) card.append(el("div", "sec", `batch: ${p.batch}`));
+    card.append(el("div", "sr", p.note || ""));
+    body.append(card);
+  }
+  if (p.updated_at) body.append(el("div", "sr", `batch log last updated ${p.updated_at}`));
+}
+
+// ── the community post, on its own card (text lives in the pkg) ─────────────
+// Focused view of just the community post + its image prompt, so scheduling it
+// in Studio doesn't mean digging through the whole upload package. Feedback
+// lands on pkg.feedback like the rest of the package.
+async function openCommunity(video) {
+  const overlay = document.getElementById("pkgview");
+  const body = document.getElementById("pkgBody");
+  const meta = document.getElementById("pkgMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · community post · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const pkg = ((all[WEEK] || {})[video] || {}).pkg;
+  if (!pkg || !pkg.community_post) {
+    body.textContent = "no community post drafted yet — it lands with the upload package.";
+    return;
+  }
+  body.replaceChildren();
+
+  const card = el("div", "idea");
+  const head = el("div", "ihead");
+  head.append(el("span", "ititle", "The community post"));
+  head.append(el("span", "sr", `${pkg.community_post.length} chars`), copyBtn(pkg.community_post));
+  card.append(head);
+  const t = el("div", "sec", pkg.community_post);
+  t.style.whiteSpace = "pre-wrap";
+  card.append(t);
+  card.append(el("div", "sr",
+    "Schedule it in Studio (Community tab) for the VIDEO's go-live day — match the post to the video it teases, that's the pairing that got mixed up before."));
+  body.append(card);
+
+  if (pkg.community_image_prompt) {
+    const img = el("div", "idea");
+    const ihead = el("div", "ihead");
+    ihead.append(el("span", "ititle", "Image prompt"));
+    ihead.append(el("span", "sr", "1:1 square — community posts crop 16:9 thumbnails"), copyBtn(pkg.community_image_prompt));
+    img.append(ihead);
+    const it = el("div", "sec", pkg.community_image_prompt);
+    it.style.whiteSpace = "pre-wrap";
+    img.append(it);
+    body.append(img);
+  }
+
+  body.append(feedbackBox(pkg.feedback || [],
+    "Anything to change in the community post before it schedules?",
+    videoFeedback(video, "pkg")));
+}
+
+// ── the per-video long-form X post (review → feedback → ready-to-schedule) ──
+// Draft lives at video_ideas[week][video].xpost (written in session, like the
+// pkg). The "ready to schedule" click sets status=approved; the scheduling
+// agent acts ONLY behind that gate. Reuses the pkg overlay DOM.
+async function openXPost(video) {
+  const overlay = document.getElementById("pkgview");
+  const body = document.getElementById("pkgBody");
+  const meta = document.getElementById("pkgMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · long-form X post · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const xp = ((all[WEEK] || {})[video] || {}).xpost;
+  if (!xp || !xp.text) {
+    body.textContent = "no post drafted yet — it lands here after the video is scheduled.";
+    return;
+  }
+  meta.textContent += ` · ${xp.status || "draft"} · written ${daysAgo(xp.written_at)}`
+    + (xp.written_by ? ` by ${xp.written_by}` : "");
+  body.replaceChildren();
+
+  const card = el("div", "idea");
+  const head = el("div", "ihead");
+  head.append(el("span", "ititle", "The post"));
+  head.append(el("span", "sr", `${xp.text.length} chars · long-form`), copyBtn(xp.text));
+  card.append(head);
+  const t = el("div", "sec", xp.text);
+  t.style.whiteSpace = "pre-wrap";
+  card.append(t);
+  if (xp.link_reply) {
+    const row = el("div", "sec");
+    row.style.display = "flex"; row.style.gap = "8px"; row.style.alignItems = "center";
+    row.append(copyBtn(xp.link_reply), document.createTextNode(`Link (rides as self-reply): ${xp.link_reply}`));
+    card.append(row);
+  }
+  if (xp.schedule_note) card.append(el("div", "sr", xp.schedule_note));
+  body.append(card);
+
+  const ready = el("div", "saveRow");
+  if (xp.status === "posted" && xp.posted_url) {
+    const a = el("a", "msg ok", "already live on X ✓ — noticed, nothing rescheduled");
+    a.href = xp.posted_url; a.target = "_blank";
+    ready.append(a);
+  } else if (xp.typefully_draft_id) {
+    const a = el("a", "msg ok",
+      `scheduled ✓ for ${xp.scheduled_for || "the go-live slot"} — view in Typefully`);
+    a.href = xp.typefully_url; a.target = "_blank";
+    ready.append(a);
+  } else if (xp.status === "approved") {
+    ready.append(el("span", "msg ok", `approved ✓ ${daysAgo(xp.approved_at)} — schedules itself once the video is on YouTube`));
+  } else {
+    const b = el("button", "mark", "✓ I'm ready — schedule it");
+    const msg = el("span", "msg", "");
+    b.onclick = async () => {
+      msg.className = "msg"; msg.textContent = "saving…";
+      try {
+        const r = await fetch("/api/video_ideas", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ week: WEEK, video, approve: "xpost" }),
+        });
+        const bd = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(bd.error || `HTTP ${r.status}`);
+        b.disabled = true;
+        msg.className = "msg ok"; msg.textContent = "approved ✓ — the agent schedules it from here";
+      } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+    };
+    ready.append(b, msg);
+  }
+  body.append(ready);
+
+  body.append(feedbackBox(xp.feedback || [],
+    "Anything to change before this schedules? Tone, opener, a claim, the ending…",
+    videoFeedback(video, "xpost")));
+}
+
+// ── the X weekly batch (14 short posts, two a day) ──────────────────────────
+// Posts are written into fleet/x_batch.json by content/x_run.py, keyed by the
+// week's Monday. Feedback appends to the week's slot via POST /api/x_batch;
+// the agent reads it in session and regenerates (feedback survives the rerun).
+async function openXBatch() {
+  const overlay = document.getElementById("xbatchview");
+  const body = document.getElementById("xbatchBody");
+  const meta = document.getElementById("xbatchMeta");
+  overlay.classList.add("open");
+  meta.textContent = `week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/x_batch").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const batch = all[WEEK];
+  if (!batch || !(batch.posts || []).length) {
+    body.textContent = (batch || {}).generating_since
+      ? "the batch agent is drafting right now — reopen this card in a minute or two and the posts will be here."
+      : "no batch yet — it drafts itself the moment the post-research Q&A is marked done (give it a minute or two after that click, then reopen). If the Q&A has been done a while and this stays empty, check fleet/logs/x_run_auto.log or ask in session.";
+    return;
+  }
+  const cta = batch.posts.filter(p => p.is_cta).length;
+  const sched = batch.posts.filter(p => p.typefully_draft_id).length;
+  meta.textContent += ` · ${batch.posts.length} posts (${cta} CTA) · written ${daysAgo(batch.written_at)}`
+    + (sched ? ` · ${sched}/${batch.posts.length} scheduled` : "");
+  body.replaceChildren();
+  // The approve gate, stated in the overlay itself (founder ask 2026-08-24:
+  // the card said MARK DONE = SHIP but the overlay never did, so approving
+  // felt like a missing button). It's the same click as the card's mark-done —
+  // one state, two doors.
+  const approved = isDone("dist/xbatch");
+  if (!approved) {
+    body.append(el("div", "sec",
+      "Reading pass: click into any post to edit it directly. There is no separate approve step — the ✅ button at the bottom (the same thing as marking this card done) is the approval, and it queues every post into Typefully."));
+  }
+  if (batch.scheduling_since && sched < batch.posts.length) {
+    body.append(el("div", "sec",
+      "⏱ the scheduler agent is queueing these into Typefully right now — reopen in a minute to see each post's slot."));
+  }
+
+  // Refusals must be loud (founder hit this 2026-08-17: 9/14 posts silently
+  // refused for >280). Warn while reviewing, badge after a partial schedule,
+  // and offer a re-fire once the trims are in.
+  const over = batch.posts.filter(p => (p.text || "").length > 280).length;
+  if (over) {
+    const warn = el("div", "sec",
+      `⚠ ${over} post${over > 1 ? "s are" : " is"} over X's 280-character limit — the scheduler REFUSES those (it never truncates), so they will not reach the queue until trimmed here. Over-limit counts show amber in each post's header.`);
+    warn.style.color = "var(--amber)";
+    body.append(warn);
+  }
+  if (batch.scheduled_at && sched < batch.posts.length && !batch.scheduling_since) {
+    const row = el("div", "sec", "");
+    const btn = el("button", "mark",
+      `⏱ schedule the remaining ${batch.posts.length - sched} into Typefully`);
+    const msg = el("span", "msg", over ? " (trim the amber posts first or they'll be refused again)" : "");
+    btn.onclick = async () => {
+      msg.textContent = " spawning the scheduler…";
+      try {
+        const r = await fetch("/api/x_schedule_run", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ week: WEEK }),
+        });
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+        msg.textContent = " scheduler running — reopen this card in a minute to see each post's slot ✓";
+      } catch (e) { msg.textContent = ` failed — ${e.message}`; }
+    };
+    row.append(btn, msg);
+    body.append(row);
+  }
+
+  // In suggested-day order, so the overlay reads like the week will run.
+  // The batch week runs Tue -> the following Mon (founder approves on Monday,
+  // so Tuesday is the first shippable morning; Mon here = NEXT Monday).
+  // _i carries each post's index in the STORED array — that's the edit key.
+  const DAYS = ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"];
+  const posts = batch.posts.map((p, i) => ({ ...p, _i: i })).sort(
+    (a, b) => DAYS.indexOf(a.suggested_day) - DAYS.indexOf(b.suggested_day));
+  for (const p of posts) {
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", `${p.suggested_day} · ${p.pillar_label || p.pillar}`));
+    if (p.is_cta) head.append(el("span", "badge me", "CTA"));
+    const edited = el("span", "badge me", "✎ edited");
+    if (!p.edited_at) edited.style.display = "none";
+    head.append(edited);
+    if (p.typefully_draft_id) {
+      const when = p.scheduled_for
+        ? new Date(p.scheduled_for).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })
+        : "queued";
+      head.append(el("span", "badge agent", `⏱ scheduled · ${when}`));
+    } else if (batch.scheduled_at) {
+      // The scheduler ran and skipped this one — refused (>280) or failed.
+      const miss = el("span", "badge me", "⚠ NOT in the queue");
+      miss.style.color = "var(--amber)";
+      head.append(miss);
+    }
+    const count = el("span", "sr", "");
+    const status = el("span", "sr", "");
+    head.append(count, status, copyBtn(() => ta.value));
+    card.append(head);
+
+    // The post IS the editor. Saves are automatic: ~1s after typing stops,
+    // again on blur, and closeOverlays() flushes any still-pending edit —
+    // an Escape-close or click-away can never silently drop a change.
+    const ta = document.createElement("textarea");
+    ta.value = p.text;
+    ta.spellcheck = true;
+    const fit = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+    const recount = () => {
+      const n = ta.value.length;
+      count.textContent = n > 280 ? `TRIM ${n}>280` : `${n} chars`;
+      count.style.color = n > 280 ? "var(--amber)" : "";
+    };
+    let pending = null;
+    const save = async () => {
+      clearTimeout(pending); pending = null;
+      const v = ta.value.trim();
+      if (v === p.text) { status.textContent = ""; return; }
+      if (!v) { ta.value = p.text; fit(); recount(); status.textContent = ""; return; }
+      status.textContent = "saving…";
+      try {
+        const r = await fetch("/api/x_batch", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ week: WEEK, post_index: p._i, text: v }),
+        });
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+        p.text = b.text;
+        edited.style.display = "";
+        status.textContent = "saved ✓ — your edit trains the drafter";
+        setTimeout(() => { if (status.textContent.startsWith("saved")) status.textContent = ""; }, 3000);
+      } catch (e) { status.textContent = `SAVE FAILED — ${e.message} (edit still in the box; keep typing to retry)`; }
+    };
+    if (p.typefully_draft_id) {
+      // Already in the Typefully queue — local edits would silently diverge
+      // from what actually posts, so the editor locks and links out instead.
+      ta.readOnly = true;
+      ta.style.opacity = "0.85";
+      status.textContent = "in the Typefully queue — edit it there";
+    } else {
+      ta.oninput = () => {
+        fit(); recount();
+        status.textContent = ta.value.trim() === p.text ? "" : "…autosaves when you pause";
+        clearTimeout(pending);
+        pending = setTimeout(save, 1200);
+      };
+      ta.onblur = save;
+    }
+    card.append(ta);
+    if (p.typefully_url) {
+      const link = el("a", "decklink", "↗ open in Typefully");
+      link.href = p.typefully_url; link.target = "_blank";
+      card.append(link);
+    }
+    requestAnimationFrame(() => { fit(); recount(); });
+    if (p.is_cta && p.link_reply) {
+      const row = el("div", "sec");
+      row.style.display = "flex"; row.style.gap = "8px"; row.style.alignItems = "center";
+      row.append(copyBtn(p.link_reply), document.createTextNode(`Link reply: ${p.link_reply}`));
+      card.append(row);
+    }
+    body.append(card);
+  }
+
+  body.append(feedbackBox(batch.feedback || [],
+    "Batch-level notes only — to reword a post, just click into it above and edit. Here: kill a post, wrong pillar mix, day swap, overall voice drift…",
+    async (text) => {
+      const r = await fetch("/api/x_batch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week: WEEK, feedback: text }),
+      });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+    }));
+
+  const gate = el("div", "sec");
+  if (approved) {
+    gate.textContent = "✓ approved — the scheduler queues these into Typefully (2/day Tue→Mon). Un-approving never unschedules; pull a post back in Typefully itself.";
+  } else {
+    const ab = el("button", "mark", "✅ approve the batch — schedule all posts into Typefully");
+    const amsg = el("span", "msg", "");
+    ab.onclick = async () => {
+      ab.disabled = true; amsg.textContent = " approving…";
+      await markStep("dist/xbatch", true);
+      amsg.textContent = " approved ✓ — the scheduler is queueing into Typefully; reopen this card in a minute to see each post's slot";
+    };
+    gate.append(ab, amsg, el("div", "sr",
+      "Same click as the card's ✓ mark done — the done-click IS the approval. After queueing, edits happen in Typefully; un-marking done never unschedules."));
+  }
+  body.append(gate);
+}
+
+// ── hard limits — every cap the fleet runs under (/api/hard_limits) ─────────
+// Three trust tiers, labeled: code = read live from the enforcing module,
+// data = today's platform-reported quota snapshot, stated = vendor-dashboard
+// backstops code can't see (shown with set-date + verification status).
+async function openLimits() {
+  const overlay = document.getElementById("limitsview");
+  const body = document.getElementById("limitsBody");
+  const meta = document.getElementById("limitsMeta");
+  overlay.classList.add("open");
+  meta.textContent = "live read";
+  body.textContent = "loading…";
+  let d;
+  try { d = await fetch("/api/hard_limits").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  body.textContent = "";
+
+  const group = (title, note) => {
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", title));
+    if (note) head.append(el("span", "sr", note));
+    card.append(head);
+    body.append(card);
+    return card;
+  };
+  const row = (card, name, value, detail) => {
+    const r = el("div", "sec");
+    r.style.display = "flex"; r.style.gap = "10px"; r.style.flexWrap = "wrap";
+    const n = el("b", "", name); n.style.minWidth = "220px";
+    const v = el("span", "", value); v.style.color = "var(--emerald)";
+    r.append(n, v);
+    if (detail) { const dt = el("span", "sr", detail); r.append(dt); }
+    card.append(r);
+  };
+
+  let g = group("Enforced in code", "read live — what the next run will obey");
+  for (const l of d.code) row(g, l.name, l.value, l.detail + (l.env ? ` · env ${l.env}` : ""));
+
+  if (d.typefully_quota && d.typefully_quota.used != null) {
+    const q = d.typefully_quota;
+    g = group("Platform quota", `Typefully, snapshot ${q.as_of}`);
+    row(g, "X publishing quota", `${q.used} used · ${q.remaining} remaining`,
+        q.resets_at ? `resets ${String(q.resets_at).slice(0, 10)}` : "");
+  }
+
+  g = group("Account-level backstops", "set in vendor dashboards — code can't see these");
+  for (const l of d.stated)
+    row(g, l.name, l.value, (l.set_at ? `set ${l.set_at} · ` : "") + l.status);
+
+  g = group("Operating rules", "policy, not code — the standing decisions");
+  for (const l of d.policy) row(g, l.name, "", l.detail);
+}
+
+// ── the email broadcast ("Notice", WEEKLY_RUNBOOK.md Loop 3) ────────────────
+// The week's issue lives in fleet/email_broadcast.json, drafted in session
+// (manual until the list justifies an agent + ESP). Feedback appends to the
+// week's slot via POST /api/email_broadcast; the send itself stays by hand.
+async function openEmail() {
+  const overlay = document.getElementById("emailview");
+  const body = document.getElementById("emailBody");
+  const meta = document.getElementById("emailMeta");
+  overlay.classList.add("open");
+  meta.textContent = `week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/email_broadcast").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const issue = all[WEEK];
+  if (!issue || !issue.pattern_md) {
+    body.textContent = (issue || {}).generating_since
+      ? "the email agent is drafting this week's issue right now — reopen this card in a minute and it will be here."
+      : "no issue yet — it drafts itself the moment the post-research Q&A is marked done, same trigger as the X batch (give it a minute or two after that click, then reopen). If the Q&A has been done a while and this stays empty, check fleet/logs/email_run_auto.log or ask in session.";
+    return;
+  }
+  meta.textContent += ` · ${issue.status || "draft"} · written ${daysAgo(issue.written_at)}`;
+  body.replaceChildren();
+  // Same approve-gate-in-the-overlay pattern as the X batch (founder ask
+  // 2026-08-24): the done-click IS the approval (wire 6), say so where he reads.
+  const approved = isDone("dist/email");
+  if (!approved) {
+    body.append(el("div", "sec",
+      "Reading pass: every field below is an editor. There is no separate approve step — the ✅ button at the bottom (the same thing as marking this card done) approves the issue and schedules the send for Thursday 9am MT."));
+  }
+
+  // Every piece is an editor (founder ask 2026-08-10): click in, change it,
+  // it autosaves — same behavior as the X batch posts. Fields stack in the
+  // order the email reads, so it still reads top-to-bottom as one note.
+  // (No around_the_web section anymore: founder rule, the CTA's Fiboprana
+  // link is the email's only link. Legacy weeks may still carry one.)
+  const fields = [
+    ["subject", "Subject", "the email subject line"],
+    ["preview_text", "Preview text", "the inbox preview snippet"],
+    ["pattern_md", "The note", "the email body — paste-clean plain text, no links here"],
+    ["cta", "CTA + reply invite", "the ONE Fiboprana link lives here; it gets tracking at send time"],
+  ];
+  const current = {};
+  const fullText = () => [current.pattern_md, "", current.cta].join("\n");
+
+  const copyRow = el("div", "sec");
+  copyRow.append(copyBtn(fullText), document.createTextNode(" full email (note + CTA, as it sends)"));
+  body.append(copyRow);
+
+  for (const [field, label, hint] of fields) {
+    current[field] = issue[field] || "";
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", label));
+    if ((issue.originals || {})[field] !== undefined)
+      head.append(el("span", "badge me", "✎ edited"));
+    const status = el("span", "sr", "");
+    head.append(status);
+    card.append(head, el("div", "sr", hint));
+
+    const ta = document.createElement("textarea");
+    ta.value = current[field];
+    ta.spellcheck = true;
+    const fit = () => { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; };
+    let pending = null;
+    const save = async () => {
+      clearTimeout(pending); pending = null;
+      const v = ta.value.trim();
+      if (v === current[field]) { status.textContent = ""; return; }
+      if (!v) { ta.value = current[field]; fit(); status.textContent = ""; return; }
+      status.textContent = "saving…";
+      try {
+        const r = await fetch("/api/email_broadcast", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ week: WEEK, field, text: v }),
+        });
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+        current[field] = b.text;
+        status.textContent = "saved ✓";
+        setTimeout(() => { if (status.textContent === "saved ✓") status.textContent = ""; }, 3000);
+      } catch (e) { status.textContent = `SAVE FAILED — ${e.message} (edit still in the box; keep typing to retry)`; }
+    };
+    ta.oninput = () => {
+      fit();
+      status.textContent = ta.value.trim() === current[field] ? "" : "…autosaves when you pause";
+      clearTimeout(pending);
+      pending = setTimeout(save, 1200);
+    };
+    ta.onblur = save;
+    card.append(ta);
+    requestAnimationFrame(fit);
+    body.append(card);
+  }
+
+  body.append(feedbackBox(issue.feedback || [],
+    "Bigger-picture notes for the agent: wrong pattern, tone drift, different CTA… (to reword something, just edit it above)",
+    async (text) => {
+      const r = await fetch("/api/email_broadcast", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week: WEEK, feedback: text }),
+      });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+    }));
+
+  const gate = el("div", "sec");
+  if (approved) {
+    gate.textContent = "✓ approved — the send is scheduled for Thursday 9am MT. If the week's build ships before Thursday, swap the CTA before it goes out.";
+  } else {
+    const ab = el("button", "mark", "✅ approve the issue — schedule the send for Thu 9am MT");
+    const amsg = el("span", "msg", "");
+    ab.onclick = async () => {
+      ab.disabled = true; amsg.textContent = " approving…";
+      await markStep("dist/email", true);
+      amsg.textContent = " approved ✓ — scheduled for Thursday 9am MT";
+    };
+    gate.append(ab, amsg, el("div", "sr",
+      "Same click as the card's ✓ mark done — the done-click IS the approval (wire 6). No separate schedule step."));
+  }
+  body.append(gate);
+}
+
+// ── the thumbnail prompts ───────────────────────────────────────────────────
+// Prompts-only for now: copy each into the image model by hand, bring results
+// to chat. Target shape (ROADMAP): an agent generates the actual images and
+// this overlay shows thumbnails to pick from instead.
+async function openThumbs(video) {
+  const overlay = document.getElementById("thumbs");
+  const body = document.getElementById("thumbsBody");
+  const meta = document.getElementById("thumbsMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const thumbs = ((all[WEEK] || {})[video] || {}).thumbs;
+  if (!thumbs || !(thumbs.prompts || []).length) {
+    body.textContent = ((all[WEEK] || {})[video] || {}).artifacts_generating_since
+      ? "the artifact agents are writing the thumbnail prompts right now — reopen in a couple of minutes."
+      : "no prompts yet — they generate (with the deck + package) the moment the script is marked done. If the script's already approved and this stays empty, check fleet/logs/video_artifacts_auto.log or ask in session.";
+    return;
+  }
+  meta.textContent += ` · ${thumbs.prompts.length} prompts · ${daysAgo(thumbs.written_at)}`
+    + (thumbs.picked ? ` · picked: ${thumbs.picked.toUpperCase()}` : "");
+  body.replaceChildren();
+  if (thumbs.note) body.append(el("div", "sr", thumbs.note));
+  // The pick IS the record: Studio only ever sees the one uploaded thumbnail,
+  // so which candidate won (and which lost) exists only here — the style
+  // ledger's training data. Click the winner once the renders are compared.
+  for (const p of thumbs.prompts) {
+    const card = el("div", "idea");
+    if (p.id === thumbs.picked) card.classList.add("chosen");
+    const head = el("div", "ihead");
+    head.append(el("span", "ititle", `${p.id.toUpperCase()} · ${p.style}`));
+    if (p.id === thumbs.picked) head.append(el("span", "badge agent", "✓ your pick"));
+    const copy = el("button", "mark", "⧉ copy");
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(p.text); copy.textContent = "copied ✓"; }
+      catch (e) { copy.textContent = "copy failed"; }
+      setTimeout(() => { copy.textContent = "⧉ copy"; }, 1500);
+    };
+    head.append(copy);
+    card.append(head, el("div", "sec", p.text));
+    if (p.id === thumbs.picked && thumbs.picked_note)
+      card.append(el("div", "why", `✓ why: ${thumbs.picked_note}`));
+    if (p.id !== thumbs.picked) {
+      const row = el("div", "pickRow");
+      const b = el("button", "mark",
+        thumbs.picked ? "switch the pick to this one" : "✓ this render won");
+      b.onclick = async () => {
+        b.textContent = "saving…";
+        try {
+          const r = await fetch("/api/video_ideas", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ week: WEEK, video, thumb_pick: p.id }),
+          });
+          const bd = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(bd.error || `HTTP ${r.status}`);
+          openThumbs(video);
+        } catch (e) { b.textContent = `failed — ${e.message}`; }
+      };
+      row.append(b);
+      card.append(row);
+    }
+    body.append(card);
+  }
+}
+
+// ── the deck viewer ─────────────────────────────────────────────────────────
+// Decks are self-contained HTML in videos/aids/, served same-origin at /aids/
+// so they embed here without leaving the dashboard. Click the frame to advance
+// slides (the deck's own nav); the full-size link is for OBS and recording.
+async function openDeck(video) {
+  const overlay = document.getElementById("deckview");
+  const body = document.getElementById("deckBody");
+  const meta = document.getElementById("deckMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let all;
+  try { all = await fetch("/api/video_ideas").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
+  const deck = ((all[WEEK] || {})[video] || {}).deck;
+  if (!deck || !deck.url) {
+    body.textContent = ((all[WEEK] || {})[video] || {}).artifacts_generating_since
+      ? "the artifact agents are building the deck right now — reopen in a couple of minutes."
+      : "no deck yet — it generates (with the thumbnails + package) the moment the script is marked done. If the script's already approved and this stays empty, check fleet/logs/video_artifacts_auto.log or ask in session.";
+    return;
+  }
+  meta.textContent += ` · ${deck.status} · built ${daysAgo(deck.built_at)}`
+    + (deck.built_by ? ` by ${deck.built_by}` : "");
+  body.replaceChildren();
+  const frame = document.createElement("iframe");
+  frame.className = "deckframe";
+  frame.src = deck.url;
+  frame.title = "visual aid deck";
+  body.append(frame);
+  const a = el("a", "decklink", "↗ open full size in a new tab (for OBS / recording)");
+  a.href = deck.url;
+  a.target = "_blank";
+  body.append(a);
+  body.append(feedbackBox(deck.feedback || [],
+    "What should change on the slides? Wrong number, too much text, different order, a slide to add or cut…",
+    videoFeedback(video, "deck")));
+}
+
+// ── the post-research Q&A (the react step) ──────────────────────────────────
+// The five founder questions. They deliberately don't change week to week (edit
+// here when they should). Answers + verdict are saved onto the run itself via
+// POST /api/gate/research_verdict — outcome_note IS the answer store, so next
+// Sunday's agent reads exactly what the founder typed (the learning loop).
+const QA_QUESTIONS = [
+  ["relevance", "Would you lead with this headline?",
+   "Judged from the digest alone: is the top story the one you'd put first? If another item deserves the slot, say which. This trains the agent's picker."],
+  ["missed", "What did the research miss or get wrong?",
+   "Gaps, wrong emphasis, out-of-lane items, things that felt stale or repeated."],
+  ["standout", "Which item makes you want to make content?",
+   "The one that gave you energy. This is a topic-pick signal."],
+  ["real_moment", "A real moment from your week the content can use?",
+   "A conversation, a decision in your own portfolio, something you built. It has to come from you; the agents never invent it."],
+  ["next_week", "What should next week's run do differently?",
+   "Direct instructions. The agent reads this verbatim before it picks."],
+];
+
+function parseQaNote(note) {
+  // outcome_note format: "slug: answer" lines (multi-line answers roll up into
+  // the preceding slug). Anything unparseable lands in an "_extra" bucket.
+  const answers = {};
+  let current = "_extra";
+  for (const line of (note || "").split("\n")) {
+    const m = line.match(/^(\w+):\s?(.*)$/);
+    // week_pain is a sibling slug written by /api/pain_call, not a question —
+    // recognized here so it never bleeds into the preceding answer's textarea.
+    if (m && (m[1] === "week_pain" || QA_QUESTIONS.some(([slug]) => slug === m[1]))) {
+      current = m[1];
+      answers[current] = m[2];
+    } else if (line.trim()) {
+      answers[current] = ((answers[current] || "") + " " + line.trim()).trim();
+    }
+  }
+  return answers;
+}
+
+async function openQA() {
+  const overlay = document.getElementById("qa");
+  const body = document.getElementById("qaBody");
+  const meta = document.getElementById("qaMeta");
+  overlay.classList.add("open");
+  body.textContent = "loading…";
+  let run;
+  try { run = await loadRun(); }
+  catch (e) { body.textContent = `couldn't load the run — ${e.message}`; return; }
+  if (!run.id) { body.textContent = "no research runs on record yet."; return; }
+  meta.textContent = `run ${daysAgo(run.created_at)}`;
+  body.replaceChildren();
+
+  const answers = parseQaNote(run.outcome_note);
+  for (const [slug, question, hint] of QA_QUESTIONS) {
+    const q = el("div", "q");
+    const ta = document.createElement("textarea");
+    ta.id = `qa-${slug}`;
+    ta.value = answers[slug] || "";
+    q.append(el("div", "qt", question), el("div", "qh", hint), ta);
+    body.append(q);
+  }
+
+  // Verdict row: the grade that rides with the answers.
+  let verdict = run.outcome_verdict || null;
+  const vrow = el("div", "vrow");
+  vrow.append(el("span", "vlbl", "Your verdict on this run:"));
+  const vbtns = {};
+  for (const v of ["strong", "ok", "off"]) {
+    const b = el("button", "vbtn" + (v === verdict ? " sel" : ""), v);
+    b.onclick = () => {
+      verdict = v;
+      for (const [k, btn] of Object.entries(vbtns)) btn.classList.toggle("sel", k === v);
+    };
+    vbtns[v] = b;
+    vrow.append(b);
+  }
+  body.append(vrow);
+
+  const saveRow = el("div", "saveRow");
+  const save = el("button", "mark", "💾 save answers");
+  const msg = el("span", "msg", "");
+  save.onclick = async () => {
+    if (!verdict) { msg.className = "msg err"; msg.textContent = "pick a verdict first"; return; }
+    const note = QA_QUESTIONS
+      .map(([slug]) => {
+        const val = document.getElementById(`qa-${slug}`).value.trim().replace(/\n+/g, " ");
+        return val ? `${slug}: ${val}` : null;
+      })
+      // Preserve the pain call — the note is shared with /api/pain_call, and
+      // a QA re-save must never drop the founder's recorded pain.
+      .concat(answers.week_pain ? [`week_pain: ${answers.week_pain}`] : [])
+      .filter(Boolean).join("\n");
+    msg.className = "msg"; msg.textContent = "saving…";
+    try {
+      const r = await fetch("/api/gate/research_verdict", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ run_id: run.id, verdict, note }),
+      });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+      READER_RUN.outcome_verdict = verdict;
+      READER_RUN.outcome_note = note;
+      msg.className = "msg ok"; msg.textContent = "saved ✓ — now mark the card done";
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+  };
+  saveRow.append(save, msg);
+  body.append(saveRow);
+}
+
+// ── the pain report ─────────────────────────────────────────────────────────
+// The "name the week's pain" card's human-in-the-loop surface (founder call
+// 2026-08-14): the machine proposes, the founder ratifies or overrides. Brief
+// by default — themes as one-click chips, evidence capped at 5 rows per
+// section with a show-all expander. Recording the call IS the done-click
+// (POST /api/pain_call writes the week_pain slug onto the run's outcome_note
+// and stamps decide/pain server-side).
+async function openPain() {
+  const overlay = document.getElementById("painview");
+  const body = document.getElementById("painBody");
+  const meta = document.getElementById("painMeta");
+  overlay.classList.add("open");
+  meta.textContent = "";
+  body.textContent = "loading…";
+  let rep;
+  try { rep = await fetch("/api/pain_report").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load the report — ${e.message}`; return; }
+  body.replaceChildren();
+  if (rep.run) meta.textContent = `research run ${daysAgo(rep.run.created_at)}`;
+
+  const label = (text, hint) => {
+    const l = el("div", "lbl", text);
+    if (hint) l.append(el("span", "hint", hint));
+    return l;
+  };
+
+  // 1. The machine's proposal — one click on a chip adopts it as your call.
+  const hypo = el("div", "pull");
+  hypo.append(label("The machine's hypothesis",
+    "Reddit themes from Sunday's run, proposed BEFORE the week — click one to adopt it"));
+  if ((rep.themes || []).length) {
+    const row = el("div", "val");
+    for (const t of rep.themes) {
+      const chip = el("button", "themeChip", t);
+      chip.onclick = () => { input.value = t; input.focus(); };
+      row.append(chip);
+    }
+    hypo.append(row);
+  } else {
+    hypo.append(el("div", "val", "no themes in the latest run"));
+  }
+  body.append(hypo);
+
+  // 2. What the week actually sounded like — the check on the hypothesis.
+  const evRow = r => {
+    const d = el("div", "evRow");
+    const text = `${r.platform || "?"} · ${r.community || "—"} — ${r.post_title || "(no title)"}`;
+    if (r.post_url) {
+      const a = el("a", null, text);
+      a.href = r.post_url; a.target = "_blank"; a.rel = "noopener";
+      d.append(a);
+    } else d.append(text);
+    if (r.judge_rationale) d.append(el("div", "evWhy", `judge: ${r.judge_rationale}`));
+    return d;
+  };
+  const capped = (box, rows, cap = 5) => {
+    rows.slice(0, cap).forEach(r => box.append(evRow(r)));
+    if (rows.length > cap) {
+      const more = el("button", "evMore", `▾ show all ${rows.length}`);
+      more.onclick = () => {
+        rows.slice(cap).forEach(r => more.before(evRow(r)));
+        more.remove();
+      };
+      box.append(more);
+    }
+  };
+  const heard = el("div", "pull");
+  heard.append(label("What you actually heard",
+    "this week's sends, then the judge's top of the queue — the hypothesis should survive contact with this list"));
+  heard.append(el("div", "val", `Replied to (${(rep.sent || []).length} this week)`));
+  if ((rep.sent || []).length) capped(heard, rep.sent);
+  else heard.append(el("div", "evRow", "nothing sent yet this week"));
+  heard.append(el("div", "val", "Top of the queue, by judge score"));
+  if ((rep.queue || []).length) capped(heard, rep.queue);
+  else heard.append(el("div", "evRow", "queue is empty"));
+  body.append(heard);
+
+  // 3. Your call — agree (chip → record) or override in your own words.
+  const callBox = el("div", "pull");
+  callBox.append(label("Your call — the recurring pain, in one sentence",
+    "recorded onto the run (next Sunday's agent reads it) and shown at the feature gate"));
+  if (rep.call) callBox.append(el("div", "val", `currently recorded: "${rep.call}"`));
+  const input = el("input", "painIn");
+  input.placeholder = "e.g. they've done the analysis but can't make themselves act on it…";
+  input.value = rep.call || "";
+  const rec = el("button", "mark", "✓ record the pain + mark done");
+  const msg = el("span", "msg", "");
+  rec.onclick = async () => {
+    const pain = input.value.trim();
+    if (!pain) { msg.className = "msg err"; msg.textContent = "name it first"; return; }
+    if (!rep.run) { msg.className = "msg err"; msg.textContent = "no research run to record onto"; return; }
+    msg.className = "msg"; msg.textContent = "recording…";
+    try {
+      const r = await fetch("/api/pain_call", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ run_id: rep.run.id, week: WEEK, pain }),
+      });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+      DB.flow[WEEK] = b.steps;
+      msg.className = "msg ok"; msg.textContent = "recorded ✓ — card marked done";
+      await refreshData();
+      renderActive();
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+  };
+  input.onkeydown = e => { if (e.key === "Enter") rec.onclick(); };
+  const saveRow = el("div", "saveRow");
+  saveRow.append(input, rec, msg);
+  callBox.append(saveRow);
+  body.append(callBox);
+}
+
+// ── close the week ──────────────────────────────────────────────────────────
+// The founder's verdict surface (founder call 2026-08-14): the last card was
+// a bare mark-done pointing at a chat ritual — now the pick and each of the
+// week's videos get their strong/ok/off + one-sentence note right here.
+// Re-saving revises (post-numbers second thoughts are the point); the run's
+// written Q&A answers are never touched (verdict-only endpoint).
+async function openClose() {
+  const overlay = document.getElementById("closeview");
+  const body = document.getElementById("closeBody");
+  const meta = document.getElementById("closeMeta");
+  overlay.classList.add("open");
+  meta.textContent = `week of ${WEEK}`;
+  body.textContent = "loading…";
+  let rep;
+  try { rep = await fetch("/api/week_close_report").then(r => r.json()); }
+  catch (e) { body.textContent = `couldn't load the week — ${e.message}`; return; }
+  body.replaceChildren();
+
+  const label = (text, hint) => {
+    const l = el("div", "lbl", text);
+    if (hint) l.append(el("span", "hint", hint));
+    return l;
+  };
+  const verdictRow = (current, onPick) => {
+    const vrow = el("div", "vrow");
+    vrow.append(el("span", "vlbl", "verdict:"));
+    const btns = {};
+    for (const v of ["strong", "ok", "off"]) {
+      const b = el("button", "vbtn" + (v === current ? " sel" : ""), v);
+      b.onclick = () => {
+        for (const [k, btn] of Object.entries(btns)) btn.classList.toggle("sel", k === v);
+        onPick(v);
+      };
+      btns[v] = b;
+      vrow.append(b);
+    }
+    return vrow;
+  };
+
+  // The research pick keeps its ONE grade from Monday's Q&A (founder call
+  // 2026-08-14: no double grading — the close is about the videos). Shown
+  // read-only for context; a change of heart goes through the Q&A overlay.
+  const runBox = el("div", "pull");
+  runBox.append(label("The research pick",
+    "graded once, at Monday's Q&A — shown for context, nothing to do here"));
+  runBox.append(el("div", "val", !rep.run ? "no research run on record"
+    : rep.run.outcome_verdict ? `graded "${rep.run.outcome_verdict}" at the Q&A`
+    : "not graded yet — the Q&A card (lane 1) is where that happens"));
+  body.append(runBox);
+
+  // Each of the week's videos — made this week, plus last week's cuts that
+  // went LIVE this week (the week-shifted pipeline), each labeled as such.
+  const vidBox = el("div", "pull");
+  vidBox.append(label("The week's videos",
+    "one sentence each — what made it strong / ok / off. Basic is fine: you're training taste. Scheduled-ahead cuts: judge the product now, revise once the numbers land."));
+  if (!rep.videos.length) vidBox.append(el("div", "val", "no videos logged this week"));
+  body.append(vidBox);
+  for (const v of rep.videos) {
+    const card = el("div", "idea");
+    const head = el("div", "ihead");
+    head.append(el("span", "chip", v.pillar), el("span", "ititle", v.title_final || v.slug));
+    card.append(head);
+    const madeThisWeek = String(v.created_at) >= WEEK;
+    const bits = [madeThisWeek ? "made this week" : "last week's cut — went live this week",
+      v.status,
+      v.published_at ? `live ${String(v.published_at).slice(0, 10)}` : null];
+    if (v.latest_check) {
+      const r = v.latest_check.result || {};
+      const nums = [r.views != null ? `${r.views} views` : null,
+                    r.likes != null ? `${r.likes} likes` : null,
+                    r.comments != null ? `${r.comments} comments` : null].filter(Boolean);
+      if (nums.length) bits.push(`${v.latest_check.window}: ${nums.join(" · ")}`);
+    }
+    card.append(el("div", "sr", bits.filter(Boolean).join(" · ")));
+    let verdict = v.outcome_verdict || null;
+    card.append(verdictRow(verdict, x => { verdict = x; }));
+    const note = el("input", "painIn");
+    note.placeholder = "one sentence — why…";
+    note.value = v.outcome_note || "";
+    const save = el("button", "mark", "💾 save");
+    const msg = el("span", "msg", "");
+    save.onclick = async () => {
+      if (!verdict) { msg.className = "msg err"; msg.textContent = "pick a verdict first"; return; }
+      msg.className = "msg"; msg.textContent = "saving…";
+      try {
+        const r = await fetch("/api/video_verdict", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video_id: v.id, verdict, note: note.value }),
+        });
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+        msg.className = "msg ok"; msg.textContent = "saved ✓";
+      } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+    };
+    note.onkeydown = e => { if (e.key === "Enter") save.onclick(); };
+    const sr = el("div", "saveRow");
+    sr.append(note, save, msg);
+    card.append(sr);
+    body.append(card);
+  }
+}
+
+// Tiny markdown renderer — enough for the digest (headings, lists, bold, links).
+// Everything is HTML-escaped first, so the digest can't inject markup.
+function mdToHtml(src) {
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = s => esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[^"'>])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  const out = [];
+  let list = null;
+  // Source files hard-wrap prose at ~90 chars; consecutive plain lines are ONE
+  // paragraph (blank line = paragraph break, standard markdown). Without this,
+  // every source line became its own <p> and re-wrapped into orphan lines
+  // (founder bug report 2026-08-11: "the second line just has three words").
+  let para = [];
+  const flushPara = () => {
+    if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para = []; }
+  };
+  const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (const raw of src.split(/\r?\n/)) {
+    const line = raw.trimEnd();
+    let m;
+    if (!line.trim()) { closeList(); flushPara(); continue; }
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { closeList(); flushPara(); out.push("<hr>"); continue; }
+    if ((m = line.match(/^(#{1,4})\s+(.*)/))) {
+      closeList(); flushPara(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); continue;
+    }
+    if ((m = line.match(/^\s*[-*•]\s+(.*)/))) {
+      flushPara();
+      if (list !== "ul") { closeList(); out.push("<ul>"); list = "ul"; }
+      out.push(`<li>${inline(m[1])}</li>`); continue;
+    }
+    if ((m = line.match(/^\s*\d+[.)]\s+(.*)/))) {
+      flushPara();
+      if (list !== "ol") { closeList(); out.push("<ol>"); list = "ol"; }
+      out.push(`<li>${inline(m[1])}</li>`); continue;
+    }
+    if ((m = line.match(/^&gt;\s?(.*)/)) || (m = line.match(/^>\s?(.*)/))) {
+      closeList(); flushPara(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); continue;
+    }
+    closeList(); para.push(line.trim());
+  }
+  closeList(); flushPara();
+  return out.join("\n");
+}
+
+// Shared derived stats.
+function daysAgo(iso) {
+  const d = Math.floor((Date.now() - new Date(iso)) / 8.64e7);
+  return d === 0 ? "today" : d === 1 ? "yesterday" : `${d}d ago`;
+}
+function weekVideo(pillar) {
+  return DB.vids.find(v => v.pillar === pillar && v.created_at >= WEEK) || null;
+}
+// The founder's recorded pain rides the run's outcome_note as a "week_pain:"
+// slug line (POST /api/pain_call writes it; next Sunday's agent reads it).
+function weekPainOf(note) {
+  for (const line of (note || "").split("\n")) {
+    if (line.startsWith("week_pain:")) return line.slice("week_pain:".length).trim() || null;
+  }
+  return null;
+}
+
+function stats() {
+  const queue = DB.cands.filter(c => c.platform === "reddit" && ["judged", "drafted"].includes(c.status)).length;
+  const waiting = DB.ledger.filter(l => l.outcome_checked_at == null).length;
+  const pain = DB.runs.length ? weekPainOf(DB.runs[0].outcome_note) : null;
+  return {
+    weekPain: pain ? `✓ "${pain}"` : null,
+    lastRun: DB.runs.length
+      ? `last run ${daysAgo(DB.runs[0].created_at)}`
+        + (DB.runs[0].status === "complete" ? " · worked ✓" : ` · ${DB.runs[0].status || "?"}`)
+      : "no runs yet",
+    redditQueue: `${queue} in queue`,
+    awaiting: `${waiting} replies awaiting outcomes` + (DB.checksHealth.open ? ` · ${DB.checksHealth.open} open checks` : ""),
+    checksHealth: (() => {
+      const h = DB.checksHealth;
+      const stuck = (h.video_stuck || 0) + (h.reply_stuck || 0);
+      if (stuck) return `⚠ ${stuck} check${stuck === 1 ? "" : "s"} stuck past the closer's cycle — needs a hand`;
+      if (h.open == null) return null;
+      return `${h.open} open · agents on schedule`
+        + (h.reddit_frozen ? ` · ${h.reddit_frozen} reddit frozen (appeal)` : "");
+    })(),
+    sent: `${DB.ledger.length} replies logged`,
+    vidNews: weekVideo("news") ? `logged: ${weekVideo("news").status}` : "not logged this week",
+    vidFeature: weekVideo("feature") ? `logged: ${weekVideo("feature").status}` : "not logged this week",
+    vidAscent: weekVideo("ascent") ? `logged: ${weekVideo("ascent").status}` : "not logged this week",
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Render helpers
+// ════════════════════════════════════════════════════════════════════════════
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+const svgEl = (tag, attrs = {}) => {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+};
+function stamp(iso) {
+  const d = new Date(iso);
+  const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+  let h = d.getHours(); const ap = h >= 12 ? "p" : "a"; h = h % 12 || 12;
+  return `${day} ${h}:${String(d.getMinutes()).padStart(2, "0")}${ap}`;
+}
+
+// ── VIEW 1 render ───────────────────────────────────────────────────────────
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const CHANNEL_LABELS = { x: "X", reddit: "Reddit", youtube: "YouTube" };
+
+// The daily-reply strip — the all-week habit, deliberately outside the step
+// sequence (founder call 2026-08-14: a daily lane never parks the pointer).
+// Rows come from /api/reply_days (REPLY_CHANNELS + queue + ledger platforms);
+// cells light THEMSELVES from the reply ledger — a "Log as sent" on /review
+// is the record, no manual ticking. Clicking an empty cell records an
+// explicit "no good candidates" skip (flow_state key replies/<channel>/<day>)
+// so a quiet day reads as worked, not missed. Frozen channels (e.g. Reddit
+// during the account appeal) render dim and unclickable with the why below.
+function renderReplyStrip() {
+  const strip = document.getElementById("replyStrip");
+  strip.replaceChildren();
+  const data = DB.replyDays || { channels: [], sent: {} };
+  const head = el("div", "shead");
+  head.append(el("span", "stitle", "💬 Daily replies — every day, all channels"));
+  const queue = DB.cands.filter(c => ["judged", "drafted"].includes(c.status)).length;
+  head.append(el("span", "squeue", `${queue} in queue`));
+  const open = el("a", "sgo", "💬 open the review queue");
+  open.href = "/review";
+  const standings = el("a", "sgo", "🧪 finder standings");
+  standings.href = "/finders";
+  head.append(open, standings);
+  strip.append(head);
+  if (!data.channels.length) {
+    strip.append(el("div", "snote", "no reply channels visible — queue + ledger unreachable"));
+    return;
+  }
+  const grid = el("div", "sgrid");
+  const todayIdx = (new Date().getDay() + 6) % 7;  // Mon=0, same math as WEEK
+  grid.append(el("span"));
+  DAY_KEYS.forEach((d, i) =>
+    grid.append(el("span", `sday${i === todayIdx ? " today" : ""}`, "MTWTFSS"[i])));
+  const weekStart = new Date(WEEK + "T00:00:00");
+  const notes = [];
+  for (const ch of data.channels) {
+    const label = CHANNEL_LABELS[ch.name] || ch.name;
+    const lbl = el("span", `schan${ch.note ? " frozen" : ""}`, label);
+    if (ch.note) { lbl.title = ch.note; notes.push(`${label}: ${ch.note}`); }
+    grid.append(lbl);
+    DAY_KEYS.forEach((d, i) => {
+      const day = new Date(weekStart.getTime() + i * 864e5);
+      const p = x => String(x).padStart(2, "0");
+      const iso = `${day.getFullYear()}-${p(day.getMonth() + 1)}-${p(day.getDate())}`;
+      const n = (data.sent[ch.name] || {})[iso] || 0;
+      const skipKey = `replies/${ch.name}/${d}`;
+      const skipped = isDone(skipKey);
+      const cell = el("button", `scell${i === todayIdx ? " today" : ""}`);
+      if (n) {
+        cell.classList.add("on");
+        cell.textContent = n;
+        cell.title = `${label} · ${d} — ${n} sent · from the reply ledger`;
+        cell.disabled = true;
+      } else if (skipped) {
+        cell.classList.add("skip");
+        cell.textContent = "–";
+        cell.title = `${label} · ${d} — marked "no good candidates" ${stamp(weekState()[skipKey])} · click to undo`;
+        cell.onclick = () => markStep(skipKey, false);
+      } else if (ch.note) {
+        cell.classList.add("frozen");
+        cell.title = ch.note;
+        cell.disabled = true;
+      } else {
+        cell.title = `${label} · ${d} — nothing sent yet · sends log themselves from the review page; click only to record "no good candidates today"`;
+        cell.onclick = () => markStep(skipKey, true);
+      }
+      grid.append(cell);
+    });
+  }
+  strip.append(grid);
+  for (const note of notes) strip.append(el("div", "snote", note));
+}
+
+// Run-counter dots for a card whose work recurs N times a week without caring
+// which day (the Apify trial runs). Same flow_state mechanics as the strip's
+// skip cells: each circle is its own key (<cardKey>/run1 .. /runN) on the week row.
+function runDots(prefix, count) {
+  const row = el("div", "dayRow");
+  row.append(el("span", "dayLbl", "runs this week"));
+  for (let i = 1; i <= count; i++) {
+    const key = `${prefix}/run${i}`;
+    const on = isDone(key);
+    const dot = el("button", `dot${on ? " on" : ""}`, String(i));
+    dot.title = on
+      ? `run ${i} — done ${stamp(weekState()[key])} · click to undo`
+      : `click after run ${i} this week`;
+    dot.onclick = () => markStep(key, !on);
+    row.append(dot);
+  }
+  return row;
+}
+
+// Finder-trial auto state: trials.db is the truth. Pips light from actual runs
+// logged this week (a manual click still toggles the flow_state key as an
+// override in either direction — the OR of the two wins for display). Also
+// renders a latest-run summary line so the card answers "what happened?"
+// without opening /finders.
+async function attachFinderRuns(card, c) {
+  try {
+    const data = await fetch("/api/finder_trials").then(r => r.json());
+    const runs = data.runs || [];
+    const weekStart = new Date(WEEK + "T00:00:00");
+    const weekEnd = new Date(weekStart.getTime() + 7 * 864e5);
+    const thisWeek = runs.filter(r => {
+      const d = new Date(r.ran_at);
+      return d >= weekStart && d < weekEnd;
+    });
+    // Light auto pips: run i this week => pip i on (manual clicks OR on top).
+    const dots = [...card.querySelectorAll(".dayRow .dot")];
+    dots.forEach((dot, i) => {
+      if (i < thisWeek.length && !dot.classList.contains("on")) {
+        dot.classList.add("on");
+        dot.title = `run ${i + 1} — logged automatically (${thisWeek[i].ran_at.slice(0, 10)}) · trials.db`;
+      }
+    });
+    if (!runs.length) return;
+    const latest = runs[0];
+    const bits = (latest.results || []).map(t => {
+      const errs = (t.errors || "").split("\n").filter(Boolean).length;
+      return `${t.tool} ${t.posts_fetched}→${t.candidates}`
+        + (t.cost_usd ? ` $${t.cost_usd.toFixed(2)}` : "")
+        + (errs ? ` (${errs} err)` : "");
+    });
+    const stat = el("div", "stat", `latest run ${daysAgo(latest.ran_at)}: ${bits.join(" · ")}`);
+    const a = el("a", null, " side-by-side ↗");
+    a.href = "/finders";
+    a.target = "_blank";
+    a.style.color = "var(--emerald)";
+    stat.append(a);
+    card.append(stat);
+  } catch (e) { /* card stays manual-only if trials.db is unreadable */ }
+}
+
+// "Tool is live" auto-check: the registry is the truth. If this week's feature
+// seed is captured as an idea whose Build gate reached 'live', stamp the card
+// done without a click. Falls back to the manual button on any miss (seed not
+// picked, off-seed pick, registry unreachable) — never blocks.
+async function attachLiveCheck(card, c, done) {
+  try {
+    const [run, reg] = await Promise.all([
+      loadRun(), fetch("/api/gate_candidates").then(r => r.json())]);
+    const seed = ((run.content_pull || {}).feature_seed) || {};
+    const title = typeof seed === "object" ? (seed.tool || "") : String(seed);
+    const row = (reg.decided || []).find(r => r.title === title && r.build_stage === "live");
+    if (!row) return;
+    const stat = el("div", "stat", `✓ registry says live — idea #${row.id}`);
+    if (row.app_url) {
+      const a = el("a", null, " open the tool ↗");
+      a.href = row.app_url;
+      a.target = "_blank";
+      a.style.color = "var(--emerald)";
+      stat.append(a);
+    }
+    card.append(stat);
+    if (!done) markStep(c.key, true);
+  } catch (e) { /* registry unreachable — the manual mark-done still works */ }
+}
+
+// Publish auto-notice: the channel credential already sees the upload, so an
+// open publish card asks the server to scan YouTube (once per page view — the
+// set clears when the tab comes back into focus, i.e. returning from Studio).
+// A clean match logs + stamps through the same endpoint as the paste; anything
+// ambiguous leaves the card manual. (founder 2026-08-12)
+const pubScanned = new Set();
+async function attachPubScan(card, c, msg) {
+  if (pubScanned.has(c.key)) return;
+  pubScanned.add(c.key);
+  try {
+    msg.className = "pubMsg"; msg.textContent = "checking YouTube for the upload…";
+    const r = await fetch("/api/week_publish_scan", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week: WEEK, video: c.key.split("/")[0] }),
+    });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok || !b.matched) { msg.textContent = ""; return; }
+    msg.className = "pubMsg ok";
+    msg.textContent = `auto-noticed ✓ "${b.title || b.slug}"`;
+    DB.flow[WEEK] = b.steps;
+    await refreshData();
+    renderActive();
+  } catch (e) { msg.textContent = ""; /* best-effort — the paste still works */ }
+}
+
+function stepCard(c, next, st) {
+  const card = el("div", "kcard");
+  const done = c.key && isDone(c.key);
+  if (done) card.classList.add("done");
+  const top = el("div", "top");
+  top.append(el("span", `badge ${c.tag}`, c.tag === "todo" ? "not built" : c.tag));
+  if (c.key === next) { card.classList.add("next"); top.append(el("span", "badge here", "you are here")); }
+  card.append(top, el("div", "title", c.title), el("div", "body", c.body));
+  if (c.stat && st[c.stat]) card.append(el("div", `stat${c.stat === "awaiting" || st[c.stat].startsWith("⚠") ? " warn" : ""}`, st[c.stat]));
+  if (c.runs) card.append(runDots(c.key, c.runs));
+  if (c.finder) attachFinderRuns(card, c);
+  if (c.livecheck) attachLiveCheck(card, c, done);
+  const checkable = c.key && !c.info && c.tag !== "todo";
+  if (c.read || c.qa || c.ideas || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
+    const row = el("div", "doneRow");
+    if (c.read) {
+      const r = el("button", "mark read", `📖 ${c.read}`);
+      r.onclick = () => openReader();
+      row.append(r);
+    }
+    if (c.qa) {
+      const q = el("button", "mark read", "✍ answer the questions");
+      q.onclick = () => openQA();
+      row.append(q);
+    }
+    if (c.pain) {
+      const p = el("button", "mark read", "🩺 open the pain report");
+      p.onclick = () => openPain();
+      row.append(p);
+    }
+    if (c.close) {
+      const w = el("button", "mark read", "🧾 open the week — record verdicts");
+      w.onclick = () => openClose();
+      row.append(w);
+    }
+    if (c.ideas) {
+      const i = el("button", "mark read", "🎬 pick from the ideas");
+      i.onclick = () => openIdeas(c.ideas);
+      row.append(i);
+    }
+    if (c.gate) {
+      const g = el("button", "mark read", "🚪 open the gate — see the evidence");
+      g.onclick = () => openGate();
+      row.append(g);
+    }
+    if (c.facts) {
+      const f = el("button", "mark read", "🔎 read the verification");
+      f.onclick = () => openFacts(c.facts);
+      row.append(f);
+    }
+    if (c.script) {
+      const s = el("button", "mark read", "📖 read the script + give feedback");
+      s.onclick = () => openScript(c.script);
+      row.append(s);
+    }
+    if (c.example) {
+      const w = el("button", "mark read", "🎯 view the recommended run");
+      w.onclick = () => openExample(c.example);
+      row.append(w);
+    }
+    if (c.deck) {
+      const d = el("button", "mark read", "🖼 view the deck + give feedback");
+      d.onclick = () => openDeck(c.deck);
+      row.append(d);
+    }
+    if (c.thumbs) {
+      const t = el("button", "mark read", "🎨 view the thumbnail prompts");
+      t.onclick = () => openThumbs(c.thumbs);
+      row.append(t);
+    }
+    if (c.pkg) {
+      const p = el("button", "mark read", "📦 view the upload package");
+      p.onclick = () => openPkg(c.pkg);
+      row.append(p);
+    }
+    if (c.xp) {
+      const x = el("button", "mark read", "𝕏 view the post + give feedback");
+      x.onclick = () => openXPost(c.xp);
+      row.append(x);
+    }
+    if (c.cp) {
+      const cbtn = el("button", "mark read", "📣 view the community post");
+      cbtn.onclick = () => openCommunity(c.cp);
+      row.append(cbtn);
+    }
+    if (c.shorts) {
+      const sbtn = el("button", "mark read", "🎬 view shorts coverage");
+      sbtn.onclick = () => openShorts();
+      row.append(sbtn);
+    }
+    if (c.xbatch) {
+      const x = el("button", "mark read", "🗓 view the posts + give feedback");
+      x.onclick = () => openXBatch();
+      row.append(x);
+    }
+    if (c.email) {
+      const m = el("button", "mark read", "✉ read the issue + give feedback");
+      m.onclick = () => openEmail();
+      row.append(m);
+    }
+    if (c.go) {
+      const g = el("button", "mark read", c.goLabel || "↗ open");
+      g.onclick = () => { window.location.href = c.go; };
+      row.append(g);
+    }
+    if (c.go2) {
+      const g2 = el("button", "mark read", c.go2Label || "↗ open");
+      g2.onclick = () => { window.location.href = c.go2; };
+      row.append(g2);
+    }
+    if (checkable && done) {
+      row.append(el("span", "stamp", `✓ done · ${stamp(weekState()[c.key])}`));
+      const undo = el("button", "undo", "undo");
+      undo.onclick = () => markStep(c.key, false);
+      row.append(undo);
+    } else if (c.pub) {
+      // One-click by design: URL in, everything else (go-live time, title)
+      // is read from the YouTube API. The override inputs stay hidden unless
+      // deliberately opened — they exist for API-down days, not the routine.
+      const url = el("input", "pub");
+      url.placeholder = "paste the YouTube URL — everything else is auto-read…";
+      const live = el("input", "pub");
+      live.type = "datetime-local";
+      live.title = "override only — go-live time is read from YouTube automatically";
+      const title = el("input", "pub");
+      title.placeholder = "title override (auto-read from YouTube)…";
+      const b = el("button", "mark", "✓ log + done");
+      const msg = el("div", "pubMsg");
+      b.onclick = () => logPublish(c.key, { youtube: url.value, live: live.value, title: title.value }, b, msg);
+      url.onkeydown = e => { if (e.key === "Enter") b.onclick(); };
+      const row2 = el("div", "doneRow");
+      row2.style.display = "none";
+      row2.append(live, title);
+      const adv = el("button", "undo", "overrides");
+      adv.title = "go-live + title are auto-read from YouTube; open only to force values";
+      adv.onclick = () => { row2.style.display = row2.style.display === "none" ? "" : "none"; };
+      row.append(url, b, adv);
+      card.append(row, row2, msg);
+      attachPubScan(card, c, msg);
+      return card;
+    } else if (checkable) {
+      // doneLabel: cards whose done-click triggers an outward action (ship,
+      // schedule) say so on the button itself — founder ask 2026-08-24.
+      const b = el("button", "mark", c.doneLabel || "✓ mark done");
+      b.onclick = () => markStep(c.key, true);
+      row.append(b);
+    }
+    card.append(row);
+  }
+  return card;
+}
+
+function videoCard(c, next) {
+  const keys = VIDEOS[c.video].stages.flatMap(s => s.cards.map(x => x.key));
+  const done = keys.filter(isDone).length;
+  const card = el("a", "kcard");
+  card.href = `#${c.video}`;
+  const top = el("div", "top");
+  top.append(el("span", "badge me", "video"));
+  if (keys.includes(next)) { card.classList.add("next"); top.append(el("span", "badge here", "you are here")); }
+  const v = weekVideo(c.video);
+  const chip = el("span", `chip${v ? " live" : ""}`, v ? `logged: ${v.status}` : "not logged yet");
+  top.append(chip);
+  card.append(top, el("div", "title", `${c.title} ↗`), el("div", "body", c.body));
+  if (done === keys.length) card.classList.add("done");
+  const prog = el("div", "progress");
+  const bar = el("div", "bar"); const fill = el("div", "fill");
+  fill.style.width = `${Math.round(100 * done / keys.length)}%`;
+  bar.append(fill);
+  prog.append(bar, el("div", "label", `${done}/${keys.length} steps`));
+  card.append(prog);
+  return card;
+}
+
+// Board-level publish scans (founder 2026-08-14): the board notices uploads
+// without the founder opening each video's workflow. Same guard set + card
+// keys as attachPubScan, so whichever surface fires first wins the page view
+// (refocus clears the set, i.e. returning from Studio rescans).
+function scanOpenPublishes() {
+  for (const video of Object.keys(VIDEOS)) {
+    const key = `${video}/publish`;
+    if (isDone(key) || pubScanned.has(key)) continue;
+    pubScanned.add(key);
+    fetch("/api/week_publish_scan", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ week: WEEK, video }),
+    }).then(r => r.json()).then(async b => {
+      if (!b || !b.matched) return;
+      DB.flow[WEEK] = b.steps;
+      await refreshData();
+      renderActive();
+    }).catch(() => { /* best-effort — the card's own scan + paste still work */ });
+  }
+}
+
+function renderWeek(sub) {
+  renderReplyStrip();
+  scanOpenPublishes();
+  const st = stats();
+  const crumb = document.getElementById("crumb");
+  crumb.replaceChildren();
+  let stages = OVERVIEW;
+  if (VIDEOS[sub]) {
+    const back = el("a", null, "← this week");
+    back.href = "#";
+    crumb.append(back, el("span", "sep", "/"),
+      el("span", null, `${VIDEOS[sub].title} — ${VIDEOS[sub].sub}`));
+    stages = VIDEOS[sub].stages;
+  }
+  const board = document.getElementById("board");
+  board.replaceChildren();
+  const next = nextKey();
+  stages.forEach((stage, i) => {
+    const col = el("div", "col");
+    const h = el("div", "stage");
+    h.append(el("span", "n", stage.n), stage.title);
+    col.append(h, el("div", "why", stage.why));
+    const wrap = el("div", "cards");
+    for (const c of stage.cards) wrap.append(c.video ? videoCard(c, next) : stepCard(c, next, st));
+    col.append(wrap);
+    board.append(col);
+    if (i < stages.length - 1) board.append(el("div", "arrow", "→"));
+  });
+}
+
+// ── VIEW 2 render ───────────────────────────────────────────────────────────
+const NW = 152, NH = 54, GX = 192, GY = 102, PX = 18, PY = 14;
+const npos = n => ({ x: PX + n.col * GX, y: PY + n.row * GY });
+
+function healthColor(n) {
+  if (n.kind === "todo") return "var(--skip)";
+  if (n.kind === "me") return "var(--amber)";
+  const hb = DB.heartbeat.find(h => h.agent_name === (n.id === "research" ? "research" : n.id));
+  if (n.kind === "deployed") {
+    if (!hb || hb.hours_since_success == null) return "var(--skip)";
+    return hb.hours_since_success <= 192 ? "var(--emerald)"
+         : hb.hours_since_success <= 336 ? "var(--amber)" : "var(--red)";
+  }
+  return "var(--emerald)";  // in-session agents: built and ready
+}
+
+function edgePath(a, b) {
+  const p1 = npos(a), p2 = npos(b);
+  if (b.col < a.col) {  // backward edge (the loop-closer): sweep along the bottom
+    const s = { x: p1.x + NW / 2, y: p1.y + NH }, e = { x: p2.x + NW / 2, y: p2.y + NH };
+    return `M ${s.x} ${s.y} C ${s.x - 60} ${s.y + 90}, ${e.x + 120} ${e.y + 330}, ${e.x} ${e.y + 6}`;
+  }
+  if (a.col === b.col) {  // same column: vertical
+    const down = p2.y > p1.y;
+    const s = { x: p1.x + NW / 2, y: p1.y + (down ? NH : 0) };
+    const e = { x: p2.x + NW / 2, y: p2.y + (down ? 0 : NH) };
+    return `M ${s.x} ${s.y} C ${s.x} ${(s.y + e.y) / 2}, ${e.x} ${(s.y + e.y) / 2}, ${e.x} ${e.y - (down ? 5 : -5)}`;
+  }
+  const s = { x: p1.x + NW, y: p1.y + NH / 2 }, e = { x: p2.x, y: p2.y + NH / 2 };
+  const mid = (s.x + e.x) / 2;
+  return `M ${s.x} ${s.y} C ${mid} ${s.y}, ${mid} ${e.y}, ${e.x - 5} ${e.y}`;
+}
+
+function renderGraph(selectedId) {
+  const svg = document.getElementById("dag");
+  svg.replaceChildren();
+  const defs = svgEl("defs");
+  for (const [id, color] of [["arr", "#7d8894"], ["arrUp", "#e8a93b"], ["arrDown", "#1db584"]]) {
+    const m = svgEl("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5,
+      markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" });
+    m.append(svgEl("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color }));
+    defs.append(m);
+  }
+  svg.append(defs);
+
+  const sel = NODES.find(n => n.id === selectedId);
+  const upIds = sel ? EDGES.filter(e => e[1] === sel.id).map(e => e[0]) : [];
+  const downIds = sel ? EDGES.filter(e => e[0] === sel.id).map(e => e[1]) : [];
+
+  for (const [from, to, cls] of EDGES) {
+    const a = NODES.find(n => n.id === from), b = NODES.find(n => n.id === to);
+    let edgeCls = `gedge${cls ? " " + cls : ""}`, marker = "arr";
+    if (sel) {
+      if (to === sel.id) { edgeCls += " up"; marker = "arrUp"; }
+      else if (from === sel.id) { edgeCls += " down"; marker = "arrDown"; }
+      else edgeCls += " dim";
+    }
+    svg.append(svgEl("path", { d: edgePath(a, b), class: edgeCls, "marker-end": `url(#${marker})` }));
+  }
+
+  for (const n of NODES) {
+    const { x, y } = npos(n);
+    const g = svgEl("g", { class: `gnode kind-${n.kind}${sel && sel.id === n.id ? " selected" : ""}`,
+                           transform: `translate(${x},${y})` });
+    g.append(svgEl("rect", { width: NW, height: NH, rx: 8 }));
+    g.append(svgEl("circle", { class: "hdot", cx: 12, cy: 15, r: 4, fill: healthColor(n) }));
+    const t1 = svgEl("text", { x: 22, y: 19 }); t1.textContent = n.label;
+    const t2 = svgEl("text", { x: 22, y: 36, class: "sub" }); t2.textContent = n.sub;
+    g.append(t1, t2);
+    g.addEventListener("click", () => { location.hash = `#graph/${n.id}`; });
+    svg.append(g);
+  }
+
+  const panel = document.getElementById("nodeDetail");
+  panel.replaceChildren();
+  panel.classList.toggle("open", !!sel);
+  if (sel) {
+    const st = stats();
+    const h = el("h3");
+    h.append(sel.label + " ", el("span", `badge ${sel.kind === "todo" ? "todo" : sel.kind === "me" ? "me" : "agent"}`,
+      sel.kind === "deployed" ? "deployed agent" : sel.kind === "agent" ? "agent · in-session" :
+      sel.kind === "me" ? "you" : "not built"));
+    panel.append(h, el("div", "body", sel.body));
+    const io = el("div", "io");
+    const name = id => NODES.find(n => n.id === id).label;
+    const upBox = el("div"); upBox.append(el("div", "lbl", "reads from"),
+      el("div", "up-list", upIds.length ? upIds.map(name).join(" · ") : "— (source node)"));
+    const downBox = el("div"); downBox.append(el("div", "lbl", "feeds"),
+      el("div", "down-list", downIds.length ? downIds.map(name).join(" · ") : "— (sink node)"));
+    io.append(upBox, downBox);
+    panel.append(io);
+    if (sel.statKey && st[sel.statKey]) panel.append(el("div", "stat", st[sel.statKey]));
+    if (sel.href) {
+      const a = el("a", null, sel.href.startsWith("#") ? "open its board →" : "open the reply pipeline →");
+      a.href = sel.href;
+      const wrap = el("div", "stat");
+      wrap.append(a);
+      panel.append(wrap);
+    }
+  }
+}
+
+// ── VIEW 3 render ───────────────────────────────────────────────────────────
+function agg7d(a) {
+  const names = a.log_names || [a.id];
+  const cut = Date.now() - 7 * 8.64e7;
+  const rows = DB.logs.filter(r => names.includes(r.agent_name) && new Date(r.created_at) >= cut);
+  const sum = k => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);  // numerics may arrive as strings
+  const durs = rows.filter(r => r.duration_ms != null);
+  return {
+    events: rows.length,
+    fails: rows.filter(r => r.status === "failure" || r.event === "error").length,
+    lastErr: rows.find(r => r.status === "failure" || r.event === "error")?.message || null,
+    tokens: sum("tokens_input") + sum("tokens_output"),
+    cost: sum("cost_usd"),
+    avgDur: durs.length ? Math.round(durs.reduce((a, r) => a + (Number(r.duration_ms) || 0), 0) / durs.length) : null,
+    logsAny: rows.some(r => r.tokens_input != null || r.cost_usd != null),
+  };
+}
+
+function agentState(a) {
+  const hb = DB.heartbeat.find(h => h.agent_name === a.id);
+  if (a.mode === "todo") return { dot: "var(--skip)", text: "not built yet — on the build queue" };
+  if (a.mode === "deployed") {
+    if (!hb || hb.hours_since_success == null) return { dot: "var(--skip)", text: "no heartbeat yet" };
+    // Judged against the agent's own cadence (roster.json fresh_hours), not a
+    // flat window: a daily job goes amber far sooner than a Saturday one.
+    const h = hb.hours_since_success, fresh = a.fresh_hours || 192;
+    if (h <= fresh) return { dot: "var(--emerald)", text: `on schedule · last success ${daysAgo(hb.last_success)}` };
+    if (h <= fresh * 2) return { dot: "var(--amber)", text: `stale · last success ${daysAgo(hb.last_success)}` };
+    return { dot: "var(--red)", text: `failing? last success ${daysAgo(hb.last_success)}` };
+  }
+  return { dot: "var(--emerald)",
+    text: hb && hb.last_success ? `in-session · last ran ${daysAgo(hb.last_success)}` : "in-session · runs when you run it" };
+}
+
+// ── Model scorecard: which model, on which agent, at what cost + quality ────
+function renderModelScorecard() {
+  const box = document.getElementById("modelScore");
+  box.replaceChildren();
+  box.append(el("h2", null, "Model scorecard"),
+    el("div", "sub", "Per agent × model, from the same run telemetry the cards "
+      + "above use. Swap a MODEL_* env var, run the agent, and its new row "
+      + "shows up here — cost and quality side by side over time."));
+
+  // Ops: aggregate agent_execution_logs rows that carry a model.
+  const agg = {};
+  for (const r of DB.logs) {
+    if (!r.model) continue;
+    const k = `${r.agent_name}|${r.model}`;
+    const a = agg[k] ||= { agent: r.agent_name, model: r.model, runs: 0, fails: 0,
+                           tin: 0, tout: 0, cost: 0, costKnown: false, durs: [] };
+    a.runs += 1;
+    if (r.status === "failure") a.fails += 1;
+    a.tin += Number(r.tokens_input) || 0;
+    a.tout += Number(r.tokens_output) || 0;
+    if (r.cost_usd != null) { a.cost += Number(r.cost_usd) || 0; a.costKnown = true; }
+    if (r.duration_ms != null) a.durs.push(Number(r.duration_ms));
+  }
+  const rows = Object.values(agg).sort((x, y) =>
+    x.agent.localeCompare(y.agent) || y.runs - x.runs);
+  const wrap = el("div", "mtable-wrap");
+  if (!rows.length) {
+    box.append(el("div", "sub", "No model-stamped runs yet — rows appear as agents run."));
+  } else {
+    const t = el("table", "mtable");
+    const head = el("tr");
+    for (const h of ["agent", "model", "runs", "fails", "tokens in/out", "cost", "avg run"])
+      head.append(el("th", null, h));
+    t.append(head);
+    for (const a of rows) {
+      const tr = el("tr");
+      tr.append(el("td", null, a.agent), el("td", null, a.model));
+      tr.append(el("td", "num", String(a.runs)));
+      tr.append(el("td", `num${a.fails ? " warn" : ""}`, String(a.fails)));
+      tr.append(el("td", "num", `${a.tin.toLocaleString()} / ${a.tout.toLocaleString()}`));
+      tr.append(el("td", "num", a.costKnown ? `$${a.cost.toFixed(2)}` : "not logged"));
+      const avg = a.durs.length ? a.durs.reduce((s, d) => s + d, 0) / a.durs.length : null;
+      tr.append(el("td", "num", avg != null ? `${(avg / 1000).toFixed(1)}s` : "–"));
+      t.append(tr);
+    }
+    wrap.append(t);
+    box.append(wrap);
+  }
+
+  // Quality joins, where the data can speak already.
+  const qbits = [];
+  const rverd = {};
+  for (const r of DB.runs) {
+    if (!r.model || !r.outcome_verdict) continue;
+    (rverd[r.model] ||= []).push(r.outcome_verdict);
+  }
+  for (const [m, vs] of Object.entries(rverd)) {
+    const c = v => vs.filter(x => x === v).length;
+    qbits.push(`research on ${m}: ${c("strong")} strong / ${c("ok")} ok / ${c("off")} off (your verdicts)`);
+  }
+  const dstats = {};
+  for (const d of DB.drafts) {
+    if (!d.model) continue;
+    const s = dstats[d.model] ||= { n: 0, chosen: 0, pass: 0 };
+    s.n += 1;
+    if (d.chosen) s.chosen += 1;
+    if (d.gate_status === "pass") s.pass += 1;
+  }
+  for (const [m, s] of Object.entries(dstats)) {
+    qbits.push(`drafter on ${m}: ${s.n} variants, you picked ${s.chosen} `
+      + `(${Math.round(100 * s.chosen / s.n)}%), gate-pass ${Math.round(100 * s.pass / s.n)}%`);
+  }
+  for (const e of DB.evals.slice(-5)) {
+    qbits.push(`eval ${e.ran_at?.slice(0, 10)}: drafter ${e.drafter_model} on `
+      + `${e.guide_version} → ${Math.round(100 * e.win_rate)}% win rate `
+      + `(judge ${e.judge_model})`);
+  }
+  for (const e of DB.synth.slice(-5)) {
+    const o = e.overall || {};
+    qbits.push(`synth eval ${e.ran_at?.slice(0, 10)}: ${e.guide_version} on `
+      + `${e.drafter_model} → gates ${Math.round(100 * (o.gate_pass_rate ?? 0))}%, `
+      + `quality ${Math.round(100 * (o.mean_quality ?? 0))}% over ${o.cases ?? "?"} cases`);
+  }
+  const latestSynth = DB.synth[DB.synth.length - 1];
+  if (latestSynth?.by_category) {
+    const weakest = Object.entries(latestSynth.by_category)
+      .sort((a, b) => (a[1].mean_quality ?? 0) - (b[1].mean_quality ?? 0)).slice(0, 3)
+      .map(([c, a]) => `${c} ${Math.round(100 * (a.mean_quality ?? 0))}%`);
+    qbits.push(`latest synth weak spots: ${weakest.join(", ")}`);
+  }
+  if (qbits.length) {
+    box.append(el("h2", null, "Quality by model"),
+      el("div", "sub", "The signals that already exist — your verdicts, your picks, "
+        + "the blind eval. They accumulate as you work; compare after a model swap."));
+    for (const q of qbits) box.append(el("div", "sub", "· " + q));
+  }
+}
+
+function renderFleet() {
+  document.getElementById("fleetPause").checked = !!DB.controls.paused._fleet;
+  const grid = document.getElementById("fleetGrid");
+  grid.replaceChildren();
+  // Any agent that logs but isn't on the roster still gets a card (honest fleet).
+  const agents = DB.roster.agents;
+  const known = new Set(agents.flatMap(a => [a.id, ...(a.log_names || [])]));
+  const extras = [...new Set(DB.heartbeat.map(h => h.agent_name))]
+    .filter(n => !known.has(n))
+    .map(n => ({ id: n, name: n, mode: "session", desc: "(logs under this name; not in fleet/roster.json yet)" }));
+  for (const a of [...agents, ...extras]) {
+    const paused = !!DB.controls.paused[a.id];
+    const card = el("div", `acard${paused ? " paused" : ""}`);
+    const head = el("div", "head");
+    const dot = el("span", "sdot"); dot.style.background = agentState(a).dot;
+    head.append(dot, el("span", "name", a.name),
+      el("span", `badge mode ${a.mode === "todo" ? "todo" : a.mode === "deployed" ? "agent" : ""}`,
+        a.mode === "deployed" ? "deployed" : a.mode === "session" ? "in-session" : "not built"));
+    card.append(head, el("div", "stateline", `${agentState(a).text} — ${a.desc}`));
+    if (a.mode !== "todo") {
+      const m = agg7d(a);
+      const met = el("div", "metrics");
+      const cell = (label, val) => {
+        const d = el("div"); d.append(el("b", null, val), ` ${label}`); return d;
+      };
+      met.append(
+        cell("events · 7d", String(m.events)),
+        cell("failures", String(m.fails)),
+        cell("avg run", m.avgDur != null ? `${(m.avgDur / 1000).toFixed(1)}s` : "–"),
+        cell("tokens / cost", m.logsAny ? `${m.tokens.toLocaleString()} · $${m.cost.toFixed(2)}` : "not logged"),
+      );
+      card.append(met);
+      if (m.lastErr) {
+        const err = el("div", "stateline", `last error: ${m.lastErr}`);
+        err.style.color = "var(--red)"; err.style.marginTop = "6px";
+        card.append(err);
+      }
+    }
+    const row = el("div", "pauseRow");
+    const sw = el("label", "switch");
+    const input = document.createElement("input");
+    input.type = "checkbox"; input.checked = paused;
+    input.onchange = () => setPause(a.id, input.checked);
+    sw.append(input, el("span", "track"));
+    row.append(sw, el("span", null, paused ? "paused (dispatcher will skip it)" : "pause this agent"));
+    card.append(row);
+    grid.append(card);
+  }
+  renderModelScorecard();
+}
+
+// ── VIEW 4 render: the org chart (Mermaid) ──────────────────────────────────
+// Built from DB.roster (fleet/roster.json — the same list the Fleet cards
+// render). Lane members either reference an agent by id (border colored live
+// from agent_heartbeat against that agent's own fresh_hours) or are
+// display-only seats with a fixed style: me | session | manual. Founder and
+// dispatcher are chart furniture kept here: deliberately no manager node
+// between founder and lanes (no-orchestrator is locked — the dispatcher is
+// an alarm clock, drawn to the side).
+const ORG_FOUNDER = { label: "👤 Founder", sub: "every gate: verdicts · picks · sends · publish" };
+const ORG_DISPATCH = { label: "⏰ Dispatcher", sub: "Railway · daily · alarm clock, not a boss" };
+
+function orgStatus(m) {
+  if (m.style === "me") return { cls: "me", note: "" };
+  const a = m.agent && DB.roster.agents.find(x => x.id === m.agent);
+  const hb = a && DB.heartbeat.find(h => h.agent_name === a.id);
+  if (!hb || hb.hours_since_success == null) {
+    if (m.style === "session" || a?.mode === "session") return { cls: "session", note: "in-session" };
+    if (m.style === "manual") return { cls: "manual", note: "manual reps" };
+    return { cls: "none", note: "no heartbeat yet" };
+  }
+  const fresh = a.fresh_hours || 192;
+  const note = `ran ${daysAgo(hb.last_success)}`;
+  if (hb.hours_since_success <= fresh) return { cls: "ok", note: "✓ " + note };
+  if (hb.hours_since_success <= fresh * 2) return { cls: "stale", note };
+  return { cls: "late", note: "⚠ " + note };
+}
+
+function orgSource() {
+  const esc = s => (s || "").replace(/"/g, "#quot;");
+  const node = (id, label, sub, st) => {
+    const text = [sub, st.note].filter(Boolean).join(" · ");
+    return `    ${id}["${esc(label)}<br/><small>${esc(text)}</small>"]:::${st.cls}\n`;
+  };
+  let s = "flowchart TB\n";
+  s += node("founder", ORG_FOUNDER.label, ORG_FOUNDER.sub, { cls: "me", note: "" });
+  s += node("org_dispatch", ORG_DISPATCH.label, ORG_DISPATCH.sub, orgStatus({ agent: "dispatch" }));
+  const firstId = {};
+  DB.roster.lanes.forEach((lane, li) => {
+    s += `  subgraph ${lane.id}["${esc(lane.label)}"]\n`;
+    const ids = lane.members.map((m, mi) => {
+      const id = `org_${li}_${mi}`;
+      s += node(id, m.label, m.sub, orgStatus(m));
+      return id;
+    });
+    // Chain members so each lane stacks vertically (subgraph direction is
+    // ignored once a subgraph has external edges): visible arrows for a
+    // chain lane (the reply conveyor), invisible links (~~~) otherwise.
+    if (ids.length > 1) s += "    " + ids.join(lane.chain ? " --> " : " ~~~ ") + "\n";
+    s += "  end\n";
+    firstId[lane.id] = ids[0];
+  });
+  // Edges land on each lane's FIRST MEMBER, not the subgraph: an edge into a
+  // subgraph id makes Mermaid flatten the members horizontally (verified),
+  // while an edge into a node keeps the lane stacked as a column. And no edge
+  // back up to founder: that cycle made dagre drop founder mid-chart, so the
+  // loop-back rides as a label (roster loop_label) on the founder edge
+  // instead. A lane with a "wake" field gets the dotted dispatcher edge.
+  for (const lane of DB.roster.lanes) {
+    const f = firstId[lane.id];
+    if (!f) continue;
+    s += lane.loop_label ? `  founder -- ${esc(lane.loop_label)} --> ${f}\n`
+                         : `  founder --> ${f}\n`;
+    if (lane.wake != null)
+      s += lane.wake ? `  org_dispatch -. ${esc(lane.wake)} .-> ${f}\n`
+                     : `  org_dispatch -.-> ${f}\n`;
+  }
+  s += "  classDef ok stroke:#1db584,stroke-width:2px\n";
+  s += "  classDef stale stroke:#e8a93b,stroke-width:2px\n";
+  s += "  classDef late stroke:#e05d5d,stroke-width:2px\n";
+  s += "  classDef none stroke:#7d8894,stroke-dasharray:4 3\n";
+  s += "  classDef session stroke:#136f52\n";
+  s += "  classDef manual stroke:#8a6626\n";
+  s += "  classDef me stroke:#e8a93b,stroke-width:2.5px\n";
+  return s;
+}
+
+// Mermaid loads lazily (3.5MB vendored file) the first time the tab opens;
+// the other three views never pay for it. Re-renders only when the generated
+// source actually changed, so the 60s refresh tick is a no-op most of the time.
+let mermaidLoad = null, orgRendered = "", orgSeq = 0;
+function loadMermaid() {
+  return mermaidLoad ||= new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "/vendor/mermaid.min.js";
+    s.onload = () => {
+      mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: {
+        darkMode: true, background: "#121822",
+        primaryColor: "#0b0f14", primaryTextColor: "#e6edf3", primaryBorderColor: "#1e2733",
+        secondaryColor: "#121822", tertiaryColor: "#121822", lineColor: "#7d8894",
+        clusterBkg: "#0e131b", clusterBorder: "#1e2733", edgeLabelBackground: "#121822",
+        fontFamily: '-apple-system, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif', fontSize: "14.5px",
+      }, flowchart: { useMaxWidth: false, rankSpacing: 34, nodeSpacing: 30 } });
+      resolve();
+    };
+    s.onerror = () => { mermaidLoad = null; reject(new Error("could not load /vendor/mermaid.min.js")); };
+    document.head.append(s);
+  });
+}
+
+async function renderOrg() {
+  const box = document.getElementById("orgChart");
+  try {
+    await loadMermaid();
+    if (!DB.roster.lanes.length) {
+      box.innerHTML = `<div class="orgmsg">roster not loaded — is /api/roster serving fleet/roster.json?</div>`;
+      orgRendered = "";
+      return;
+    }
+    const src = orgSource();
+    if (src === orgRendered) return;
+    const { svg } = await mermaid.render(`orgSvg${++orgSeq}`, src);
+    box.innerHTML = svg;
+    orgRendered = src;
+  } catch (e) {
+    box.innerHTML = `<div class="orgmsg err">org chart failed: ${e.message}</div>`;
+    orgRendered = "";
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Router — hash carries {view, selection}; data cache makes switches instant.
+//   ''|#news|#feature|#ascent → week · #graph[/node] → graph · #org · #fleet
+// ════════════════════════════════════════════════════════════════════════════
+function parseHash() {
+  const h = location.hash.replace(/^#/, "");
+  if (h === "fleet") return { tab: "fleet" };
+  if (h === "org") return { tab: "org" };
+  if (h === "graph" || h.startsWith("graph/")) return { tab: "graph", sub: h.split("/")[1] || null };
+  return { tab: "week", sub: VIDEOS[h] ? h : null };
+}
+
+function renderActive() {
+  const { tab, sub } = parseHash();
+  for (const a of document.querySelectorAll("#tabs a"))
+    a.classList.toggle("active", a.dataset.tab === tab);
+  for (const v of document.querySelectorAll(".view"))
+    v.classList.toggle("active", v.id === `view-${tab}`);
+  if (tab === "week") renderWeek(sub);
+  else if (tab === "graph") renderGraph(sub);
+  else if (tab === "org") renderOrg();
+  else renderFleet();
+}
+
+document.getElementById("weekLabel").textContent =
+  `week of ${new Date(WEEK + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · resets Mondays`;
+
+document.getElementById("fleetPause").onchange =
+  e => setPause("_fleet", e.target.checked);
+
+window.addEventListener("hashchange", renderActive);
+document.addEventListener("visibilitychange", async () => {
+  if (!document.hidden) { pubScanned.clear(); await refreshData(); renderActive(); }
+});
+
+(async () => { await refreshData(); renderActive(); })();
+setInterval(async () => { await refreshData(); renderActive(); }, 60_000);
+</script>
+</body>
+</html>

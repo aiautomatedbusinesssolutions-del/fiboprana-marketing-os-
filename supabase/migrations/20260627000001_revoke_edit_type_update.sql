@@ -1,0 +1,13 @@
+-- Make edit_type write-once at the DB level (moat fix).
+--
+-- 20260626000001_reply_system.sql originally granted anon/authenticated UPDATE on
+-- edit_type. But edit_type is an edit_* diff-classification column — the calibration
+-- and voice-learning signal — and must be write-once like ai_draft / final_sent /
+-- edit_delta / edit_ratio. log_sent_reply() only ever INSERTs it; nothing UPDATEs it,
+-- so revoking the UPDATE breaks no code path and closes a moat leak (the label was
+-- rewritable after send under the public anon key).
+--
+-- The base migration has been corrected for fresh applies; this revoke reconciles any
+-- database where the original (edit_type-granting) version was already applied. It is a
+-- harmless no-op on a database built from the corrected base migration.
+revoke update (edit_type) on marketing.reply_ledger from anon, authenticated;

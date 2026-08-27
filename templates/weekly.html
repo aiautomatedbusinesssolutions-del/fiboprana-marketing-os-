@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Weekly System — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Weekly System</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('runbook') }}">Open the runbook</a>
+        </div>
+    </div>
+
+    <p class="lede">
+        The weekly marketing engine — one machine, three loops, three cadences. This is a separate
+        section; your existing modules are untouched and still in the top nav. It's built one lane at
+        a time. See the <a href="{{ url_for('runbook') }}">runbook</a> for the full operating
+        procedure and <code>BUILD_PLAN.md</code> for what's coming next.
+    </p>
+
+    <section style="margin-top: 24px;">
+        <h2>Weekly content loop</h2>
+        <div class="tiles" style="margin-top: 12px;">
+            <a class="tile" href="{{ url_for('radar.radar_digest') }}" style="text-decoration: none;">
+                <h2 style="font-size: 1.1em;">Trend Digest</h2>
+                <p>This week's cutting-edge fintech + AI-in-fintech story, distilled from the radar pile.</p>
+                <p class="muted" style="font-size: 0.85em;">● Live</p>
+            </a>
+            <a class="tile" href="{{ url_for('swipe.swipe_index') }}" style="text-decoration: none;">
+                <h2 style="font-size: 1.1em;">Swipe File</h2>
+                <p>Capture posts that worked; triage into structured content signals.</p>
+                <p class="muted" style="font-size: 0.85em;">● Live</p>
+            </a>
+            <a class="tile" href="{{ url_for('journal.journal_list') }}" style="text-decoration: none;">
+                <h2 style="font-size: 1.1em;">Portfolio Journal</h2>
+                <p>The weekly Ascent entry — decision + why, public-safe.</p>
+                <p class="muted" style="font-size: 0.85em;">● Live</p>
+            </a>
+            <div class="tile" style="opacity: 0.55;">
+                <h2 style="font-size: 1.1em;">Content Pack</h2>
+                <p>One button: bundle the week's inputs into brand-voiced, copy-paste drafts.</p>
+                <p class="muted" style="font-size: 0.85em;">Planned</p>
+            </div>
+        </div>
+    </section>
+
+    <section style="margin-top: 32px;">
+        <h2>Strategy review &middot; Funnel</h2>
+        <p class="muted">
+            The monthly strategy review and the funnel / list-building layer are designed and
+            scheduled for later phases. See the <a href="{{ url_for('runbook') }}">runbook</a>.
+        </p>
+    </section>
+{% endblock %}

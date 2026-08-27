@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}X posts for Observation #{{ observation.id }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>X posts for Observation #{{ observation.id }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('observations.observations_detail', obs_id=observation.id) }}">← Back to observation</a>
+            <form method="post" action="{{ url_for('content.generate_x_posts') }}">
+                <input type="hidden" name="observation_id" value="{{ observation.id }}">
+                <button type="submit" class="button-secondary">Regenerate</button>
+            </form>
+        </div>
+    </div>
+
+    <p class="lede">5 draft posts in 5 styles. Copy what you want; click Regenerate to get a fresh batch.</p>
+
+    {% for post in posts %}
+        <div class="x-post" data-style="{{ post.style }}">
+            <div class="x-post-header">
+                <h2 class="x-post-style">{{ post.style|replace('_', ' ')|title }}</h2>
+                <span class="x-post-count {% if post.text|length > 280 %}x-post-count-over{% endif %}">{{ post.text|length }} / 280</span>
+            </div>
+            <textarea class="x-post-text {% if post.text|length > 280 %}x-post-text-over{% endif %}" readonly rows="4" id="x-post-{{ loop.index }}">{{ post.text }}</textarea>
+            <div class="x-post-actions">
+                <button type="button" class="button-secondary copy-post-btn" data-target="x-post-{{ loop.index }}">Copy</button>
+                <form method="post" action="{{ url_for('attribution.new_form') }}" style="display: inline;">
+                    <input type="hidden" name="utm_source"     value="x">
+                    <input type="hidden" name="utm_medium"     value="post">
+                    <input type="hidden" name="utm_campaign"   value="obs-{{ observation.id }}-{{ post.style }}">
+                    <input type="hidden" name="utm_content"    value="{{ observation.id }}">
+                    <input type="hidden" name="observation_id" value="{{ observation.id }}">
+                    <input type="hidden" name="post_text"      value="{{ post.text }}">
+                    <button type="submit" class="button-secondary">Create tracking link</button>
+                </form>
+                <span class="extract-status copy-status" data-status-for="x-post-{{ loop.index }}" role="status" aria-live="polite"></span>
+            </div>
+
+            <div class="image-prompts" data-post-index="{{ loop.index }}" data-observation-id="{{ observation.id }}" data-post-style="{{ post.style }}">
+                <div class="image-prompts-actions">
+                    <button type="button" class="button-secondary generate-image-prompts-btn">Generate image prompts</button>
+                    <span class="extract-status image-prompts-status" role="status" aria-live="polite"></span>
+                </div>
+                <div class="image-prompts-results" hidden>
+                    <div class="image-prompt-block" data-generator="ideogram">
+                        <div class="image-prompt-header">
+                            <h3 class="image-prompt-label">Ideogram</h3>
+                            <button type="button" class="button-secondary copy-image-prompt-btn">Copy</button>
+                        </div>
+                        <textarea class="image-prompt-text" readonly rows="6"></textarea>
+                    </div>
+                    <div class="image-prompt-block" data-generator="gpt_image">
+                        <div class="image-prompt-header">
+                            <h3 class="image-prompt-label">GPT Image 2.0</h3>
+                            <button type="button" class="button-secondary copy-image-prompt-btn">Copy</button>
+                        </div>
+                        <textarea class="image-prompt-text" readonly rows="6"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
+    <script>
+    (function () {
+        var buttons = document.querySelectorAll('.copy-post-btn');
+        buttons.forEach(function (btn) {
+            var origLabel = btn.textContent;
+            var statusEl = document.querySelector('[data-status-for="' + btn.dataset.target + '"]');
+            var revertTimer = null;
+
+            function setStatus(msg, kind) {
+                if (!statusEl) return;
+                statusEl.textContent = msg || '';
+                statusEl.className = 'extract-status copy-status' + (kind ? ' extract-status-' + kind : '');
+            }
+
+            function fallback(ta) {
+                ta.focus();
+                ta.select();
+                setStatus('Press Ctrl+C to copy.', 'error');
+            }
+
+            btn.addEventListener('click', function () {
+                var ta = document.getElementById(btn.dataset.target);
+                if (!ta) return;
+                var text = ta.value;
+                if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
+
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    fallback(ta);
+                    return;
+                }
+
+                navigator.clipboard.writeText(text).then(function () {
+                    btn.textContent = 'Copied!';
+                    setStatus('', '');
+                    revertTimer = setTimeout(function () {
+                        btn.textContent = origLabel;
+                        revertTimer = null;
+                    }, 2000);
+                }).catch(function () {
+                    fallback(ta);
+                });
+            });
+        });
+    })();
+
+    (function () {
+        var endpoint = "{{ url_for('content.generate_image_prompts') }}";
+        var blocks = document.querySelectorAll('.image-prompts');
+
+        blocks.forEach(function (block) {
+            var btn = block.querySelector('.generate-image-prompts-btn');
+            var statusEl = block.querySelector('.image-prompts-status');
+            var results = block.querySelector('.image-prompts-results');
+            var ideogramTa = block.querySelector('[data-generator="ideogram"] .image-prompt-text');
+            var gptTa = block.querySelector('[data-generator="gpt_image"] .image-prompt-text');
+            var copyBtns = block.querySelectorAll('.copy-image-prompt-btn');
+
+            var postIdx = block.dataset.postIndex;
+            var observationId = block.dataset.observationId;
+            var postStyle = block.dataset.postStyle;
+            var sourceTa = document.getElementById('x-post-' + postIdx);
+
+            function setStatus(msg, kind) {
+                statusEl.textContent = msg || '';
+                statusEl.className = 'extract-status image-prompts-status' + (kind ? ' extract-status-' + kind : '');
+            }
+
+            btn.addEventListener('click', function () {
+                if (!sourceTa) return;
+                btn.disabled = true;
+                setStatus('Generating image prompts...', '');
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        observation_id: observationId,
+                        post_text: sourceTa.value,
+                        post_style: postStyle,
+                    }),
+                }).then(function (resp) {
+                    return resp.json().then(function (data) {
+                        return {ok: resp.ok, status: resp.status, data: data};
+                    });
+                }).then(function (r) {
+                    btn.disabled = false;
+                    if (!r.ok || (r.data && r.data.error)) {
+                        setStatus((r.data && r.data.error) || ('Failed (' + r.status + ')'), 'error');
+                        return;
+                    }
+                    ideogramTa.value = r.data.ideogram || '';
+                    gptTa.value = r.data.gpt_image || '';
+                    results.hidden = false;
+                    btn.textContent = 'Regenerate image prompts';
+                    setStatus('', '');
+                }).catch(function (err) {
+                    btn.disabled = false;
+                    setStatus('Network error: ' + err, 'error');
+                });
+            });
+
+            copyBtns.forEach(function (cb) {
+                var ta = cb.closest('.image-prompt-block').querySelector('.image-prompt-text');
+                var orig = cb.textContent;
+                var revert = null;
+                cb.addEventListener('click', function () {
+                    if (revert) { clearTimeout(revert); revert = null; }
+                    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                        ta.focus();
+                        ta.select();
+                        return;
+                    }
+                    navigator.clipboard.writeText(ta.value).then(function () {
+                        cb.textContent = 'Copied!';
+                        revert = setTimeout(function () {
+                            cb.textContent = orig;
+                            revert = null;
+                        }, 2000);
+                    }).catch(function () {
+                        ta.focus();
+                        ta.select();
+                    });
+                });
+            });
+        });
+    })();
+    </script>
+{% endblock %}

@@ -1,0 +1,134 @@
+# Reply-finder config. Edit values here; reloaded each run.
+#
+# source: which per-sub fetch feeds the scanner.
+#   apify — PRODUCTION (inherited call from the engine's 2026-08-07 trial):
+#           sees full post bodies (flip matching reads the whole selftext) and
+#           comment counts; ~$0.46 per 7-sub scan at 25 posts/sub. Needs
+#           APIFY_TOKEN in the environment.
+#   rss   — retired fallback: free, but Reddit 429-throttles it and it only
+#           sees title + an often-empty blurb.
+source: apify
+
+subreddits:
+  - Meditation
+  - Mindfulness
+  - breathwork
+  - qigong
+  - ouraring
+  - whoop
+  - QuantifiedSelf
+
+feed:
+  limit_per_sub: 100         # rss only: ?limit=N on the RSS URL (Reddit caps ~100)
+  apify_limit_per_sub: 25    # apify only: posts per sub per run (cost scales with this)
+  lookback_hours: 72         # drop posts older than this
+  delay_seconds: 6           # rss only: polite pause between feeds against 429s
+
+# The edge: threads where the turn-it-inward reply lands — from the metric or
+# the technique to the person's own experience, noticed over time, without a
+# grade. Grouped so each group carries its own suggested angle. Matched
+# case-insensitively as substrings against the post title + blurb.
+flip_groups:
+  - name: data_confusion
+    angle: >
+      They're asking what the number MEANS. Don't interpret the metric. Turn it
+      inward: what were those days actually like for them? The score is a proxy,
+      not a verdict — help them put the number next to their own experience and
+      notice what lines up, over weeks not mornings.
+    phrases:
+      - "what does my hrv"
+      - "hrv dropped"
+      - "hrv is low"
+      - "sleep score"
+      - "readiness score"
+      - "recovery score"
+      - "why is my recovery"
+      - "what does this mean"
+      - "does this data"
+      - "is this accurate"
+
+  - name: practice_doubt
+    angle: >
+      They can't tell if their practice is doing anything. Don't referee the
+      technique. Shift from am-I-doing-it-right to what-would-count-as-evidence
+      for THEM: small things to notice over weeks (falling asleep easier, the
+      2pm dip softening). Normalize that not-seeing-it is why most people quit.
+    phrases:
+      - "is meditation working"
+      - "is it working"
+      - "not sure it's doing anything"
+      - "doing anything for me"
+      - "am i doing it right"
+      - "doing it wrong"
+      - "no progress"
+      - "any progress"
+      - "should i keep meditating"
+      - "can't tell if"
+      - "feel any different"
+
+  - name: score_anxiety
+    angle: >
+      The tracker is making them feel worse. Validate the feeling first — never
+      shame the tool or the tracking. They're allowed to look less, step back,
+      or decide the score isn't the boss of the day. Relief-first: what would
+      checking in with themselves (not the app) look like?
+    phrases:
+      - "stressing me out"
+      - "making me anxious"
+      - "anxiety about my"
+      - "obsessed with my score"
+      - "obsessing over"
+      - "checking my ring"
+      - "hangxiety"
+      - "ruining my sleep"
+      - "take a break from tracking"
+      - "quit tracking"
+      - "never enough"
+
+# Audience-fit. Weaker than a flip, but keeps the queue on our person. A post
+# with neither a flip nor a soft trigger is treated as off-topic and dropped.
+soft_trigger_phrases:
+  - "new to meditation"
+  - "just started meditating"
+  - "beginner"
+  - "burnout"
+  - "burned out"
+  - "burnt out"
+  - "wired and tired"
+  - "can't relax"
+  - "mind won't stop"
+  - "mind won't shut off"
+  - "just got my oura"
+  - "just got a whoop"
+  - "running on fumes"
+
+# Hard kill — compliance-aligned (never reply into medical or crisis threads;
+# stay on the general-wellness side of the line) plus promo/engagement noise.
+# A match drops the post regardless of score.
+exclusion_phrases:
+  - "diagnos"
+  - "medication"
+  - "antidepressant"
+  - "ssri"
+  - "adderall"
+  - "therapist told me"
+  - "suicid"
+  - "self harm"
+  - "self-harm"
+  - "psychosis"
+  - "ptsd"
+  - "psychedelic"
+  - "microdos"
+  - "ayahuasca"
+  - "discount code"
+  - "promo code"
+  - "buy my"
+
+scoring:
+  flip_match: 20          # per flip phrase — the edge
+  multiple_flips: 10      # bonus when 2+ flip phrases hit
+  soft_trigger: 5         # per audience-fit phrase
+  freshness_max: 20       # full at age 0, linear to 0 at lookback_hours (reliable here)
+
+scan:
+  min_score_to_display: 15

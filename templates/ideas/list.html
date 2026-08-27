@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Product Ideas — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Product Ideas</h1>
+        <div class="actions">
+            <a class="button" href="{{ url_for('ideas.ideas_new_form') }}">+ New idea</a>
+            <form method="post" action="{{ url_for('ideas.ideas_propose') }}" style="display: inline;">
+                <button type="submit" class="button-secondary">Propose new ideas</button>
+            </form>
+        </div>
+    </div>
+
+    {% if created_id %}
+        <div class="notice notice-success">
+            Saved idea #{{ created_id }}. <a href="{{ url_for('ideas.ideas_detail', idea_id=created_id) }}">View it →</a>
+        </div>
+    {% endif %}
+
+    {% if proposed_count %}
+        <div class="notice notice-success">
+            Saved {{ proposed_count }} AI-proposed idea{{ '' if proposed_count == 1 else 's' }}. Review them below.
+        </div>
+    {% endif %}
+
+    <form class="filters" method="get" action="{{ url_for('ideas.ideas_list') }}">
+        <div class="filter-field">
+            <label for="f-status">Status</label>
+            <select id="f-status" name="status">
+                <option value="" {% if not filters.status %}selected{% endif %}>All</option>
+                <option value="idea"     {% if filters.status == 'idea' %}selected{% endif %}>Idea</option>
+                <option value="approved" {% if filters.status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if filters.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="f-proposed">Proposed by</label>
+            <select id="f-proposed" name="proposed_by">
+                <option value="" {% if not filters.proposed_by %}selected{% endif %}>All</option>
+                <option value="manual" {% if filters.proposed_by == 'manual' %}selected{% endif %}>Manual</option>
+                <option value="ai"     {% if filters.proposed_by == 'ai' %}selected{% endif %}>AI</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="f-tag">Tag</label>
+            <input id="f-tag" name="tag" value="{{ filters.tag }}" placeholder="e.g. journaling">
+        </div>
+        <div class="filter-field">
+            <label for="f-limit">Limit</label>
+            <input id="f-limit" name="limit" type="number" min="1" max="500" value="{{ filters.limit }}">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Filter</button>
+            <a class="button-link" href="{{ url_for('ideas.ideas_list') }}">Reset</a>
+        </div>
+    </form>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} idea{{ '' if rows|length == 1 else 's' }}.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Created</th>
+                        <th>Title</th>
+                        <th>Source</th>
+                        <th>Status</th>
+                        <th>Build</th>
+                        <th>Proposed by</th>
+                        <th>Guardrails</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><a href="{{ url_for('ideas.ideas_detail', idea_id=r.id) }}">{{ r.created_at[:10] }}</a></td>
+                        <td><a href="{{ url_for('ideas.ideas_detail', idea_id=r.id) }}">{{ r.title }}</a></td>
+                        <td>
+                            {% if r.source %}
+                                <span class="muted">{{ r.source|truncate(80) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.status }}</td>
+                        <td>
+                            {% if r.gate_week == current_week %}
+                                <span class="wk-chip wk-chip-now">THIS WEEK</span> <span class="muted">{{ r.build_stage }}</span>
+                            {% elif r.gate_week %}
+                                <span class="wk-chip">wk of {{ r.gate_week }}</span> <span class="muted">{{ r.build_stage }}</span>
+                            {% elif r.build_stage %}
+                                <span class="muted">{{ r.build_stage }}</span>
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.proposed_by }}</td>
+                        <td>
+                            {% if r.gr_status == 'conflict' %}
+                                <span class="guardrail-conflict">conflict</span>
+                            {% elif r.gr_status == 'error' %}
+                                <span class="guardrail-error">check failed</span>
+                            {% elif r.gr_status == 'ok' %}
+                                <span class="muted">ok</span>
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.tags %}
+                                {% for t in r.tags.split(',') if t %}<a class="tag" href="{{ url_for('tag_detail', tag=t.strip()) }}">{{ t }}</a>{% endfor %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">No ideas match. <a href="{{ url_for('ideas.ideas_new_form') }}">Add one →</a> or click "Propose new ideas" to have Claude generate some from your observations.</p>
+    {% endif %}
+{% endblock %}

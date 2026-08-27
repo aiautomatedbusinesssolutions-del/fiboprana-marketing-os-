@@ -1,0 +1,79 @@
+# Radar config — competitive/niche scanner for the mind-body wellness space.
+# Edit freely; the loader re-reads on every scan, no app restart needed.
+
+# How many days back to consider items "fresh". Items older than this are
+# skipped at fetch time, before they ever hit the DB.
+lookback_days: 30
+
+# Per-source caps to keep a single scan bounded.
+hn_hits_per_query: 20
+exa_results_per_query: 10
+
+# Hacker News Algolia search queries. Free API, no auth.
+# Tip: HN matches are sparse for niche phrases — broader, single-word queries
+# (or two-word combos that show up in titles) return more signal.
+hn_queries:
+  - "wearable"
+  - "Oura"
+  - "meditation"
+  - "HRV"
+  - "mental health app"
+  # AI-in-wellness trend signal — the weekly Trend Digest's main interest.
+  - "AI wellness"
+  - "emotion AI"
+  - "digital health"
+
+# RSS / Atom feeds. Mix of adjacent-competitor blogs and editorial-voice peers.
+# NOTE: verify each feed resolves on the first scan and swap any that 403/404 —
+# these were seeded by hand for the Fiboprana clone, not yet battle-tested.
+rss_feeds:
+  - name: "Ness Labs"
+    url:  "https://nesslabs.com/feed"
+  - name: "Mindful.org"
+    url:  "https://www.mindful.org/feed/"
+  - name: "Quantified Self"
+    url:  "https://quantifiedself.com/blog/feed/"
+  - name: "MobiHealthNews"
+    url:  "https://www.mobihealthnews.com/feed"
+  - name: "Oura Blog"
+    url:  "https://ouraring.com/blog/feed/"
+
+# Items whose title or blurb match ANY of these keywords (case-insensitive,
+# whole-word-ish substring) are dropped before insert. Tune freely — this is
+# how you keep off-topic noise out of the digest.
+denylist_keywords:
+  # Fiboprana is grounded mind-body wellness. Filter the woo and the
+  # adjacent-but-off-lane fitness/diet content even when framed as "wellness."
+  - "manifestation"
+  - "astrology"
+  - "crystal healing"
+  - "law of attraction"
+  - "weight loss"
+  - "ozempic"
+  - "bodybuilding"
+  - "protein powder"
+  - "supplement stack"
+  - "testosterone"
+  - "keto"
+  - "crypto"
+  - "bitcoin"
+
+# Exa neural-search discovery queries. Each call = 1 credit at num_results <= 10.
+# Mapped to the digest buckets: product moves, research, backlash, AI-in-wellness,
+# privacy/regulation, startup watch.
+exa_queries:
+  - "apps that correlate meditation or breathwork practice with heart rate variability and sleep data"
+  - "wearable companies adding stress mood or mind-state tracking features"
+  - "tracker anxiety orthosomnia and backlash against sleep scores and readiness scores"
+  - "AI wellness coaches and emotion AI products for stress and mental wellbeing"
+  # Privacy/regulatory line — the highest-value signal to never miss (FTC HBNR,
+  # Washington MHMDA, FDA general-wellness vs. medical-device). The Fiboprana
+  # analog of the old education-vs-advice watch.
+  - "FTC enforcement or state privacy law on mental health and wellness app data"
+  - "FDA general wellness versus medical device line for consumer mind or stress tracking apps"
+  # Research signal — mind-body claims we could cover (with sources) in mind-science videos.
+  - "new research on meditation breathwork or qigong effects measured with wearables or HRV"
+  # Startup watch: startups surface through launch + funding coverage, so hunt
+  # those directly. Feeds the digest's "Startup watch" bucket.
+  - "early-stage startup building mind-body wellness meditation or nervous system tracking app"
+  - "seed or Series A funding for a mental wellness or mind-state tracking product"

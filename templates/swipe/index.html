@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Swipe File — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Swipe File</h1>
+        <div class="actions">
+            <a class="button" href="{{ url_for('swipe.swipe_new_form') }}">Quick-add</a>
+            <a class="button button-secondary" href="{{ url_for('swipe.swipe_triage') }}">Triage ({{ new_count }})</a>
+            <a class="button-link" href="{{ url_for('weekly_hub') }}">← Weekly</a>
+        </div>
+    </div>
+
+    {% if message %}<div class="notice notice-success">{{ message }}</div>{% endif %}
+    {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
+    {% if added %}<div class="notice notice-success">Added {{ added }} item{{ '' if added == 1 else 's' }} to triage.</div>{% endif %}
+
+    <p class="lede">
+        Posts that worked, captured loosely in the moment, then triaged into structured content
+        signals the content engine can draw on. Two layers, like capture → synthesis: the raw inbox
+        is allowed to be junky; the promoted signals are not.
+    </p>
+
+    <div class="tiles" style="margin-top: 12px;">
+        <div class="tile"><h2>{{ new_count }}</h2><p>awaiting triage</p></div>
+        <div class="tile"><h2>{{ signal_count }}</h2><p>active signals</p></div>
+    </div>
+
+    <section style="margin-top: 32px;">
+        <h2>Recent signals</h2>
+        {% if not signals %}
+            <p class="empty">No signals yet. <a href="{{ url_for('swipe.swipe_new_form') }}">Quick-add</a> a few posts, then triage them.</p>
+        {% else %}
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead><tr><th>Platform</th><th>Hook</th><th>Why it landed</th><th>Founder's angle</th></tr></thead>
+                    <tbody>
+                        {% for s in signals %}
+                            <tr>
+                                <td>{{ s.platform or '—' }}</td>
+                                <td><code>{{ s.hook_type or '—' }}</code></td>
+                                <td>{{ s.why_it_landed or '' }}</td>
+                                <td class="muted">{{ s.nates_angle or '' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

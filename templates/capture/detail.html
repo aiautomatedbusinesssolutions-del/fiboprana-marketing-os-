@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Entry #{{ row.id }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Entry #{{ row.id }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('capture.capture_edit_form', entry_id=row.id) }}">Edit</a>
+            <a class="button-link" href="{{ url_for('capture.capture_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    {% if row.raw_transcript %}
+        <section class="raw-transcript">
+            <h2>Raw transcript</h2>
+            <div class="transcript-box">{{ row.raw_transcript }}</div>
+        </section>
+    {% endif %}
+
+    <dl class="entry-detail">
+        {% for name, label, kind, _hint in fields %}
+            {% set val = row[name] %}
+            {% if val %}
+                <dt>{{ label }}</dt>
+                <dd>
+                    {% if kind == 'textarea' %}
+                        <div class="multiline">{{ val }}</div>
+                    {% elif name == 'tags' %}
+                        {% for t in val.split(',') if t %}<a class="tag" href="{{ url_for('tag_detail', tag=t.strip()) }}">{{ t }}</a>{% endfor %}
+                    {% else %}
+                        {{ val }}
+                    {% endif %}
+                </dd>
+            {% endif %}
+        {% endfor %}
+        {% if row.follow_up_status_changed_at %}
+            <dt>Follow-up changed</dt>
+            <dd class="muted">{{ row.follow_up_status_changed_at }} <span class="hint">(UTC)</span></dd>
+        {% endif %}
+        <dt>Created at</dt>
+        <dd class="muted">{{ row.created_at }} <span class="hint">(UTC)</span></dd>
+    </dl>
+{% endblock %}

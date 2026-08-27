@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Radar — Saved — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Radar — Saved</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('radar.radar_list') }}">Back to Radar</a>
+        </div>
+    </div>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} saved item{{ '' if rows|length == 1 else 's' }}.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Origin</th>
+                        <th>Title</th>
+                        <th>Published</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><span class="muted">{{ r.source }}</span></td>
+                        <td>{{ r.source_label or '—' }}</td>
+                        <td>
+                            <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title or r.url }}</a>
+                            {% if r.blurb %}
+                                <br><span class="muted">{{ r.blurb|truncate(220) }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="muted">{{ (r.published_at or '')[:10] }}</span></td>
+                        <td>
+                            <form method="post" action="{{ url_for('radar.radar_archive', item_id=r.id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Archive</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">Nothing saved yet.</p>
+    {% endif %}
+{% endblock %}

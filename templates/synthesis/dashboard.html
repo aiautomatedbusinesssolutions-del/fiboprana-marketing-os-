@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Synthesis — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Synthesis</h1>
+        <div class="actions">
+            <form method="post" action="{{ url_for('synthesis.synthesis_regenerate') }}" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Generating…';">
+                <button type="submit" class="button" {% if no_observations %}disabled{% endif %}>
+                    {{ 'Regenerate synthesis' if latest else 'Generate first synthesis' }}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if regenerate_error %}
+        <div class="notice notice-error">{{ regenerate_error }}</div>
+    {% endif %}
+    {% if regenerate_success %}
+        <div class="notice notice-success">{{ regenerate_success }}</div>
+    {% endif %}
+
+    <p class="lede">Pattern aggregation across observations. Regenerate after adding observations; the idea proposer reads <code>SYNTHESIS.md</code> as input.</p>
+
+    <div class="tiles" style="margin-top: 12px;">
+        <div class="tile">
+            <h2>{{ stats.observation_count }}</h2>
+            <p>total observations</p>
+        </div>
+        <div class="tile">
+            <h2>{{ stats.recent_count }}</h2>
+            <p>added (last 30 days)</p>
+        </div>
+        <div class="tile">
+            {% if latest %}
+                <h2>{{ latest.generated_at[:10] }}</h2>
+                <p>last synthesis run</p>
+            {% else %}
+                <h2>—</h2>
+                <p>never run</p>
+            {% endif %}
+        </div>
+        <div class="tile">
+            <h2>{{ stats.drift }}</h2>
+            <p>obs since last synthesis</p>
+        </div>
+    </div>
+
+    {% if stats.drift > 0 and latest %}
+        <p class="hint" style="margin-top: 12px;"><strong>Heads up:</strong> {{ stats.drift }} observation{{ 's' if stats.drift != 1 else '' }} added since the last synthesis run. The idea proposer is reading slightly-stale synthesis until you regenerate.</p>
+    {% endif %}
+
+    <section style="margin-top: 32px;">
+        <h2>Tag frequency</h2>
+        {% if not tags %}
+            <p class="muted">No tags yet.</p>
+        {% else %}
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead>
+                        <tr><th>Tag</th><th>Count</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for tag, count in tags %}
+                            <tr><td><code>{{ tag }}</code></td><td>{{ count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    <section style="margin-top: 32px;">
+        <h2>Source breakdown</h2>
+        {% if not sources %}
+            <p class="muted">No sources yet.</p>
+        {% else %}
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead><tr><th>Source</th><th>Count</th></tr></thead>
+                    <tbody>
+                        {% for source, count in sources %}
+                            <tr><td>{{ source }}</td><td>{{ count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    {% if product_insights %}
+        <section style="margin-top: 32px;">
+            <h2>Product-insight observations ({{ product_insights|length }})</h2>
+            <p class="hint">Observations tagged <code>product-insight</code> — directly-actionable feature implications for the Fiboprana app (per <code>DECISIONS.md</code> 2026-04-22).</p>
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Obs.</th>
+                            <th>Segment</th>
+                            <th>Feature implications</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in product_insights %}
+                            <tr>
+                                <td class="muted">{{ o.date_observed }}</td>
+                                <td><a href="{{ url_for('observations.observations_detail', obs_id=o.id) }}">#{{ o.id }}</a></td>
+                                <td>{{ o.segment_guess or '—' }}</td>
+                                <td>{{ (o.feature_implications or '')[:160] }}{% if o.feature_implications and o.feature_implications|length > 160 %}…{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
+
+    {% if latest %}
+        <section style="margin-top: 32px;">
+            <h2>Latest synthesis</h2>
+            <p class="hint">
+                Generated {{ latest.generated_at }} (UTC) ·
+                {{ latest.observation_count }} observations ·
+                {{ latest.model }}{% if latest.input_token_count %} ·
+                {{ latest.input_token_count }} in / {{ latest.output_token_count }} out tokens{% endif %}
+            </p>
+            <div class="synthesis-md">{{ latest.synthesis_md }}</div>
+        </section>
+    {% else %}
+        <section style="margin-top: 32px;">
+            <h2>Latest synthesis</h2>
+            <p class="muted">No synthesis runs yet. Click <strong>Generate first synthesis</strong> above to run one.</p>
+        </section>
+    {% endif %}
+
+    {% if runs and runs|length > 1 %}
+        <section style="margin-top: 32px;">
+            <h2>Run history</h2>
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead>
+                        <tr>
+                            <th>Generated</th>
+                            <th>Observations</th>
+                            <th>Model</th>
+                            <th>Tokens (in / out)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                            <tr>
+                                <td><a href="{{ url_for('synthesis.synthesis_run_detail', run_id=run.id) }}">{{ run.generated_at }}</a></td>
+                                <td>{{ run.observation_count }}</td>
+                                <td class="muted">{{ run.model }}</td>
+                                <td class="muted">{{ run.input_token_count or '—' }} / {{ run.output_token_count or '—' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}

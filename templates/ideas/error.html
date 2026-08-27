@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Idea proposal error — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Couldn't propose ideas</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('ideas.ideas_list') }}">← Back to ideas</a>
+            <form method="post" action="{{ url_for('ideas.ideas_propose') }}" style="display: inline;">
+                <button type="submit" class="button-secondary">Try again</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="notice notice-error">
+        <strong>Error:</strong> {{ error }}
+    </div>
+{% endblock %}

@@ -1,0 +1,50 @@
+# Sourcing scanner config. Edit values here; no restart needed
+# (reloaded on each scan).
+
+subreddits:
+  - Meditation
+  - Mindfulness
+  - breathwork
+  - ouraring
+  - QuantifiedSelf
+
+trigger_phrases:
+  - "is it working"
+  - "doing anything"
+  - "can't tell if"
+  - "am i doing it right"
+  - "sleep score"
+  - "readiness score"
+  - "hrv"
+  - "making me anxious"
+  - "stressing me out"
+  - "obsessed with my"
+  - "take a break from tracking"
+  - "new to meditation"
+  - "just started meditating"
+  - "beginner"
+  - "burnout"
+  - "burned out"
+  - "wired and tired"
+  - "mind won't stop"
+  - "dumb question"
+
+exclusion_phrases:
+  - "diagnos"
+  - "medication"
+  - "suicid"
+  - "self harm"
+  - "psychedelic"
+  - "promo code"
+
+scoring:
+  trigger_match: 10
+  multiple_triggers: 5
+  exclusion_match: -20
+  min_comment_count: 2
+  comment_count_weight: 1
+  max_age_hours: 48
+
+scan:
+  limit_per_subreddit: 25
+  min_score_to_display: 10

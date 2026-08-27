@@ -1,0 +1,909 @@
+:root {
+    --bg: #1a1714;
+    --surface: #252220;
+    --surface-alt: #2e2a26;
+    --text: #f0ece4;
+    --text-muted: #a09a90;
+    --border: #3a3530;
+    --accent: #4d8865;
+    --accent-light: #1f3026;
+    --error: #d96e5d;
+    --error-light: #3a221d;
+    --warn: #d6a14a;
+    --disabled: #5a5650;
+    --tile-hover: #2a2724;
+    --mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+a { color: var(--accent); }
+
+/* ---------- layout ---------- */
+
+.site-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+}
+.site-header nav {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+.site-header .brand {
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+}
+.site-header nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+.site-header nav a:hover { color: var(--text); }
+/* The agent-fleet surfaces (served by fleet/routes.py) get the brand emerald
+   so they read as one group, distinct from the module links. */
+.site-header nav a.nav-fleet { color: #1db584; }
+.site-header nav a.nav-fleet:hover { color: #2ad0a0; }
+
+.nav-search {
+    margin-left: auto;
+    display: flex;
+}
+.nav-search input {
+    background: var(--surface-alt);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    min-width: 180px;
+}
+.nav-search input::placeholder { color: var(--text-muted); }
+.nav-search input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+/* ---------- search page ---------- */
+
+.search-form {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 20px;
+}
+.search-form input[type="text"] {
+    flex: 1;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 16px;
+}
+.search-form input[type="text"]:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+.search-results {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+}
+.search-result {
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+.search-result:first-child { border-top: none; }
+.search-result-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+.search-result-title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+}
+.search-result-title:hover { color: var(--accent); }
+.search-result-date {
+    font-family: var(--mono);
+    font-size: 12px;
+}
+.search-result-snippet {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 2px;
+}
+.search-result-snippet mark {
+    background: var(--warn);
+    color: var(--bg);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+.search-kind {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: var(--bg);
+}
+.kind-observation { background: var(--accent); }
+.kind-capture     { background: var(--warn); }
+.kind-idea        { background: #7a8fb8; }
+
+.content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+/* ---------- typography ---------- */
+
+h1 { font-size: 28px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 0 0 8px; }
+.lede { color: var(--text-muted); margin: 0 0 24px; }
+.muted { color: var(--text-muted); font-size: 14px; }
+.hint { color: var(--text-muted); font-size: 12px; }
+.required { color: var(--error); }
+code {
+    font-family: var(--mono);
+    background: var(--surface-alt);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+/* ---------- page header ---------- */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- buttons & notices ---------- */
+
+.button, button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-family: inherit;
+}
+.button:hover, button:hover { filter: brightness(1.1); }
+.button-secondary {
+    background: var(--surface-alt);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+.button-small, button.button-small {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+.button-link {
+    color: var(--accent);
+    text-decoration: none;
+    padding: 8px 0;
+}
+.button-link:hover { text-decoration: underline; }
+
+.notice { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; border: 1px solid; }
+.notice-success { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.notice-error { background: var(--error-light); border-color: var(--error); color: var(--error); }
+.notice a { color: inherit; font-weight: 500; }
+
+/* ---------- dashboard tiles ---------- */
+
+/* ---------- attention queue (dashboard) ---------- */
+
+.attention-queue {
+    margin: 0 0 32px;
+}
+.attention-heading {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+}
+.attention-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+.attention-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+}
+.attention-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--text);
+}
+.attention-section-header:hover .attention-section-title { color: var(--accent); }
+.attention-section-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+.attention-section-count {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--warn);
+}
+.attention-section-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 2px 0 10px;
+}
+.attention-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.attention-item {
+    padding: 6px 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.attention-item:first-child { border-top: none; }
+.attention-item-label {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.attention-item-label:hover { color: var(--accent); }
+.attention-item-label-unlinked {
+    color: var(--text-muted);
+    cursor: default;
+}
+.attention-item-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+}
+.attention-section-more {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-decoration: none;
+    align-self: flex-start;
+}
+.attention-section-more:hover { color: var(--accent); }
+
+/* ---------- linked observations (idea detail) ---------- */
+
+.linked-observations {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.linked-observations li {
+    padding: 4px 0;
+}
+.linked-obs-snippet {
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+/* ---------- tag suggestion chips (capture/observation forms) ---------- */
+
+.tag-suggestions {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.tag-suggestions-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-right: 4px;
+}
+.tag-chip {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface-alt);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2px 10px;
+    cursor: pointer;
+    line-height: 1.6;
+}
+.tag-chip:hover {
+    background: var(--tile-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ---------- synthesis snapshot (dashboard) ---------- */
+
+.synthesis-snapshot {
+    margin: 0 0 32px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+}
+.synthesis-snapshot-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.synthesis-snapshot-heading {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 0;
+}
+.synthesis-snapshot-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+}
+.synthesis-snapshot-meta a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.synthesis-patterns {
+    list-style: decimal inside;
+    margin: 0;
+    padding: 0;
+    color: var(--text);
+}
+.synthesis-pattern {
+    padding: 6px 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+}
+.synthesis-pattern:first-child { border-top: none; }
+.synthesis-pattern-title {
+    font-size: 15px;
+}
+.synthesis-pattern-freq {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+}
+.synthesis-snapshot-more {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+.synthesis-snapshot-more:hover { color: var(--accent); }
+
+/* ---------- module tiles ---------- */
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+.tile {
+    display: block;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.1s;
+}
+.tile-active:hover { background: var(--tile-hover); }
+.tile-inactive {
+    color: var(--disabled);
+    background: var(--surface-alt);
+    cursor: not-allowed;
+}
+.tile-inactive h2 { color: var(--disabled); }
+.tile-inactive p { color: var(--disabled); }
+.tile-status {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+.tile-inactive .tile-status { color: var(--disabled); }
+
+/* ---------- filter form ---------- */
+
+.filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    align-items: end;
+}
+.filter-field { display: flex; flex-direction: column; }
+.filter-field label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+.filter-field input, .filter-field select {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+}
+.filter-actions { display: flex; gap: 8px; align-items: center; }
+
+.result-count { color: var(--text-muted); font-size: 14px; margin: 0 0 12px; }
+
+/* ---------- rows table ---------- */
+
+.table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+}
+.rows {
+    width: 100%;
+    border-collapse: collapse;
+}
+.rows th, .rows td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    vertical-align: top;
+}
+.rows th { background: var(--surface-alt); font-weight: 600; }
+.rows tr:last-child td { border-bottom: none; }
+.rows td a { color: var(--accent); font-weight: 500; text-decoration: none; }
+.rows td a:hover { text-decoration: underline; }
+
+/* Sortable header links — distinct from cell links, no underline by default. */
+.rows th a { color: var(--text); text-decoration: none; }
+.rows th a:hover { text-decoration: underline; }
+
+/* Button-styled <a> inside cells: .rows td a above sets text color to accent
+   green, which collides with the button's green background and hides the
+   label. Restore the white button text. */
+.rows td a.button           { color: #fff; }
+.rows td a.button-secondary { color: var(--text); }
+
+/* ---------- tags ---------- */
+
+.tag {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin: 2px 2px 2px 0;
+    text-decoration: none;
+}
+a.tag:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+.tag-heading {
+    font-size: 18px;
+    padding: 4px 12px;
+}
+
+/* ---------- tag detail page ---------- */
+
+.tag-section {
+    margin: 24px 0;
+}
+.tag-section h2 {
+    font-size: 16px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+.tag-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.tag-row {
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+}
+.tag-row:first-child { border-top: none; }
+.tag-row-title {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    margin-right: 8px;
+}
+.tag-row-title:hover { color: var(--accent); }
+.tag-row-snippet {
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-muted);
+}
+
+/* ---------- entry form ---------- */
+
+/* Defensive baseline: any input / textarea / select without its own class
+   still picks up the dark theme. Specific rules below (.form-field input,
+   .x-post-text, etc.) override as needed via specificity. Without this,
+   the browser falls back to its own light defaults (black on white) and
+   text becomes unreadable on the app's dark background. */
+input, textarea, select {
+    color: var(--text);
+}
+
+.entry-form { max-width: 720px; }
+.form-field { margin-bottom: 16px; }
+.form-field label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+.form-field input, .form-field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 15px;
+    background: var(--surface);
+    color: var(--text);
+}
+/* Datalist autocomplete inputs and bare text inputs outside .form-field
+   (e.g. the short-URL display on /attribution/<id>) — same dark treatment
+   so text never renders black on the dark surface. */
+input[list], input[type="text"][readonly], input[type="url"][readonly] {
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 15px;
+}
+.form-field textarea { resize: vertical; min-height: 60px; }
+.form-field.has-error input, .form-field.has-error textarea { border-color: var(--error); }
+.field-error { color: var(--error); font-size: 13px; margin: 4px 0 0; }
+.form-actions { display: flex; gap: 12px; align-items: center; margin-top: 20px; }
+
+/* ---------- entry detail ---------- */
+
+.entry-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 12px 20px;
+    margin: 0;
+}
+.entry-detail dt {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+.entry-detail dd { margin: 0; }
+.entry-detail dd .multiline {
+    white-space: pre-wrap;
+    font-family: inherit;
+    background: var(--surface-alt);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* ---------- raw transcript (paste entries) ---------- */
+
+.raw-transcript {
+    margin-bottom: 20px;
+}
+.raw-transcript h2 {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin: 0 0 8px;
+}
+.transcript-box {
+    white-space: pre-wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+/* ---------- export page ---------- */
+
+.downloads { padding-left: 20px; }
+.downloads li { margin-bottom: 8px; }
+.downloads a {
+    color: var(--accent);
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 14px;
+}
+.downloads a:hover { text-decoration: underline; }
+
+/* ---------- mobile ---------- */
+
+/* ---------- AI extraction controls on observations/new ---------- */
+
+.ai-note {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.extract-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+.extract-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+.extract-status { font-size: 13px; }
+.extract-status-ok    { color: var(--accent); }
+.extract-status-error { color: var(--error); }
+.extract-status-info  { color: var(--text-muted); }
+
+.copy-fallback {
+    width: 100%;
+    min-height: 160px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    resize: vertical;
+}
+
+/* ---------- x posts ---------- */
+
+.x-post {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.x-post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+.x-post-style {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.x-post-count {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.x-post-count-over {
+    color: var(--error);
+    font-weight: 600;
+}
+.x-post-text {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    background: var(--bg);
+    color: var(--text);
+    resize: vertical;
+}
+.x-post-text-over {
+    border: 2px solid var(--error);
+    background: var(--error-light);
+    color: var(--text);
+}
+.x-post-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 8px;
+}
+.copy-status { font-size: 13px; }
+
+.image-prompts {
+    margin-top: 14px;
+    border-top: 1px dashed var(--border);
+    padding-top: 12px;
+}
+.image-prompts-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.image-prompts-results {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.image-prompt-block {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+}
+.image-prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 12px;
+}
+.image-prompt-label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+.image-prompt-text {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    background: var(--surface);
+    color: var(--text);
+    resize: vertical;
+}
+
+/* Product Ideas: week chips — which week's feature is this? The row whose
+   gate_week matches the current week gets the bright THIS WEEK variant so the
+   founder can spot the active feature at a glance; past weeks stay quiet. */
+.wk-chip {
+    display: inline-block;
+    background: var(--surface-alt);
+    color: var(--text);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.wk-chip-now {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+/* Product Ideas: guardrail-check badges in list view, rule-id chips on detail. */
+.guardrail-conflict {
+    display: inline-block;
+    background: var(--error-light);
+    color: var(--error);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.guardrail-error {
+    display: inline-block;
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px dashed var(--border);
+}
+.rule-id {
+    display: inline-block;
+    background: var(--error);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-right: 4px;
+}
+
+@media (max-width: 640px) {
+    .content { padding: 16px 12px 60px; }
+    .page-header { flex-direction: column; align-items: stretch; }
+    .entry-detail { grid-template-columns: 1fr; gap: 4px 0; }
+    .entry-detail dt { margin-top: 10px; }
+    h1 { font-size: 24px; }
+}
+
+.badge-cached { color: var(--accent); }
+.badge-stale  { color: var(--warn); }
+
+/* ---------- synthesis ---------- */
+
+/* The synthesis output is raw markdown; render as preformatted text so the
+   headers / bullets / blockquotes keep their structure without depending on
+   a markdown-rendering library. Maxes width and constrains line length for
+   readability; max-height keeps the page navigable when the synthesis grows
+   to many pages. */
+.synthesis-md {
+    white-space: pre-wrap;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    max-height: 70vh;
+    overflow-y: auto;
+}

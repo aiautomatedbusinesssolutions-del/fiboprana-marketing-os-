@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}#{{ tag }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Tag: <span class="tag tag-heading">{{ tag }}</span></h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('dashboard') }}">← Dashboard</a>
+        </div>
+    </div>
+
+    <p class="lede">
+        {{ total }} row{{ '' if total == 1 else 's' }} use this tag —
+        observations: {{ observations|length }} · captures: {{ captures|length }} · ideas: {{ ideas|length }}.
+    </p>
+
+    {% if observations %}
+        <section class="tag-section">
+            <h2>Observations ({{ observations|length }})</h2>
+            <ul class="tag-rows">
+                {% for r in observations %}
+                    <li class="tag-row">
+                        <a class="tag-row-title" href="{{ url_for('observations.observations_detail', obs_id=r.id) }}">Obs #{{ r.id }}</a>
+                        <span class="muted">{{ r.date_observed }}{% if r.source %} · {{ r.source }}{% endif %}{% if r.segment_guess %} · {{ r.segment_guess|truncate(40) }}{% endif %}</span>
+                        {% if r.pain_points %}<div class="muted tag-row-snippet">{{ r.pain_points|truncate(160) }}</div>{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {% if captures %}
+        <section class="tag-section">
+            <h2>Captures ({{ captures|length }})</h2>
+            <ul class="tag-rows">
+                {% for r in captures %}
+                    <li class="tag-row">
+                        <a class="tag-row-title" href="{{ url_for('capture.capture_detail', entry_id=r.id) }}">Capture #{{ r.id }}{% if r.handle %} — {{ r.handle }}{% endif %}</a>
+                        <span class="muted">{{ r.date }}{% if r.source %} · {{ r.source }}{% endif %}</span>
+                        {% if r.stated_goal %}<div class="muted tag-row-snippet">{{ r.stated_goal|truncate(160) }}</div>
+                        {% elif r.pain_points %}<div class="muted tag-row-snippet">{{ r.pain_points|truncate(160) }}</div>{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {% if ideas %}
+        <section class="tag-section">
+            <h2>Product ideas ({{ ideas|length }})</h2>
+            <ul class="tag-rows">
+                {% for r in ideas %}
+                    <li class="tag-row">
+                        <a class="tag-row-title" href="{{ url_for('ideas.ideas_detail', idea_id=r.id) }}">Idea #{{ r.id }} — {{ r.title }}</a>
+                        <span class="muted">{{ (r.created_at or '')[:10] }} · {{ r.status }} · {{ r.proposed_by }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {% if total == 0 %}
+        <p class="empty">Nothing uses this tag yet.</p>
+    {% endif %}
+{% endblock %}

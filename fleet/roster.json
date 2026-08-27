@@ -1,0 +1,66 @@
+{
+  "_about": "THE fleet roster - the one hand-maintained list of agents. The /week Fleet cards and Org Chart both build from this (served at GET /api/roster); `python -m fleet.roster` checks it against the dispatcher schedule in fleet/dispatch.py, which stays the sole authority on what actually runs. Edit here when an agent is added, retired, or changes cadence. Field notes: id = agent_name in agent_heartbeat AND the pause key in fleet_controls.json; cadence (machine-checked) = daily | weekdays | saturday | sunday | weekly | on-demand; fresh_hours = how old the last success may be before the dashboard turns amber (double it for red); log_names = extra agent_execution_logs names to roll into this card (defaults to [id]). Lane members either reference an agent by id (live heartbeat coloring) or are display-only seats with a fixed style: me | session | manual.",
+
+  "agents": [
+    { "id": "dispatch", "name": "Dispatcher", "mode": "deployed", "cadence": "daily",
+      "fresh_hours": 36, "file": "fleet/dispatch.py",
+      "desc": "Railway daily cron that runs the due jobs as subprocesses — the schedule is the manager." },
+    { "id": "research", "name": "Research (radar)", "mode": "deployed", "cadence": "sunday",
+      "fresh_hours": 192, "file": "fleet/research_run.py",
+      "desc": "Weekly trend digest: HN + RSS + Exa scan, deduped vs last week." },
+    { "id": "reply", "name": "Reply pipeline", "mode": "deployed", "cadence": "weekdays",
+      "fresh_hours": 80, "log_names": ["reply", "reply_finder", "reply_drafter"],
+      "file": "fleet/reply_finder_agent.py",
+      "desc": "finder → judge → drafter; drafts wait at the founder gate, nothing auto-sends." },
+    { "id": "checks", "name": "Checks sweep", "mode": "deployed", "cadence": "daily",
+      "fresh_hours": 36, "file": "fleet/dispatch.py",
+      "desc": "Opens outcome windows for anything newly published (idempotent sweep)." },
+    { "id": "metrics", "name": "Metrics snapshots", "mode": "deployed", "cadence": "daily",
+      "fresh_hours": 36, "file": "fleet/metrics_agent.py",
+      "desc": "Daily raw numbers into metric_snapshots; closes due reply/post windows." },
+    { "id": "outcome_checker", "name": "Outcome checker", "mode": "deployed", "cadence": "saturday",
+      "fresh_hours": 192, "file": "fleet/outcome_checker_agent.py",
+      "desc": "Reads real engagement for sent replies into reply_ledger — facts, never verdicts." },
+    { "id": "distiller", "name": "Style distiller", "mode": "deployed", "cadence": "saturday",
+      "fresh_hours": 192, "file": "fleet/distiller_agent.py",
+      "desc": "Reads your edit diffs → proposes style rules (founder-gated, nothing auto-commits)." },
+    { "id": "reply_eval", "name": "Eval harness", "mode": "deployed", "cadence": "saturday",
+      "fresh_hours": 192, "file": "fleet/reply_eval_agent.py",
+      "desc": "Blind-judges fresh drafts vs your gold replies; win-rate per guide version." },
+    { "id": "x_batch", "name": "X batch generator", "mode": "session", "cadence": "weekly",
+      "fresh_hours": 192, "file": "content/x_run.py",
+      "desc": "Weekly short-form batch → Typefully; you approve voice before anything schedules." },
+    { "id": "repurposer", "name": "Repurposer", "mode": "session", "cadence": "on-demand",
+      "file": "fleet/repurposer_agent.py",
+      "desc": "Per clip: YT Short + X + IG (+ TikTok) packages → content_calendar drafts." },
+    { "id": "x_finder", "name": "X reply finder", "mode": "session", "cadence": "weekdays",
+      "file": "fleet/channels/x.py",
+      "desc": "Grok x_search eyes, Claude judges; runs inside the reply job when the X channel is enabled." }
+  ],
+
+  "lanes": [
+    { "id": "lane_research", "label": "📡 Research — Sundays", "wake": "", "members": [
+      { "agent": "research", "label": "research (radar)", "sub": "HN+RSS+Exa → digest" },
+      { "label": "content pull", "sub": "digest → 5 items", "style": "session" }
+    ]},
+    { "id": "lane_content", "label": "🎬 Content — Mon–Thu", "members": [
+      { "agent": "x_batch", "label": "X batch gen", "sub": "14 posts/wk → Typefully" },
+      { "label": "packager", "sub": "title · thumb · description", "style": "manual" },
+      { "agent": "repurposer", "label": "repurposer", "sub": "clip → Short/X/IG packages" }
+    ]},
+    { "id": "lane_reply", "label": "💬 Replies — Mon–Fri", "chain": true, "wake": "wakes on schedule", "members": [
+      { "agent": "reply", "label": "reply finder", "sub": "Reddit RSS + X via Grok" },
+      { "agent": "reply", "label": "judge", "sub": "reply-worthy or skip" },
+      { "agent": "reply", "label": "drafter", "sub": "2–3 gated variants" },
+      { "label": "you send", "sub": "the moat — hand-rewritten", "style": "me" }
+    ]},
+    { "id": "lane_measure", "label": "📏 Measure — daily + Saturdays", "wake": "",
+      "loop_label": "outcomes flow back up", "members": [
+      { "agent": "metrics", "label": "metrics snapshots", "sub": "daily raw numbers" },
+      { "agent": "checks", "label": "checks sweep", "sub": "closes due outcome windows" },
+      { "agent": "outcome_checker", "label": "outcome checker", "sub": "reply outcomes · Sat" },
+      { "agent": "distiller", "label": "style distiller", "sub": "edit diffs → rules · Sat" },
+      { "agent": "reply_eval", "label": "eval harness", "sub": "blind win-rate · Sat" }
+    ]}
+  ]
+}

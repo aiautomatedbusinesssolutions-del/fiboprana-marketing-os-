@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Observations — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Observations</h1>
+        <div class="actions">
+            <a class="button" href="{{ url_for('observations.observations_new_form') }}">+ New observation</a>
+            <a class="button button-secondary" href="{{ url_for('observations.observations_export') }}">Export</a>
+        </div>
+    </div>
+
+    {% if created_id %}
+        <div class="notice notice-success">
+            Saved entry #{{ created_id }}. <a href="{{ url_for('observations.observations_detail', obs_id=created_id) }}">View it →</a>
+        </div>
+    {% endif %}
+
+    <form class="filters" method="get" action="{{ url_for('observations.observations_list') }}">
+        <div class="filter-field">
+            <label for="f-tag">Tag</label>
+            <input id="f-tag" name="tag" value="{{ filters.tag }}" placeholder="e.g. broker-fees">
+        </div>
+        <div class="filter-field">
+            <label for="f-source">Source</label>
+            <input id="f-source" name="source" value="{{ filters.source }}" placeholder="e.g. reddit">
+        </div>
+        <div class="filter-field">
+            <label for="f-segment">Segment guess</label>
+            <input id="f-segment" name="segment" value="{{ filters.segment }}" placeholder="e.g. beginner">
+        </div>
+        <div class="filter-field">
+            <label for="f-from">From</label>
+            <input id="f-from" name="from" type="date" value="{{ filters.date_from }}">
+        </div>
+        <div class="filter-field">
+            <label for="f-to">To</label>
+            <input id="f-to" name="to" type="date" value="{{ filters.date_to }}">
+        </div>
+        <div class="filter-field">
+            <label for="f-limit">Limit</label>
+            <input id="f-limit" name="limit" type="number" min="1" max="500" value="{{ filters.limit }}">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Filter</button>
+            <a class="button-link" href="{{ url_for('observations.observations_list') }}">Reset</a>
+        </div>
+    </form>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} entr{{ 'y' if rows|length == 1 else 'ies' }}.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Source</th>
+                        <th>Segment guess</th>
+                        <th>Pain points (snippet)</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><a href="{{ url_for('observations.observations_detail', obs_id=r.id) }}">{{ r.date_observed }}</a></td>
+                        <td>
+                            {{ r.source or '' }}
+                            {% if r.source_detail %}<br><span class="muted">{{ r.source_detail }}</span>{% endif %}
+                        </td>
+                        <td>{{ r.segment_guess or '' }}</td>
+                        <td>
+                            {% if r.pain_points %}
+                                {{ r.pain_points|truncate(140) }}
+                            {% elif r.raw_content %}
+                                <span class="muted">{{ r.raw_content|truncate(200) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.tags %}
+                                {% for t in r.tags.split(',') if t %}<a class="tag" href="{{ url_for('tag_detail', tag=t.strip()) }}">{{ t }}</a>{% endfor %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">No entries match. <a href="{{ url_for('observations.observations_new_form') }}">Add one →</a></p>
+    {% endif %}
+{% endblock %}

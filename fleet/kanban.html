@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reply Pipeline — Kanban</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Fiboprana Emerald-refresh palette (fiboprana-site verified) */
+  :root {
+    --bg: #0b0f14;
+    --card: #121822;
+    --card-edge: #1e2733;
+    --ink: #e6edf3;
+    --ink-dim: #a9b6c3;
+    --emerald: #1db584;
+    --amber: #e8a93b;
+    --skip: #7d8894;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 450 15.5px/1.55 -apple-system, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    padding: 18px 20px 40px;
+  }
+
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  header h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 22px; font-weight: 600; }
+  header h1 .s { color: var(--emerald); }
+  header .sub { color: var(--ink-dim); font-size: 14.5px; }
+
+  /* platform filter chips */
+  .chips { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .chip {
+    border: 1px solid var(--card-edge); border-radius: 999px; padding: 3px 14px;
+    background: none; color: var(--ink-dim); font-size: 14.5px; cursor: pointer;
+  }
+  .chip.on { border-color: var(--emerald); color: var(--emerald); }
+
+  /* Phase 2 progress */
+  .phase { margin: 10px 0 16px; max-width: 520px; }
+  .phase .label { font-size: 13.5px; color: var(--ink-dim); margin-bottom: 4px; }
+  .phase .bar { height: 6px; background: var(--card-edge); border-radius: 3px; overflow: hidden; }
+  .phase .fill { height: 100%; background: var(--emerald); border-radius: 3px; transition: width .4s; }
+
+  /* board */
+  .board { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 12px; }
+  .col { min-width: 250px; max-width: 300px; flex: 1; }
+  .col h2 {
+    font-size: 13.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-dim); padding: 6px 2px; display: flex; justify-content: space-between;
+  }
+  .col h2 .count { color: var(--emerald); }
+  .col .next {
+    font-size: 13.5px; color: var(--amber); padding: 2px 2px 8px; min-height: 24px;
+  }
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+
+  .kcard {
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .kcard.dim { opacity: .55; }
+  .kcard .top { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 12.5px; letter-spacing: .05em; text-transform: uppercase;
+    border-radius: 4px; padding: 1px 6px; border: 1px solid var(--card-edge); color: var(--ink-dim);
+  }
+  .badge.x { color: var(--ink); border-color: var(--ink-dim); }
+  .badge.reddit { color: var(--amber); border-color: var(--amber); }
+  .badge.engage { color: var(--emerald); border-color: var(--emerald); }
+  .badge.maybe { color: var(--amber); border-color: var(--amber); }
+  .badge.skip, .badge.skipped, .badge.rejected { color: var(--skip); border-color: var(--skip); }
+  .badge.voice { color: var(--emerald); border-color: var(--emerald); }
+  .badge.substance, .badge.both { color: var(--amber); border-color: var(--amber); }
+  .badge.none { color: var(--ink); border-color: var(--ink-dim); }
+  .kcard .title { font-weight: 600; margin-bottom: 3px; }
+  .kcard .who { color: var(--ink-dim); font-size: 14px; margin-bottom: 6px; }
+  .kcard .body { color: var(--ink-dim); font-size: 14px; }
+  .kcard .body b { color: var(--ink); font-weight: 600; }
+  .kcard .metrics { margin-top: 6px; font-size: 14px; color: var(--emerald); }
+  .kcard .await { margin-top: 6px; font-size: 14px; color: var(--amber); }
+  .kcard a { color: var(--emerald); text-decoration: none; }
+
+  .empty { color: var(--skip); font-size: 14px; padding: 8px 2px; }
+  footer { margin-top: 10px; color: var(--skip); font-size: 13.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="s">S</span>tackivate — Reply Pipeline</h1>
+  <span class="sub">live from Supabase · refreshes every 60s · window, not a door (writes happen in session / CLI)</span>
+  <a href="/flow" style="color:var(--emerald);text-decoration:none;font-size:14.5px">← big picture</a>
+  <a href="/review" style="color:var(--emerald);text-decoration:none;font-size:14.5px">review queue →</a>
+  <a href="/map" style="color:var(--emerald);text-decoration:none;font-size:14.5px">fleet map →</a>
+</header>
+
+<div class="chips" id="chips">
+  <button class="chip on" data-p="">All</button>
+  <button class="chip" data-p="x">X</button>
+  <button class="chip" data-p="reddit">Reddit</button>
+</div>
+
+<div class="phase">
+  <div class="label" id="phaseLabel">Phase 2 distiller unlock — counting edits…</div>
+  <div class="bar"><div class="fill" id="phaseFill" style="width:0%"></div></div>
+</div>
+
+<div class="board" id="board"></div>
+
+<footer>
+  Columns = <code>reply_candidates.status</code>; Sent/Outcome detail = <code>reply_ledger</code>.
+  Every view of this pipeline reads the same rows — nothing to sync.
+</footer>
+
+<script>
+// The five real pipeline stages, each with the "what moves a card out of here" hint.
+const COLUMNS = [
+  { key: "new",     title: "Found",    next: "→ judge scores it (run_reply_finder / session)" },
+  { key: "judged",  title: "Judged",   next: "→ engage verdicts get drafted (run_reply_drafter / session)" },
+  { key: "drafted", title: "Drafted",  next: "→ you pick + edit + post, then it's logged as sent" },
+  { key: "sent",    title: "Sent",     next: "→ outcome check ritual fills in the numbers" },
+  { key: "skipped", title: "Passed on", next: "" },
+];
+const PHASE2_TARGET = 25;   // ~20-30 edits unlock the distiller; midpoint shown
+
+let platform = "";          // "" = all
+
+async function api(table, params) {
+  const r = await fetch(`/api/${table}?${new URLSearchParams(params)}`);
+  if (!r.ok) throw new Error(`${table}: HTTP ${r.status}`);
+  return r.json();
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function badge(text, cls) { return el("span", `badge ${cls || ""}`, text); }
+
+function age(iso) {
+  if (!iso) return "";
+  const h = Math.round((Date.now() - new Date(iso)) / 3.6e6);
+  return h < 1 ? "just now" : h < 24 ? `${h}h` : `${Math.round(h / 24)}d`;
+}
+
+function trim(s, n) { return s && s.length > n ? s.slice(0, n - 1) + "…" : (s || ""); }
+
+function candidateCard(c) {
+  const card = el("div", "kcard");
+  const top = el("div", "top");
+  top.append(badge(c.platform, c.platform));
+  if (c.judge_verdict) top.append(badge(c.judge_verdict, c.judge_verdict));
+  top.append(el("span", "badge", age(c.created_at)));
+  card.append(top);
+  card.append(el("div", "title", trim(c.post_title || c.post_excerpt, 90)));
+  if (c.post_author) card.append(el("div", "who", c.post_author));
+  if (c.judge_rationale) card.append(el("div", "body", trim(c.judge_rationale, 160)));
+  if (c.judge_verdict === "skip" || c.status === "skipped") card.classList.add("dim");
+  return card;
+}
+
+function ledgerCard(l) {
+  const card = el("div", "kcard");
+  const top = el("div", "top");
+  top.append(badge(l.platform, l.platform));
+  if (l.edit_type) top.append(badge(l.edit_type, l.edit_type));
+  if (l.edit_ratio != null) top.append(badge(`edit ${Number(l.edit_ratio).toFixed(2)}`));
+  top.append(el("span", "badge", age(l.replied_at)));
+  card.append(top);
+  card.append(el("div", "title", trim(l.post_title || "(reply)", 90)));
+  if (l.post_author) card.append(el("div", "who", l.post_author));
+  const body = el("div", "body");
+  body.innerHTML = `<b>sent:</b> ${trim(l.final_sent, 150)}`;
+  card.append(body);
+
+  if (l.outcome_checked_at != null) {
+    const bits = [];
+    if (l.outcome_score != null) bits.push(`score ${l.outcome_score}`);
+    if (l.op_replied) bits.push("OP replied");
+    if (l.outcome_notes) bits.push(trim(l.outcome_notes, 60));
+    card.append(el("div", "metrics", "✓ " + (bits.join(" · ") || "checked")));
+  } else {
+    card.append(el("div", "await", "awaiting outcome" + (l.reply_url ? "" : " · no URL yet (checker will match by text)")));
+  }
+  if (l.reply_url) {
+    const link = el("div", "body");
+    link.innerHTML = `<a href="${l.reply_url}" target="_blank">open reply ↗</a>`;
+    card.append(link);
+  }
+  return card;
+}
+
+async function load() {
+  const candParams = { order: "created_at.desc", limit: 200 };
+  const ledgParams = { order: "replied_at.desc", limit: 200 };
+  if (platform) { candParams.platform = `eq.${platform}`; ledgParams.platform = `eq.${platform}`; }
+
+  const [cands, ledger] = await Promise.all([
+    api("reply_candidates", candParams),
+    api("reply_ledger", ledgParams),
+  ]);
+
+  // Phase 2 progress: ledger rows with a real edit signal (excludes legacy imports)
+  const edits = ledger.filter(l => l.edit_type && l.edit_type !== "legacy").length;
+  document.getElementById("phaseLabel").textContent =
+    `Phase 2 distiller unlock — ${edits} / ~${PHASE2_TARGET} logged edits`;
+  document.getElementById("phaseFill").style.width =
+    Math.min(100, Math.round(edits / PHASE2_TARGET * 100)) + "%";
+
+  const board = document.getElementById("board");
+  board.replaceChildren();
+
+  const byStatus = {};
+  for (const c of cands) (byStatus[c.status] ||= []).push(c);
+  const sentIds = new Set(ledger.map(l => l.candidate_id).filter(Boolean));
+
+  for (const col of COLUMNS) {
+    const colEl = el("div", "col");
+    let cards;
+    if (col.key === "sent") {
+      cards = ledger.map(ledgerCard);
+    } else {
+      // don't double-show a candidate whose reply is already on the Sent column
+      cards = (byStatus[col.key] || []).filter(c => !sentIds.has(c.id)).map(candidateCard);
+    }
+    const h = el("h2", null, col.title);
+    h.append(el("span", "count", String(cards.length)));
+    colEl.append(h);
+    if (col.next && cards.length) colEl.append(el("div", "next", cards.length + " " + col.next));
+    else colEl.append(el("div", "next", ""));
+    const wrap = el("div", "cards");
+    cards.length ? wrap.append(...cards) : wrap.append(el("div", "empty", "nothing here"));
+    colEl.append(wrap);
+    board.append(colEl);
+  }
+}
+
+document.getElementById("chips").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip");
+  if (!b) return;
+  document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === b));
+  platform = b.dataset.p;
+  load();
+});
+
+load().catch(err => {
+  document.getElementById("board").replaceChildren(
+    el("div", "empty", "failed to load: " + err.message));
+});
+setInterval(() => load().catch(() => {}), 60_000);
+</script>
+</body>
+</html>

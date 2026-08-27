@@ -1,0 +1,10 @@
+# Keep the image small and secrets out of it.
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*.db
+.env
+journal/screenshots/
+node_modules/

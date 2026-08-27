@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Convert — the conversion loop</title>
+<style>
+  /* Brand: Emerald-refresh (bg #0b0f14 / emerald #1db584 / amber #e8a93b).
+     Readable-text rules: >=12px floors, bright secondary grays, weight 450. */
+  :root {
+    --bg: #0b0f14; --panel: #121a26; --line: #223046;
+    --ink: #e8eef7; --ink2: #9fb0c4; --ink3: #7e8fa5;
+    --em: #1db584; --am: #e8a93b; --red: #e06c6c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 450 14px/1.5 system-ui, "Segoe UI", sans-serif;
+         padding: 24px 28px 60px; }
+  a { color: var(--em); text-decoration: none; }
+  header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; }
+  .sub { color: var(--ink2); font-size: 13px; }
+  nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+  h2 { font-size: 15px; font-weight: 650; margin: 26px 0 8px; }
+
+  .funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px; margin-top: 14px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: 14px 16px 12px; }
+  .tile .lbl { color: var(--ink2); font-size: 12.5px; }
+  .tile .val { font-size: 26px; font-weight: 650; margin: 2px 0 1px;
+               font-variant-numeric: tabular-nums; }
+  .tile .hint { color: var(--ink3); font-size: 12px; }
+
+  .loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 16px 18px; }
+  .card h3 { margin: 0 0 4px; font-size: 14.5px; }
+  .card h3 .n { color: var(--am); margin-right: 6px; }
+  .card p { color: var(--ink2); font-size: 13px; margin: 6px 0; line-height: 1.5; }
+  .pill { display: inline-block; border-radius: 999px; padding: 3px 10px;
+          font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+  .pill.live { background: rgba(29,181,132,.12); color: var(--em); }
+  .pill.gated { background: rgba(232,169,59,.14); color: var(--am); }
+  .pill.todo { background: rgba(224,108,108,.12); color: var(--red); }
+  .empty { color: var(--ink2); background: var(--panel); border: 1px dashed var(--line);
+           border-radius: 10px; padding: 16px; font-size: 13px; }
+  footer { color: var(--ink3); font-size: 12.5px; margin-top: 34px;
+           border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Convert</h1>
+  <span class="sub" id="asof">loading…</span>
+  <nav>
+    <a href="/week">this week</a>
+    <a href="/pulse">pulse</a>
+    <a href="/map">fleet map</a>
+  </nav>
+</header>
+<div class="sub">The conversion loop: what happens after the marketing machine delivers a stranger.
+  Audit 2026-08-22 found the leaks; each card below is one of them, with its fix status.</div>
+
+<h2>The funnel, right now</h2>
+<div class="funnel" id="funnel"><div class="empty">loading…</div></div>
+
+<h2>The loop</h2>
+<div class="loop">
+  <div class="card"><span class="pill live" id="p-capture">live</span>
+    <h3><span class="n">1</span>Capture</h3>
+    <p>The quiz gates its full result behind an email (working — it produced every lead so far).
+       Every free tool now carries an "email me my read" card via the shared callbacks section.</p>
+    <p id="capture-note" class="sub"></p>
+  </div>
+  <div class="card"><span class="pill gated" id="p-nurture">gated on your copy pass</span>
+    <h3><span class="n">2</span>Nurture</h3>
+    <p>The 4-email welcome sequence (result explained → Time Machine → why I built this → Pro Lab),
+       hourly cron, claim-then-send dedupe, first-touch wins. <b>Sends nothing until
+       LEAD_SEQUENCE_ENABLED=1</b> — read the drafts in
+       <code>src/services/email/lead-sequence.ts</code>, then set the flag in Vercel.</p>
+  </div>
+  <div class="card"><span class="pill todo">backlog</span>
+    <h3><span class="n">3</span>Activate</h3>
+    <p>First-session experience: the six beginner-accessibility fixes (Freedometer research)
+       are the known leak. PostHog carries the quiz funnel events; the CRM's real-data adapter
+       is the visibility build.</p>
+  </div>
+  <div class="card"><span class="pill live">live, unmarketed until 2026-08-22</span>
+    <h3><span class="n">4</span>Offer</h3>
+    <p>The Founding Member offer was already LIVE (Wave 1: 10 spots, $14.99/mo locked for life,
+       first month free, atomic cap, Stripe checkout via /billing) — invisible to the audit
+       because its banner renders client-side. The real leak was that the funnel never pointed
+       at it. Fixed: sequence email 4 pitches it with the live remaining count, and the Notice
+       email carries it as an on-pattern CTA destination.</p>
+    <p id="offer-note" class="sub"></p>
+  </div>
+</div>
+
+<footer>
+  Sources: <code>app_funnel</code> snapshots (daily metrics agent), <code>short_links</code> +
+  <code>link_clicks</code> (attribution). Deep dives: the CRM (once its Supabase adapter lands)
+  and PostHog for the step-by-step funnel.
+</footer>
+
+<script>
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c;
+  if (x !== undefined) e.textContent = x; return e; };
+const fmt = n => (n === null || n === undefined) ? "—" : Number(n).toLocaleString("en-US");
+
+async function api(name, params) {
+  const r = await fetch(`/api/${name}?${new URLSearchParams(params || {})}`);
+  if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`);
+  return r.json();
+}
+
+(async () => {
+  const funnel = document.getElementById("funnel");
+  try {
+    const [pulse, clicks] = await Promise.all([
+      api("pulse"),
+      api("link_clicks", { select: "clicked_at", order: "clicked_at.desc", limit: "500" }),
+    ]);
+    const rows = pulse.app_funnel || [];
+    const latest = rows.length ? rows[rows.length - 1] : null;
+    const m = latest ? latest.metrics : {};
+    const weekAgo = Date.now() - 7 * 864e5;
+    const clicks7 = (clicks || []).filter(c => new Date(c.clicked_at) > weekAgo).length;
+    const tiles = [
+      ["Arrivals (7d, tracked)", clicks7, "link clicks via /r/ codes"],
+      ["Quiz leads", m.quiz_leads, "emails from the quiz"],
+      ["Tool leads", m.tool_leads, "new capture — needs the SQL paste"],
+      ["Sequence emails sent", m.sequence_sends, "0 until the flag is on"],
+      ["Account holders", m.users, ""],
+      ["Waitlist", m.waitlist, ""],
+      ["Founding members", m.founding_members, "no doorway yet"],
+    ];
+    funnel.replaceChildren();
+    for (const [lbl, val, hint] of tiles) {
+      const t = el("div", "tile");
+      t.append(el("div", "lbl", lbl), el("div", "val", fmt(val)));
+      if (hint) t.append(el("div", "hint", hint));
+      funnel.append(t);
+    }
+    document.getElementById("asof").textContent =
+      latest ? `funnel as of ${latest.snapshot_date}` : "no funnel snapshots yet";
+    document.getElementById("capture-note").textContent =
+      `${fmt(m.quiz_leads)} quiz leads · ${fmt(m.tool_leads)} tool leads so far`;
+    try {
+      const f = await (await fetch("https://fiboprana.com/api/founding/status")).json();
+      if (f && f.enabled) document.getElementById("offer-note").textContent =
+        `${f.remaining} of ${f.cap} founding spots open right now`;
+    } catch (e) { /* live status is a bonus, not a dependency */ }
+  } catch (e) {
+    funnel.replaceChildren(el("div", "empty", `couldn't load — ${e.message}`));
+  }
+})();
+</script>
+</body>
+</html>

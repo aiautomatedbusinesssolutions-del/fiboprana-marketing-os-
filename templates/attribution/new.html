@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}New tracking link — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>New tracking link</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('attribution.dashboard') }}">← Back to attribution</a>
+        </div>
+    </div>
+
+    <p class="lede">A short link the user pastes wherever they're publishing. The redirect logs each click, then sends the visitor to the destination with the UTM params appended.</p>
+
+    {% if errors %}
+        <div class="notice notice-error">Please fix the errors below.</div>
+    {% endif %}
+
+    <datalist id="utm-source-options">
+        {% for opt in source_options %}<option value="{{ opt }}">{% endfor %}
+    </datalist>
+    <datalist id="utm-medium-options">
+        {% for opt in medium_options %}<option value="{{ opt }}">{% endfor %}
+    </datalist>
+
+    <form method="post" class="entry-form" action="{{ url_for('attribution.create') }}">
+        <div class="form-field{% if errors.get('destination') %} has-error{% endif %}">
+            <label for="f-destination">Destination URL <span class="required">*</span></label>
+            <input id="f-destination" name="destination" type="url"
+                   value="{{ defaults.get('destination', default_destination) }}"
+                   placeholder="https://fiboprana.com" required>
+            {% if errors.get('destination') %}<p class="field-error">{{ errors['destination'] }}</p>{% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="f-utm_source">Channel (utm_source)</label>
+            <input id="f-utm_source" name="utm_source" type="text"
+                   list="utm-source-options"
+                   value="{{ defaults.get('utm_source', '') }}"
+                   placeholder="x / tiktok / linkedin / reddit-dm / ...">
+        </div>
+
+        <div class="form-field">
+            <label for="f-utm_medium">Medium (utm_medium)</label>
+            <input id="f-utm_medium" name="utm_medium" type="text"
+                   list="utm-medium-options"
+                   value="{{ defaults.get('utm_medium', '') }}"
+                   placeholder="post / dm / bio / reply / ...">
+        </div>
+
+        <div class="form-field">
+            <label for="f-utm_campaign">Campaign (utm_campaign)</label>
+            <input id="f-utm_campaign" name="utm_campaign" type="text"
+                   value="{{ defaults.get('utm_campaign', '') }}"
+                   placeholder="e.g. broker-fees-thread, april-newsletter">
+        </div>
+
+        <div class="form-field">
+            <label for="f-utm_content">Content tag (utm_content)</label>
+            <input id="f-utm_content" name="utm_content" type="text"
+                   value="{{ defaults.get('utm_content', '') }}"
+                   placeholder="usually the observation id, or a short post tag">
+            <p class="hint">Auto-fills with observation id when launched from an observation page.</p>
+        </div>
+
+        <div class="form-field">
+            <label for="f-utm_term">Term (utm_term)</label>
+            <input id="f-utm_term" name="utm_term" type="text"
+                   value="{{ defaults.get('utm_term', '') }}"
+                   placeholder="optional — usually unused">
+        </div>
+
+        <div class="form-field">
+            <label for="f-observation_id">Observation id (optional)</label>
+            <input id="f-observation_id" name="observation_id" type="number"
+                   value="{{ defaults.get('observation_id', '') }}"
+                   placeholder="links the row back to the observation for analytics">
+        </div>
+
+        <div class="form-field">
+            <label for="f-post_text">Post / DM text (optional)</label>
+            <textarea id="f-post_text" name="post_text" rows="6"
+                      placeholder="paste the post or DM body that this link is going into">{{ defaults.get('post_text', '') }}</textarea>
+            <p class="hint">Stored alongside the link so you can see exactly what got clicked when reviewing later.</p>
+        </div>
+
+        <div class="form-field">
+            <label for="f-notes">Notes (optional)</label>
+            <textarea id="f-notes" name="notes" rows="3"
+                      placeholder="anything else worth remembering — schedule, audience, etc.">{{ defaults.get('notes', '') }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Create link</button>
+            <a class="button-link" href="{{ url_for('attribution.dashboard') }}">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

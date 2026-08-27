@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Idea #{{ row.id }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Idea #{{ row.id }}: {{ row.title }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('ideas.ideas_list') }}">← Back to list</a>
+            <button type="button" id="copy-md-btn" class="button-secondary">Copy as markdown</button>
+            <span id="copy-md-status" class="extract-status copy-status" role="status" aria-live="polite"></span>
+        </div>
+    </div>
+
+    <section class="raw-transcript">
+        <h2>Description</h2>
+        <div class="transcript-box">{{ row.description }}</div>
+    </section>
+
+    <dl class="entry-detail">
+        <dt>Status</dt>
+        <dd>{{ row.status }}</dd>
+
+        <dt>Proposed by</dt>
+        <dd>{{ row.proposed_by }}</dd>
+
+        {% if row.source %}
+            <dt>Source</dt>
+            <dd><div class="multiline">{{ row.source }}</div></dd>
+        {% endif %}
+
+        {% if linked_observations %}
+            <dt>Linked observations</dt>
+            <dd>
+                <ul class="linked-observations">
+                    {% for obs in linked_observations %}
+                        <li>
+                            <a href="{{ url_for('observations.observations_detail', obs_id=obs.id) }}">Obs #{{ obs.id }}</a>
+                            <span class="muted">— {{ obs.date_observed }}{% if obs.segment_guess %} · {{ obs.segment_guess|truncate(40) }}{% endif %}</span>
+                            {% if obs.pain_points %}
+                                <div class="muted linked-obs-snippet">{{ obs.pain_points|truncate(140) }}</div>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </dd>
+        {% endif %}
+
+        {% if row.tags %}
+            <dt>Tags</dt>
+            <dd>{% for t in row.tags.split(',') if t %}<a class="tag" href="{{ url_for('tag_detail', tag=t.strip()) }}">{{ t }}</a>{% endfor %}</dd>
+        {% endif %}
+
+        <dt>Created at</dt>
+        <dd class="muted">{{ row.created_at }} <span class="hint">(UTC)</span></dd>
+
+        <dt>Updated at</dt>
+        <dd class="muted">{{ row.updated_at }} <span class="hint">(UTC)</span></dd>
+    </dl>
+
+    <section style="margin-top: 24px;">
+        <h2>Status</h2>
+        <div class="extract-row">
+            {% if row.status != 'idea' %}
+                <form method="post" action="{{ url_for('ideas.ideas_change_status', idea_id=row.id) }}" style="display: inline;">
+                    <input type="hidden" name="status" value="idea">
+                    <button type="submit" class="button-secondary">Mark as idea</button>
+                </form>
+            {% endif %}
+            {% if row.status != 'approved' %}
+                <form method="post" action="{{ url_for('ideas.ideas_change_status', idea_id=row.id) }}" style="display: inline;">
+                    <input type="hidden" name="status" value="approved">
+                    <button type="submit" class="button">Approve</button>
+                </form>
+            {% endif %}
+            {% if row.status != 'rejected' %}
+                <form method="post" action="{{ url_for('ideas.ideas_change_status', idea_id=row.id) }}" style="display: inline;">
+                    <input type="hidden" name="status" value="rejected">
+                    <button type="submit" class="button-secondary">Reject</button>
+                </form>
+            {% endif %}
+        </div>
+    </section>
+
+    <section style="margin-top: 24px;">
+        <h2>
+            Build gate — Step 4 → 5
+            {% if row.gate_week == current_week %}
+                <span class="wk-chip wk-chip-now">THIS WEEK'S FEATURE</span>
+            {% elif row.gate_week %}
+                <span class="wk-chip">gated wk of {{ row.gate_week }}</span>
+            {% endif %}
+        </h2>
+        <p class="muted">
+            The weekly build decision log (WORKFLOW.md). Leave the stage blank while this is
+            just a brainstorm idea; set it once it clears the gate, then advance it to live.
+            The app project reads decided features (any stage set), not the inbox.
+        </p>
+
+        <form method="post" action="{{ url_for('ideas.ideas_update_build', idea_id=row.id) }}" novalidate>
+            <div class="form-field">
+                <label for="f-build-stage">Build stage</label>
+                <select id="f-build-stage" name="build_stage">
+                    <option value="" {% if not row.build_stage %}selected{% endif %}>— not yet (brainstorm only)</option>
+                    {% for s in build_stages %}
+                        <option value="{{ s }}" {% if row.build_stage == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% for col, label, kind, help in build_fields %}
+                <div class="form-field">
+                    <label for="f-{{ col }}">{{ label }} <span class="muted">({{ help }})</span></label>
+                    {% if kind == 'textarea' %}
+                        <textarea id="f-{{ col }}" name="{{ col }}" rows="3">{{ row[col] or '' }}</textarea>
+                    {% else %}
+                        <input id="f-{{ col }}" name="{{ col }}" type="text" value="{{ row[col] or '' }}">
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <div class="form-field">
+                <label for="f-sitemap-added">Sitemap added? <span class="muted">(Step 5 — the hardcoded entry in the app's sitemap.ts that's easy to forget)</span></label>
+                <select id="f-sitemap-added" name="sitemap_added">
+                    {% for opt in ['', 'yes', 'no'] %}
+                        <option value="{{ opt }}" {% if (row.sitemap_added or '') == opt %}selected{% endif %}>{{ opt or '—' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="button">Save build gate</button>
+            </div>
+        </form>
+    </section>
+
+    <section style="margin-top: 24px;">
+        <h2>Guardrails check</h2>
+
+        {% if gr_result.status == 'ok' %}
+            <div class="notice notice-success">
+                <strong>OK.</strong> No guardrail conflicts found.
+                {% if gr_result.explanation %}<br><span class="muted">{{ gr_result.explanation }}</span>{% endif %}
+            </div>
+        {% elif gr_result.status == 'conflict' %}
+            <div class="notice notice-error">
+                <strong>Conflict.</strong>
+                {% if gr_result.rules_violated %}
+                    <div style="margin-top: 6px;">
+                        {% for rule_id in gr_result.rules_violated %}<span class="rule-id">{{ rule_id }}</span>{% endfor %}
+                    </div>
+                {% endif %}
+                {% if gr_result.explanation %}<p style="margin: 8px 0 0 0;">{{ gr_result.explanation }}</p>{% endif %}
+            </div>
+        {% elif gr_result.status == 'error' %}
+            <div class="notice notice-error">
+                <strong>Check failed.</strong>
+                {% if gr_result.explanation %}<p style="margin: 8px 0 0 0;">{{ gr_result.explanation }}</p>{% endif %}
+            </div>
+        {% else %}
+            <div class="notice">
+                <strong>Not checked yet.</strong> Click below to run the check.
+            </div>
+        {% endif %}
+
+        <div class="extract-row" style="margin-top: 8px;">
+            {% if row.guardrails_checked_at %}
+                <span class="extract-status extract-status-info">Last checked: {{ row.guardrails_checked_at }} (UTC)</span>
+            {% endif %}
+            <form method="post" action="{{ url_for('ideas.ideas_recheck', idea_id=row.id) }}" style="display: inline;">
+                <button type="submit" class="button-secondary">Re-check guardrails</button>
+            </form>
+        </div>
+    </section>
+
+    <textarea id="idea-md-text" class="copy-fallback" readonly hidden rows="14" aria-label="Markdown to copy manually">{{ idea_md }}</textarea>
+
+    <script>
+    (function () {
+        var btn = document.getElementById('copy-md-btn');
+        if (!btn) return;
+        var src = document.getElementById('idea-md-text');
+        var statusEl = document.getElementById('copy-md-status');
+        var origLabel = btn.textContent;
+        var revertTimer = null;
+
+        function setStatus(msg, kind) {
+            if (!statusEl) return;
+            statusEl.textContent = msg || '';
+            statusEl.className = 'extract-status copy-status' + (kind ? ' extract-status-' + kind : '');
+        }
+
+        function fallback() {
+            if (!src) return;
+            src.hidden = false;
+            src.focus();
+            src.select();
+            setStatus('Copy failed — text selected, press Ctrl+C.', 'error');
+        }
+
+        btn.addEventListener('click', function () {
+            if (!src) return;
+            if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
+            if (!navigator.clipboard || !navigator.clipboard.writeText) { fallback(); return; }
+
+            navigator.clipboard.writeText(src.value).then(function () {
+                btn.textContent = 'Copied!';
+                setStatus('', '');
+                revertTimer = setTimeout(function () {
+                    btn.textContent = origLabel;
+                    revertTimer = null;
+                }, 2000);
+            }).catch(fallback);
+        });
+    })();
+    </script>
+{% endblock %}

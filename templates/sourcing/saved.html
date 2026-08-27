@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Sourcing — saved — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Sourcing — saved for later</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('sourcing.sourcing_list') }}">← Back to digest</a>
+        </div>
+    </div>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} saved.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Score</th>
+                        <th>Subreddit</th>
+                        <th>Title</th>
+                        <th>Age</th>
+                        <th>Comments</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><strong>{{ r.score }}</strong></td>
+                        <td>r/{{ r.subreddit }}</td>
+                        <td>
+                            <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>
+                            {% if r.matched_triggers %}
+                                <br><span class="muted">matched: {{ r.matched_triggers }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.posted_at %}
+                                <span class="muted">{{ r.posted_at|truncate(16, true, '') }}Z</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.comment_count }}</td>
+                        <td>
+                            <a class="button button-small" href="{{ url_for('sourcing.sourcing_extract', reddit_id=r.reddit_id) }}">Extract</a>
+                            <form method="post" action="{{ url_for('sourcing.sourcing_skip', reddit_id=r.reddit_id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Move to skipped</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">Nothing saved yet. Use the <strong>Save for later</strong> button on the <a href="{{ url_for('sourcing.sourcing_list') }}">digest</a>.</p>
+    {% endif %}
+{% endblock %}

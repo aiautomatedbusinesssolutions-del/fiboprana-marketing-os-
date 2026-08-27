@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Web Sourcing — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Web Sourcing</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('sourcing_web.sourcing_web_saved') }}">Saved for later</a>
+        </div>
+    </div>
+
+    {% if scan_error %}
+        <div class="notice notice-error">{{ scan_error }}</div>
+    {% endif %}
+
+    {% if scan_summary %}
+        <div class="notice notice-success">
+            {% if scan_summary.ad_hoc %}
+                Ad-hoc query: <em>{{ scan_summary.adhoc_query }}</em>.
+            {% else %}
+                Ran {{ scan_summary.templates_run }} template{{ '' if scan_summary.templates_run == 1 else 's' }}.
+            {% endif %}
+            Returned {{ scan_summary.results_returned }} result{{ '' if scan_summary.results_returned == 1 else 's' }};
+            <strong>{{ scan_summary.new_candidates }}</strong> new
+            (<span class="muted">{{ scan_summary.skipped_already_seen }} already seen</span>).
+            {% if scan_summary.templates_failed %}
+                <br><strong>Failed templates:</strong>
+                {% for label, err in scan_summary.templates_failed %}
+                    {{ label }} ({{ err }}){% if not loop.last %}; {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="scan-controls" style="margin: 1em 0; display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
+        <form method="post" action="{{ url_for('sourcing_web.sourcing_web_scan') }}" style="display:inline">
+            <input type="hidden" name="mode" value="templates">
+            <button type="submit" class="button">Scan all templates</button>
+        </form>
+
+        <form method="post" action="{{ url_for('sourcing_web.sourcing_web_scan') }}" style="display:inline; flex: 1; min-width: 320px;">
+            <input type="hidden" name="mode" value="adhoc">
+            <input type="text" name="query" placeholder="Ad-hoc query (e.g. 'Bogleheads 15 year retrospective')" style="width: 70%; max-width: 480px;">
+            <button type="submit" class="button button-secondary">Run query</button>
+        </form>
+    </div>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} candidate{{ '' if rows|length == 1 else 's' }}.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th><a href="{{ url_for('sourcing_web.sourcing_web_list', sort=sort_links.query.sort, order=sort_links.query.order) }}">Query{% if sort_links.query.indicator %} {{ sort_links.query.indicator }}{% endif %}</a></th>
+                        <th><a href="{{ url_for('sourcing_web.sourcing_web_list', sort=sort_links.subreddit.sort, order=sort_links.subreddit.order) }}">Subreddit{% if sort_links.subreddit.indicator %} {{ sort_links.subreddit.indicator }}{% endif %}</a></th>
+                        <th>Title</th>
+                        <th><a href="{{ url_for('sourcing_web.sourcing_web_list', sort=sort_links.score.sort, order=sort_links.score.order) }}">Score{% if sort_links.score.indicator %} {{ sort_links.score.indicator }}{% endif %}</a></th>
+                        <th><a href="{{ url_for('sourcing_web.sourcing_web_list', sort=sort_links.recency.sort, order=sort_links.recency.order) }}">Seen{% if sort_links.recency.indicator %} {{ sort_links.recency.indicator }}{% endif %}</a></th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td>
+                            {% if r.query_kind == 'adhoc' %}
+                                <span class="muted">(ad-hoc)</span>
+                            {% else %}
+                                {{ r.query_label or '(unnamed)' }}
+                            {% endif %}
+                        </td>
+                        <td>{% if r.subreddit %}r/{{ r.subreddit }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>
+                            <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title or r.url }}</a>
+                            {% if r.first_highlight %}
+                                <br><span class="muted">{{ r.first_highlight|truncate(220) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.exa_score is not none %}
+                                <span class="muted">{{ '%.3f'|format(r.exa_score) }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="muted">{{ (r.first_seen_at or '')[:10] }}</span></td>
+                        <td>
+                            <a class="button button-small" href="{{ url_for('sourcing_web.sourcing_web_extract', result_id=r.id) }}">Extract</a>
+                            <button type="button" class="button button-small button-secondary copy-json-btn" data-row-id="{{ r.id }}">Copy JSON</button>
+                            <form method="post" action="{{ url_for('sourcing_web.sourcing_web_save_later', result_id=r.id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Save for later</button>
+                            </form>
+                            <form method="post" action="{{ url_for('sourcing_web.sourcing_web_skip', result_id=r.id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Skip</button>
+                            </form>
+                            <script type="application/json" id="rowjson-{{ r.id }}">{{ r.json_for_copy|tojson }}</script>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">
+            No candidates yet. Click <strong>Scan all templates</strong> to run the audience-gap
+            queries in <code>sourcing_web/config.yaml</code>, or use the ad-hoc query input above.
+        </p>
+    {% endif %}
+
+    <script>
+    (function () {
+        document.addEventListener('click', function (ev) {
+            var btn = ev.target.closest && ev.target.closest('.copy-json-btn');
+            if (!btn) return;
+            var rowId = btn.getAttribute('data-row-id');
+            var src = document.getElementById('rowjson-' + rowId);
+            if (!src) return;
+            var json = src.textContent;
+            var origLabel = btn.dataset.origLabel || btn.textContent;
+            btn.dataset.origLabel = origLabel;
+
+            function done() {
+                btn.textContent = 'Copied!';
+                setTimeout(function () { btn.textContent = origLabel; }, 1500);
+            }
+            function fail() {
+                btn.textContent = 'Copy failed';
+                setTimeout(function () { btn.textContent = origLabel; }, 2000);
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(json).then(done, fail);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = json;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); done(); }
+                catch (e) { fail(); }
+                document.body.removeChild(ta);
+            }
+        });
+    })();
+    </script>
+{% endblock %}

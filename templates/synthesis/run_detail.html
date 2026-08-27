@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Synthesis run #{{ run.id }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Synthesis run #{{ run.id }}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('synthesis.synthesis_dashboard') }}">← Back to synthesis</a>
+        </div>
+    </div>
+
+    <dl class="entry-detail">
+        <dt>Generated at</dt><dd>{{ run.generated_at }} <span class="hint">(UTC)</span></dd>
+        <dt>Observations</dt><dd>{{ run.observation_count }}</dd>
+        <dt>Model</dt><dd>{{ run.model or '—' }}</dd>
+        {% if run.input_token_count %}
+            <dt>Input tokens</dt><dd class="muted">{{ run.input_token_count }}</dd>
+            <dt>Output tokens</dt><dd class="muted">{{ run.output_token_count }}</dd>
+        {% endif %}
+    </dl>
+
+    <section style="margin-top: 24px;">
+        <h2>Synthesis</h2>
+        <div class="synthesis-md">{{ run.synthesis_md }}</div>
+    </section>
+{% endblock %}

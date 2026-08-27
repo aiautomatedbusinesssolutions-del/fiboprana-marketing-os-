@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Web Sourcing — saved — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Web Sourcing — saved for later</h1>
+        <div class="actions">
+            <a class="button button-secondary" href="{{ url_for('sourcing_web.sourcing_web_list') }}">← Back to digest</a>
+        </div>
+    </div>
+
+    {% if rows %}
+        <p class="result-count">{{ rows|length }} saved.</p>
+        <div class="table-wrap">
+            <table class="rows">
+                <thead>
+                    <tr>
+                        <th>Query</th>
+                        <th>Subreddit</th>
+                        <th>Title</th>
+                        <th>Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td>
+                            {% if r.query_kind == 'adhoc' %}
+                                <span class="muted">(ad-hoc)</span>
+                            {% else %}
+                                {{ r.query_label or '(unnamed)' }}
+                            {% endif %}
+                        </td>
+                        <td>{% if r.subreddit %}r/{{ r.subreddit }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                        <td>
+                            <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title or r.url }}</a>
+                            {% if r.first_highlight %}
+                                <br><span class="muted">{{ r.first_highlight|truncate(220) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.exa_score is not none %}
+                                <span class="muted">{{ '%.3f'|format(r.exa_score) }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a class="button button-small" href="{{ url_for('sourcing_web.sourcing_web_extract', result_id=r.id) }}">Extract</a>
+                            <form method="post" action="{{ url_for('sourcing_web.sourcing_web_skip', result_id=r.id) }}" style="display:inline">
+                                <button type="submit" class="button button-small button-secondary">Move to skipped</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">Nothing saved yet. Use the <strong>Save for later</strong> button on the <a href="{{ url_for('sourcing_web.sourcing_web_list') }}">digest</a>.</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Link {{ link.code }} — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Link <code>{{ link.code }}</code>{% if link.archived %} <span class="muted">(archived)</span>{% endif %}</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('attribution.dashboard') }}">← Back to attribution</a>
+        </div>
+    </div>
+
+    {% if just_created %}
+        <div class="notice notice-success">Link created. Copy it below and paste into your post / DM.</div>
+    {% endif %}
+
+    <section style="margin-top: 16px;">
+        <h2>Short URL</h2>
+        <div class="extract-row">
+            <input id="short-url" type="text" readonly value="{{ short_url }}" style="flex: 1; min-width: 280px;">
+            <button type="button" id="copy-short-url-btn" class="button-secondary">Copy</button>
+            <span id="copy-status" class="extract-status" role="status" aria-live="polite"></span>
+        </div>
+        <p class="hint">Redirects to: <a href="{{ resolved_destination }}" target="_blank" rel="noopener noreferrer">{{ resolved_destination }}</a></p>
+    </section>
+
+    <dl class="entry-detail" style="margin-top: 24px;">
+        <dt>Destination</dt><dd>{{ link.destination }}</dd>
+        {% if link.utm_source    %}<dt>utm_source</dt><dd>{{ link.utm_source }}</dd>{% endif %}
+        {% if link.utm_medium    %}<dt>utm_medium</dt><dd>{{ link.utm_medium }}</dd>{% endif %}
+        {% if link.utm_campaign  %}<dt>utm_campaign</dt><dd>{{ link.utm_campaign }}</dd>{% endif %}
+        {% if link.utm_content   %}<dt>utm_content</dt><dd>{{ link.utm_content }}</dd>{% endif %}
+        {% if link.utm_term      %}<dt>utm_term</dt><dd>{{ link.utm_term }}</dd>{% endif %}
+        {% if link.observation_id %}
+            <dt>Observation</dt>
+            <dd><a href="{{ url_for('observations.observations_detail', obs_id=link.observation_id) }}">#{{ link.observation_id }}</a></dd>
+        {% endif %}
+        {% if link.post_text %}
+            <dt>Post / DM text</dt>
+            <dd><div class="multiline">{{ link.post_text }}</div></dd>
+        {% endif %}
+        {% if link.notes %}
+            <dt>Notes</dt>
+            <dd><div class="multiline">{{ link.notes }}</div></dd>
+        {% endif %}
+        <dt>Created at</dt><dd class="muted">{{ link.created_at }} <span class="hint">(UTC)</span></dd>
+    </dl>
+
+    <section style="margin-top: 24px;">
+        <h2>Clicks ({{ clicks|length }})</h2>
+        {% if not clicks %}
+            <p class="muted">No clicks yet.</p>
+        {% else %}
+            <div class="table-wrap">
+                <table class="rows">
+                    <thead>
+                        <tr>
+                            <th>When (UTC)</th>
+                            <th>Referer</th>
+                            <th>User-agent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in clicks %}
+                            <tr>
+                                <td class="muted">{{ c.clicked_at }}</td>
+                                <td class="muted">{{ (c.referer or '—')[:60] }}</td>
+                                <td class="muted">{{ (c.user_agent or '—')[:80] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    <section style="margin-top: 32px;">
+        <form method="post" action="{{ url_for('attribution.archive', link_id=link.id) }}">
+            {% if link.archived %}
+                <input type="hidden" name="unarchive" value="1">
+                <button type="submit" class="button-secondary">Unarchive</button>
+            {% else %}
+                <button type="submit" class="button-secondary"
+                        onclick="return confirm('Archive this link? The redirect keeps working forever — archiving just hides the row from the default dashboard.');">
+                    Archive
+                </button>
+            {% endif %}
+        </form>
+    </section>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('copy-short-url-btn');
+            var inp = document.getElementById('short-url');
+            var statusEl = document.getElementById('copy-status');
+            if (!btn || !inp) return;
+            var origLabel = btn.textContent;
+            var revertTimer = null;
+
+            function setStatus(msg, kind) {
+                statusEl.textContent = msg || '';
+                statusEl.className = 'extract-status' + (kind ? ' extract-status-' + kind : '');
+            }
+
+            btn.addEventListener('click', function () {
+                if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    inp.focus(); inp.select();
+                    setStatus('Press Ctrl+C to copy.', 'error');
+                    return;
+                }
+                navigator.clipboard.writeText(inp.value).then(function () {
+                    btn.textContent = 'Copied!';
+                    setStatus('', '');
+                    revertTimer = setTimeout(function () {
+                        btn.textContent = origLabel;
+                        revertTimer = null;
+                    }, 2000);
+                }).catch(function () {
+                    inp.focus(); inp.select();
+                    setStatus('Press Ctrl+C to copy.', 'error');
+                });
+            });
+        })();
+    </script>
+{% endblock %}

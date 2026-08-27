@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Triage — Swipe File{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Swipe triage</h1>
+        <div class="actions">
+            <a class="button" href="{{ url_for('swipe.swipe_new_form') }}">Quick-add</a>
+            <a class="button-link" href="{{ url_for('swipe.swipe_index') }}">← Swipe file</a>
+        </div>
+    </div>
+
+    {% if message %}<div class="notice notice-success">{{ message }}</div>{% endif %}
+    {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
+    {% if added %}<div class="notice notice-success">Added {{ added }} item{{ '' if added == 1 else 's' }}.</div>{% endif %}
+
+    <p class="lede">
+        The 10-minute pass: turn each raw capture into a structured signal. Draft with AI, edit in
+        your voice, promote the keepers, discard freely — especially anything that only works through
+        FOMO or price calls.
+    </p>
+
+    {% if undrafted %}
+        <form method="post" action="{{ url_for('swipe.swipe_draft_pending') }}" style="margin: 1em 0;"
+              onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Drafting…';">
+            <button type="submit" class="button">Draft {{ undrafted }} pending with AI</button>
+            <span class="muted" style="font-size: 0.85em;">One quick Haiku call each; pre-fills the fields below.</span>
+        </form>
+    {% endif %}
+
+    {% if not items %}
+        <p class="empty">Nothing to triage. <a href="{{ url_for('swipe.swipe_new_form') }}">Quick-add</a> some posts.</p>
+    {% endif %}
+
+    {% for it in items %}
+        <div style="border: 1px solid var(--border); border-radius: 4px; margin-bottom: 1em; padding: 0.75em 1em;">
+            <div class="muted" style="font-size: 0.9em;">
+                {{ it.platform or 'unknown' }} ·
+                {% if it.url %}<a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.url }}</a>{% else %}(no link){% endif %}
+            </div>
+            {% if it.why_note %}<p style="margin: 0.4em 0;"><strong>Why it worked:</strong> {{ it.why_note }}</p>{% endif %}
+            {% if it.draft.discard_flag %}<div class="notice notice-error" style="margin: 0.5em 0;">AI flags this as off-guardrail (FOMO / price calls). Consider discarding.</div>{% endif %}
+
+            <form method="post" action="{{ url_for('swipe.swipe_promote', raw_id=it.id) }}">
+                <div class="form-field">
+                    <label>Hook type</label>
+                    <select name="hook_type">
+                        {% for h in hook_types %}
+                            <option value="{{ h }}" {% if it.draft.hook_type == h %}selected{% endif %}>{{ h }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Why it landed</label>
+                    <input type="text" name="why_it_landed" value="{{ it.draft.why_it_landed or '' }}">
+                </div>
+                <div class="form-field">
+                    <label>Founder's angle</label>
+                    <input type="text" name="nates_angle" value="{{ it.draft.nates_angle or '' }}">
+                </div>
+                <div class="form-field">
+                    <label>Recognizable specific</label>
+                    <input type="text" name="recognizable_specific" value="{{ it.draft.recognizable_specific or '' }}">
+                </div>
+                <div class="form-field">
+                    <label>Tags</label>
+                    <input type="text" name="tags" value="{{ it.draft.tags or '' }}">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="button">Promote</button>
+                    <button type="submit" class="button button-secondary" formaction="{{ url_for('swipe.swipe_discard', raw_id=it.id) }}">Discard</button>
+                </div>
+            </form>
+        </div>
+    {% endfor %}
+{% endblock %}

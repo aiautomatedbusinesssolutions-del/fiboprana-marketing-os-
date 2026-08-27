@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Finder Trial — Fiboprana</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Fiboprana Emerald-refresh palette (fiboprana-site verified) */
+  :root {
+    --bg: #0b0f14;
+    --card: #121822;
+    --card-edge: #1e2733;
+    --ink: #e6edf3;
+    --ink-dim: #a9b6c3;
+    --emerald: #1db584;
+    --amber: #e8a93b;
+    --skip: #7d8894;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 450 15.5px/1.55 -apple-system, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    padding: 18px 20px 40px; max-width: 960px; margin: 0 auto;
+  }
+
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  header h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 22px; font-weight: 600; }
+  header h1 .s { color: var(--emerald); }
+  header .sub { color: var(--ink-dim); font-size: 14.5px; }
+  header a { color: var(--emerald); text-decoration: none; font-size: 14.5px; margin-left: auto; }
+
+  .note { color: var(--ink-dim); font-size: 14px; margin: 4px 0 16px; }
+
+  /* per-tool identity, used by badges and scoreboard accents */
+  .t-rss     { --tool: var(--ink-dim); }
+  .t-apify   { --tool: var(--amber); }
+  .t-opencli { --tool: var(--emerald); }
+  .badge {
+    font-size: 12.5px; letter-spacing: .05em; text-transform: uppercase;
+    border-radius: 4px; padding: 1px 6px; border: 1px solid var(--tool); color: var(--tool);
+  }
+
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 22px; }
+  .tile {
+    background: var(--card); border: 1px solid var(--card-edge); border-radius: 12px;
+    padding: 12px 14px; border-top: 2px solid var(--tool);
+  }
+  .tile .tname { font-size: 13.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--tool); margin-bottom: 6px; }
+  .tile .big { font-size: 22px; font-weight: 600; }
+  .tile .big small { font-size: 13.5px; font-weight: 400; color: var(--ink-dim); }
+  .tile .rows { margin-top: 6px; font-size: 14px; color: var(--ink-dim); }
+  .tile .rows b { color: var(--ink); font-weight: 600; }
+
+  h2 { font-size: 16.5px; margin: 6px 0 10px; color: var(--ink); }
+
+  .run {
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 12px; padding: 13px 16px; margin-bottom: 14px;
+  }
+  .run .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .run .when { font-weight: 600; }
+  .run .cost { color: var(--amber); font-size: 14px; }
+  .run .cost.free { color: var(--emerald); }
+  .run .top .toggle {
+    margin-left: auto; border: 1px solid var(--card-edge); border-radius: 6px;
+    background: none; color: var(--emerald); font-size: 13.5px; padding: 2px 10px; cursor: pointer;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--ink-dim); font-weight: 400; padding: 2px 10px 4px 0; }
+  td { padding: 3px 10px 3px 0; border-top: 1px solid var(--card-edge); }
+  td.num, th.num { text-align: right; padding-right: 16px; }
+
+  .bar { height: 6px; border-radius: 3px; background: var(--card-edge); overflow: hidden; margin-top: 2px; }
+  .bar i { display: block; height: 100%; background: var(--tool); }
+
+  .overlap { color: var(--ink-dim); font-size: 14px; margin-top: 8px; }
+  .overlap b { color: var(--ink); }
+  .errors { color: var(--amber); font-size: 13.5px; margin-top: 6px; white-space: pre-wrap; }
+
+  .cands { margin-top: 10px; display: none; }
+  .cands.open { display: block; }
+  .cand {
+    border-top: 1px solid var(--card-edge); padding: 6px 0; font-size: 14.5px;
+    display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  }
+  .cand .score { color: var(--tool); font-weight: 600; min-width: 30px; text-align: right; }
+  .cand a { color: var(--ink); text-decoration: none; }
+  .cand a:hover { color: var(--emerald); }
+  .cand .meta { color: var(--ink-dim); font-size: 13.5px; }
+  .cand .only { color: var(--tool); font-size: 13px; letter-spacing: .04em; }
+
+  .empty { color: var(--ink-dim); padding: 30px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="s">S</span> Finder Trial</h1>
+  <span class="sub">RSS vs Apify vs OpenCLI — same subreddits, same scoring brain</span>
+  <a href="/week">← week</a>
+</header>
+<div class="note">Free tools can run daily; Apify joins 2–3×/wk (free tier). A candidate is a post that cleared
+the reply-finder score floor. “Unique” = threads only that tool surfaced in that run.</div>
+
+<div class="board" id="board"></div>
+<h2>Runs</h2>
+<div id="runs"><div class="empty">No trial runs yet — <code>python -m finder_trial.run</code></div></div>
+
+<script>
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = (n, d) => d ? Math.round(100 * n / d) : 0;
+const TOOLS = ["opencli", "apify", "rss"];   // display order: the challenger first
+
+function scoreboard(runs) {
+  const agg = {};
+  for (const run of runs) {
+    for (const r of run.results) {
+      const a = agg[r.tool] ??= { runs: 0, cands: 0, cost: 0, unique: 0, body: 0, comments: 0, total: 0 };
+      a.runs++; a.cands += r.candidates || 0; a.cost += r.cost_usd || 0;
+      a.unique += run.overlap.unique[r.tool] ?? 0;
+    }
+    for (const c of run.candidates) {
+      const a = agg[c.tool]; if (!a) continue;
+      a.total++;
+      if ((c.body_chars || 0) >= 100) a.body++;
+      if (c.num_comments != null) a.comments++;
+    }
+  }
+  document.getElementById("board").innerHTML = TOOLS.filter(t => agg[t]).map(t => {
+    const a = agg[t];
+    return `<div class="tile t-${t}">
+      <div class="tname">${t}</div>
+      <div class="big">${a.cands} <small>candidates / ${a.runs} run${a.runs === 1 ? "" : "s"}</small></div>
+      <div class="rows">
+        unique finds <b>${a.unique}</b> · body text <b>${pct(a.body, a.total)}%</b> ·
+        comment counts <b>${pct(a.comments, a.total)}%</b> · cost <b>$${a.cost.toFixed(2)}</b>
+      </div></div>`;
+  }).join("");
+}
+
+function runCard(run) {
+  const when = new Date(run.ran_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  const cost = run.estimated_cost_usd || 0;
+  const maxCand = Math.max(1, ...run.results.map(r => r.candidates || 0));
+  const shared = new Set(run.overlap.shared_keys || []);
+
+  const rows = run.results.map(r => {
+    const byTool = run.candidates.filter(c => c.tool === r.tool);
+    const body = pct(byTool.filter(c => (c.body_chars || 0) >= 100).length, byTool.length);
+    return `<tr class="t-${r.tool}">
+      <td><span class="badge">${r.tool}</span></td>
+      <td class="num">${r.posts_fetched ?? "—"}</td>
+      <td class="num">${r.candidates ?? 0}<div class="bar"><i style="width:${pct(r.candidates, maxCand)}%"></i></div></td>
+      <td class="num">${run.overlap.unique[r.tool] ?? 0}</td>
+      <td class="num">${body}%</td>
+      <td class="num">${r.seconds != null ? r.seconds + "s" : "—"}</td>
+      <td class="num">${r.cost_usd ? "$" + r.cost_usd.toFixed(2) : "free"}</td>
+    </tr>`;
+  }).join("");
+
+  const cands = run.candidates.slice(0, 60).map(c => `
+    <div class="cand t-${c.tool}">
+      <span class="score">${c.score}</span>
+      <span class="badge">${c.tool}</span>
+      <a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>
+      <span class="meta">r/${esc(c.subreddit)} · ${c.age_hours ?? "?"}h
+        ${c.num_comments != null ? "· " + c.num_comments + " comments" : ""}
+        ${c.body_chars ? "· " + c.body_chars + " body chars" : ""}
+        ${c.flip_group ? "· " + esc(c.flip_group) : ""}</span>
+      ${run.results.length > 1 && !shared.has(c.thread_key) ? '<span class="only">only here</span>' : ""}
+    </div>`).join("");
+
+  const errors = run.results.filter(r => r.errors)
+    .map(r => `${r.tool}:\n${esc(r.errors)}`).join("\n");
+
+  return `<div class="run">
+    <div class="top">
+      <span class="when">${when}</span>
+      ${run.results.map(r => `<span class="badge t-${r.tool}" style="--tool:${r.tool === "apify" ? "var(--amber)" : r.tool === "opencli" ? "var(--emerald)" : "var(--ink-dim)"}">${r.tool}</span>`).join("")}
+      <span class="cost ${cost ? "" : "free"}">${cost ? "$" + cost.toFixed(2) : "free run"}</span>
+      <button class="toggle" onclick="this.closest('.run').querySelector('.cands').classList.toggle('open')">candidates</button>
+    </div>
+    <table>
+      <tr><th>tool</th><th class="num">posts</th><th class="num">candidates</th>
+          <th class="num">unique</th><th class="num">body ≥100ch</th><th class="num">time</th><th class="num">cost</th></tr>
+      ${rows}
+    </table>
+    <div class="overlap"><b>${run.overlap.distinct_threads}</b> distinct threads${
+      run.overlap.in_all != null ? ` · <b>${run.overlap.in_all}</b> found by every tool` : ""}</div>
+    ${errors ? `<div class="errors">${errors}</div>` : ""}
+    <div class="cands">${cands || '<div class="empty">no candidates cleared the floor</div>'}</div>
+  </div>`;
+}
+
+fetch("/api/finder_trials").then(r => r.json()).then(({ runs }) => {
+  if (!runs.length) return;
+  scoreboard(runs);
+  document.getElementById("runs").innerHTML = runs.map(runCard).join("");
+}).catch(e => {
+  document.getElementById("runs").innerHTML = `<div class="empty">failed to load: ${esc(e.message)}</div>`;
+});
+</script>
+</body>
+</html>

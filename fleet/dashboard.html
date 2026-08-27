@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiboprana — Marketing OS</title>
+<!--
+  The Marketing OS dashboard. Served by `python -m fleet.dashboard`, which also
+  proxies /api/<table> to Supabase (keys stay in .env). Read-only window over the
+  same rows the agents + founder write — see MARKETING_OS.md for the design.
+  Brand tokens match the video decks (Emerald refresh, fiboprana-site globals.css).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f14; --surface:#131922; --surface-2:#1a2230; --border:#1f2733;
+    --text:#e6ebf2; --muted:#a9b6c3; --dim:#7d8894;
+    --emerald:#1db584; --emerald-hi:#23c691; --amber:#e8a93b; --red:#e2554d;
+    --serif:"IBM Plex Serif", Georgia, serif;
+    --sans:"Inter", system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;font-size:16.5px;line-height:1.55}
+
+  /* ── chrome ─────────────────────────────────────────────────────────── */
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:22px;
+    padding:12px 28px;background:rgba(11,15,20,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border)}
+  .brand{font-family:var(--serif);font-weight:600;font-size:1.05rem;display:flex;
+    align-items:center;gap:.5em;white-space:nowrap}
+  .brand .tri{color:var(--emerald)}
+  .brand .os{color:var(--dim);font-family:var(--sans);font-weight:500;font-size:0.9rem;
+    letter-spacing:.14em;text-transform:uppercase;margin-left:.4em}
+  nav{display:flex;gap:4px;overflow-x:auto;flex:1}
+  nav a{color:var(--muted);text-decoration:none;font-size:0.9rem;font-weight:500;
+    padding:6px 10px;border-radius:8px;white-space:nowrap}
+  nav a:hover{color:var(--text);background:var(--surface-2)}
+  .refresh{display:flex;align-items:center;gap:10px;white-space:nowrap}
+  .refresh .age{color:var(--dim);font-size:0.85rem}
+  .refresh button{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    font:inherit;font-size:0.88rem;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer}
+  .refresh button:hover{border-color:var(--emerald)}
+
+  main{max-width:1440px;margin:0 auto;padding:26px 28px 80px}
+
+  /* ── header strip ───────────────────────────────────────────────────── */
+  .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;
+    flex-wrap:wrap;margin:8px 0 22px}
+  .hero h1{font-family:var(--serif);font-weight:600;font-size:1.7rem;letter-spacing:-.01em}
+  .hero .sub{color:var(--muted);margin-top:4px;max-width:70ch}
+  .stats{display:flex;gap:12px;flex-wrap:wrap}
+  .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:12px 18px;min-width:118px}
+  .stat-tile .n{font-family:var(--serif);font-weight:600;font-size:1.6rem;line-height:1.1}
+  .stat-tile .l{color:var(--muted);font-size:0.82rem;letter-spacing:.08em;text-transform:uppercase;
+    margin-top:3px}
+  .stat-tile.good .n{color:var(--emerald)}
+  .stat-tile.warn .n{color:var(--amber)}
+  .stat-tile.bad  .n{color:var(--red)}
+
+  /* ── sections ───────────────────────────────────────────────────────── */
+  section{margin-top:40px;scroll-margin-top:70px}
+  .kicker{font-weight:600;font-size:0.88rem;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--emerald);display:flex;align-items:center;gap:.9em;margin-bottom:6px}
+  .kicker::before{content:"";width:2.2em;height:2px;background:var(--emerald);opacity:.7}
+  section>h2{font-family:var(--serif);font-weight:600;font-size:1.35rem;margin-bottom:4px}
+  .explain{color:var(--muted);font-size:0.93rem;max-width:100ch;margin-bottom:16px}
+  .explain b{color:var(--text);font-weight:600}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px}
+  .grid{display:grid;gap:14px}
+
+  /* chips */
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:600;
+    letter-spacing:.05em;padding:2px 9px;border-radius:999px;border:1px solid var(--border);
+    color:var(--muted);text-transform:uppercase;white-space:nowrap}
+  .chip.em{color:var(--emerald);border-color:rgba(29,181,132,.4);background:rgba(29,181,132,.08)}
+  .chip.am{color:var(--amber);border-color:rgba(232,169,59,.4);background:rgba(232,169,59,.08)}
+  .chip.rd{color:var(--red);border-color:rgba(226,85,77,.4);background:rgba(226,85,77,.08)}
+  .chip.dm{color:var(--dim)}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+  /* ── gates ──────────────────────────────────────────────────────────── */
+  .gates{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+  .gate{border-left:3px solid var(--border);display:flex;flex-direction:column;gap:6px}
+  .gate.active{border-left-color:var(--amber)}
+  .gate.clear{opacity:.75}
+  .gate .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .gate .name{font-weight:600}
+  .gate .count{font-family:var(--serif);font-size:1.5rem;font-weight:600;color:var(--amber)}
+  .gate.clear .count{color:var(--emerald)}
+  .gate .what{color:var(--muted);font-size:0.9rem}
+  .gate .items{color:var(--dim);font-size:0.86rem;line-height:1.5}
+  .gate .items b{color:var(--muted);font-weight:500}
+  .gate{cursor:pointer;transition:background .15s,border-color .15s}
+  .gate:hover{background:var(--surface-2)}
+  .gate.open{border-color:var(--emerald);border-left-color:var(--emerald)}
+  .gate .hint{margin-top:auto;padding-top:6px;color:var(--dim);font-size:0.78rem;
+    letter-spacing:.08em;text-transform:uppercase}
+  .gate.active .hint{color:var(--amber)}
+
+  /* gate drawer — the queue behind a clicked card */
+  .gate-drawer{margin-top:14px;background:var(--surface);border:1px solid rgba(29,181,132,.5);
+    border-radius:16px;padding:18px}
+  .gate-drawer .gd-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .gate-drawer h3{font-family:var(--serif);font-size:1.05rem;font-weight:600}
+  .gate-drawer .gd-close{background:none;border:none;color:var(--dim);font:inherit;
+    font-size:0.9rem;cursor:pointer}
+  .gate-drawer .gd-close:hover{color:var(--text)}
+  .gate-drawer .gd-sub{color:var(--muted);font-size:0.9rem;margin:4px 0 14px}
+  .gq{display:flex;flex-direction:column;gap:10px}
+  .gq-item{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px}
+  .gq-item .gq-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .gq-item .gq-title{font-weight:600}
+  .gq-item .gq-meta{color:var(--dim);font-size:0.86rem;margin-left:auto}
+  .gq-item .gq-body{color:var(--muted);font-size:0.9rem;margin-top:6px}
+  .gq-item .gq-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .gq-item input[type=text],.gq-item select{background:var(--bg);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font:inherit;font-size:0.9rem;padding:6px 10px}
+  .gq-item input[type=text]{flex:1;min-width:180px}
+  .btn{background:var(--surface);border:1px solid var(--border);color:var(--text);font:inherit;
+    font-size:0.88rem;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;
+    white-space:nowrap}
+  .btn:hover{border-color:var(--emerald)}
+  .btn.em{border-color:rgba(29,181,132,.5);color:var(--emerald)}
+  .btn.rd{border-color:rgba(226,85,77,.5);color:var(--red)}
+  .gq-item .digest{display:none;margin-top:10px;padding:12px;background:var(--bg);
+    border:1px solid var(--border);border-radius:10px;white-space:pre-wrap;font-size:0.88rem;
+    color:var(--muted);max-height:420px;overflow:auto}
+  .gq-msg{font-size:0.86rem;color:var(--dim)}
+  .gq-msg.err{color:var(--red)}
+  .gq-empty{color:var(--dim);font-size:0.9rem;padding:8px 2px}
+
+  /* ── fleet ──────────────────────────────────────────────────────────── */
+  .fleet{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .agent .head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+  .agent .name{font-weight:600;font-size:1.03rem}
+  .agent .job{color:var(--muted);font-size:0.9rem}
+  .agent .meta{display:flex;justify-content:space-between;gap:8px;margin-top:12px;
+    padding-top:10px;border-top:1px solid var(--border);font-size:0.86rem;color:var(--dim)}
+  .agent .hb{display:flex;align-items:center;gap:6px}
+
+  /* ── pipeline (kanban) ──────────────────────────────────────────────── */
+  .board{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+  .lane{min-width:170px;flex:1 0 170px;background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;padding:10px}
+  .lane h3{font-size:0.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    display:flex;justify-content:space-between;margin-bottom:8px;font-weight:600}
+  .lane h3 .n{color:var(--dim)}
+  .lane.hot{border-color:rgba(232,169,59,.45)}
+  .lane.hot h3{color:var(--amber)}
+  .vcard{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+    padding:8px 10px;margin-bottom:8px}
+  .vcard .slug{font-size:0.9rem;font-weight:500;word-break:break-word}
+  .vcard .row{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+  .vcard .age{color:var(--dim);font-size:0.8rem;margin-left:auto}
+  .lane .empty{color:var(--dim);font-size:0.85rem;text-align:center;padding:14px 0}
+
+  /* ── ledger / experiments ───────────────────────────────────────────── */
+  .split2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+  @media(max-width:1000px){.split2{grid-template-columns:1fr}}
+  .dec{border-bottom:1px solid var(--border);padding:12px 2px}
+  .dec:last-child{border-bottom:none}
+  .dec .top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .dec .chosen{font-weight:600;margin-top:6px}
+  .dec .why{color:var(--muted);font-size:0.9rem;margin-top:3px}
+  .dec .alts{color:var(--dim);font-size:0.88rem;margin-top:5px}
+  .dec .alts b{color:var(--muted);font-weight:500}
+  .dec .verdictline{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:0.88rem;color:var(--dim)}
+  .slot{border:1px dashed var(--border);border-radius:14px;padding:16px;text-align:center;
+    color:var(--dim);margin-bottom:12px}
+  .slot.filled{border-style:solid;text-align:left;color:var(--text)}
+  .slot .title{font-weight:600;margin-bottom:4px}
+  .exp-hist{font-size:0.9rem;color:var(--muted)}
+  .exp-hist li{list-style:none;padding:8px 0;border-bottom:1px solid var(--border);
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .exp-hist li:last-child{border-bottom:none}
+
+  /* ── reply loop ─────────────────────────────────────────────────────── */
+  .reply-grid{display:grid;grid-template-columns:1fr 1.3fr;gap:14px}
+  @media(max-width:1000px){.reply-grid{grid-template-columns:1fr}}
+  .funnel{display:flex;flex-direction:column;gap:8px}
+  .fstage{display:flex;align-items:center;gap:12px}
+  .fstage .bar{height:26px;border-radius:6px;background:rgba(29,181,132,.25);
+    border:1px solid rgba(29,181,132,.4);min-width:4px;transition:width .4s}
+  .fstage .lbl{width:150px;color:var(--muted);font-size:0.9rem;flex-shrink:0}
+  .fstage .n{font-family:var(--serif);font-weight:600}
+  .progress{margin-top:16px}
+  .progress .track{height:8px;border-radius:999px;background:var(--surface-2);
+    border:1px solid var(--border);overflow:hidden}
+  .progress .fill{height:100%;background:var(--emerald);border-radius:999px}
+  .progress .cap{display:flex;justify-content:space-between;color:var(--dim);
+    font-size:0.84rem;margin-top:5px}
+
+  /* chart */
+  .chart-wrap{position:relative}
+  .chart-tip{position:absolute;pointer-events:none;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:0.85rem;
+    color:var(--text);display:none;white-space:nowrap;z-index:5;
+    box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  .chart-note{color:var(--dim);font-size:0.84rem;margin-top:6px}
+
+  /* ── tables ─────────────────────────────────────────────────────────── */
+  table{width:100%;border-collapse:collapse;font-size:0.9rem}
+  th{text-align:left;color:var(--dim);font-weight:600;font-size:0.82rem;letter-spacing:.08em;
+    text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--border)}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(26,34,48,.5)}
+  .tbl-wrap{overflow-x:auto}
+  td .sub{color:var(--dim);font-size:0.84rem;margin-top:2px}
+
+  /* ── checks tiles ───────────────────────────────────────────────────── */
+  .check-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;
+    margin-bottom:14px}
+
+  /* ── lineage ────────────────────────────────────────────────────────── */
+  .run-node{margin-bottom:14px}
+  .run-node .run{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .run-node .children{margin:8px 0 0 14px;padding-left:16px;border-left:2px solid var(--border);
+    display:flex;flex-direction:column;gap:6px}
+  .leaf{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:0.92rem}
+  .leaf .arrow{color:var(--dim)}
+
+  /* ── week rhythm ────────────────────────────────────────────────────── */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  @media(max-width:900px){.week{grid-template-columns:repeat(2,1fr)}}
+  .day{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .day.today{border-color:var(--emerald)}
+  .day h4{font-size:0.85rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:8px;display:flex;justify-content:space-between}
+  .day.today h4{color:var(--emerald)}
+  .day ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+  .day li{font-size:0.86rem;color:var(--muted);padding-left:12px;position:relative}
+  .day li::before{content:"";position:absolute;left:0;top:.5em;width:5px;height:2px;background:var(--amber)}
+  .day li.cron::before{background:var(--emerald)}
+  .legend{display:flex;gap:18px;margin-top:10px;color:var(--dim);font-size:0.84rem}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:3px;display:inline-block}
+
+  .error-bar{background:rgba(226,85,77,.12);border:1px solid rgba(226,85,77,.4);
+    color:var(--red);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:none;
+    font-size:0.93rem}
+  .loading{color:var(--dim);padding:20px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="tri">▲</span> Fiboprana <span class="os">Marketing OS</span></div>
+  <nav>
+    <a href="#gates">Waiting on you</a>
+    <a href="#fleet">Fleet</a>
+    <a href="#pipeline">Videos</a>
+    <a href="#ledger">Learning ledger</a>
+    <a href="#replies">Reply loop</a>
+    <a href="#checks">Outcome queue</a>
+    <a href="#research">Research</a>
+    <a href="#lineage">Lineage</a>
+    <a href="#week">The week</a>
+    <a href="#ops">Ops log</a>
+    <a href="/review" style="color:var(--emerald)">Review ↗</a>
+    <a href="/week" style="color:var(--emerald)">Mission control ↗</a>
+    <a href="/map" style="color:var(--emerald)">Map ↗</a>
+  </nav>
+  <div class="refresh">
+    <span class="age" id="refresh-age">loading…</span>
+    <button onclick="loadAll()">Refresh</button>
+  </div>
+</div>
+
+<main>
+  <div class="error-bar" id="error-bar"></div>
+
+  <div class="hero">
+    <div>
+      <h1>The whole machine, on one page</h1>
+      <div class="sub">Research feeds videos and posts; every decision is logged with a
+      prediction; outcomes flow back and grade the predictions. Founder gates are where the
+      system <b>waits for you</b> — everything else runs on cron or in sessions.</div>
+    </div>
+    <div class="stats" id="hero-stats"></div>
+  </div>
+
+  <!-- ═════════ 1 · FOUNDER GATES ═════════ -->
+  <section id="gates">
+    <div class="kicker">Founder gates</div>
+    <h2>Waiting on you</h2>
+    <div class="explain">The OS has no orchestrator — it moves work through status columns and
+    <b>stops at these gates</b> until you act. An amber card means the system is parked there right now.</div>
+    <div class="grid gates" id="gates-grid"><div class="loading">loading…</div></div>
+    <div class="gate-drawer" id="gate-drawer" style="display:none"></div>
+  </section>
+
+  <!-- ═════════ 2 · AGENT FLEET ═════════ -->
+  <section id="fleet">
+    <div class="kicker">Agent fleet</div>
+    <h2>Who does what — and is it alive</h2>
+    <div class="explain">The 7-agent roster from MARKETING_OS.md. Build stage is the ladder:
+    <b>manual reps → rulebook → agent</b>. Heartbeats come from the ops log — a live agent that
+    goes quiet past its max age turns red.</div>
+    <div class="grid fleet" id="fleet-grid"><div class="loading">loading…</div></div>
+  </section>
+
+  <!-- ═════════ 3 · VIDEO PIPELINE ═════════ -->
+  <section id="pipeline">
+    <div class="kicker">Video pipeline</div>
+    <h2>Every video, idea → published</h2>
+    <div class="explain">The lineage spine (<b>marketing.videos</b>; the slug is the dedup memory
+    that stops repeat ideas). Amber lanes are founder gates. <span class="chip dm">LEGACY</span> =
+    backfilled pre-OS rows, excluded from calibration.</div>
+    <div class="board" id="video-board"><div class="loading">loading…</div></div>
+  </section>
+
+  <!-- ═════════ 4 · LEARNING LEDGER ═════════ -->
+  <section id="ledger">
+    <div class="kicker">Learning ledger · the prediction market</div>
+    <h2>Decisions, predictions, and what actually happened</h2>
+    <div class="explain">Every lever-tagged decision writes a row: <b>what was chosen, what was
+    rejected and why, and (in experiment mode) a pre-publish prediction</b>. Outcomes close back
+    onto the same rows — over time this becomes the training set for every future agent, and the
+    calibration table shows whether predictions can be trusted.</div>
+    <div class="split2">
+      <div class="card">
+        <h3 style="margin-bottom:6px">Decision rows <span class="chip dm" id="dec-count"></span></h3>
+        <div id="decisions-list"><div class="loading">loading…</div></div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:14px">
+          <h3 style="margin-bottom:10px">The experiment slot</h3>
+          <div class="explain" style="margin-bottom:10px">DB-enforced discipline: <b>at most ONE
+          active experiment</b> at a time (plus one YouTube Test&nbsp;&amp;&nbsp;Compare, which
+          randomizes within a video so it can't confound). One hypothesis at a time = clean signal.</div>
+          <div id="exp-slot"></div>
+          <div id="exp-tc-slot"></div>
+          <ul class="exp-hist" id="exp-history"></ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:6px">Calibration</h3>
+          <div id="calibration"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 5 · REPLY LOOP ═════════ -->
+  <section id="replies">
+    <div class="kicker">Reply loop · lane 1</div>
+    <h2>Find → judge → draft → you review → send</h2>
+    <div class="explain">The daily growth lever and the most-proven loop. Agents find and draft;
+    <b>you review, edit, and hand-send</b>. The edit distance between the AI draft and what you
+    actually sent is the voice-learning signal — when it falls, the drafter sounds like you.</div>
+    <div class="reply-grid">
+      <div class="card">
+        <h3 style="margin-bottom:12px">The funnel (all time)</h3>
+        <div class="funnel" id="reply-funnel"></div>
+        <div class="progress" id="distiller-progress"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:4px">Draft → final edit distance</h3>
+        <div class="chart-note" style="margin-bottom:8px">Lower = the drafter is learning your
+        voice. Green band = target (&lt; 0.25 ≈ light touch-ups only).</div>
+        <div class="chart-wrap" id="edit-chart"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin-bottom:8px">Sent replies (the ledger)</h3>
+      <div class="tbl-wrap" id="ledger-table"></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 6 · OUTCOME QUEUE ═════════ -->
+  <section id="checks">
+    <div class="kicker">Outcome queue</div>
+    <h2>The loop-closer</h2>
+    <div class="explain">When anything publishes, the dispatcher opens <b>24h / 7d / 28d checks</b>.
+    Closing them (with real numbers) is what turns decisions into lessons. An overdue open check
+    nags until it's closed or honestly skipped — it never silently rots.</div>
+    <div class="check-tiles" id="check-tiles"></div>
+    <div class="card"><div class="tbl-wrap" id="checks-table"></div></div>
+  </section>
+
+  <!-- ═════════ 7 · RESEARCH ═════════ -->
+  <section id="research">
+    <div class="kicker">Research runs</div>
+    <h2>The weekly input</h2>
+    <div class="explain">Sunday cron: scan → digest → content pull (headline, video angle, feature
+    seed, Reddit themes). <b>Your verdict (strong / ok / off) is the learning signal</b> the next
+    run reads before it decides. An ungraded run teaches nothing.</div>
+    <div class="card"><div class="tbl-wrap" id="research-table"></div></div>
+  </section>
+
+  <!-- ═════════ 8 · LINEAGE ═════════ -->
+  <section id="lineage">
+    <div class="kicker">Lineage</div>
+    <h2>Research → video → posts</h2>
+    <div class="explain">Every piece of content points at what caused it (one hop). This is how a
+    view count 28 days from now flows back to grade the research run that seeded the topic.</div>
+    <div class="card" id="lineage-tree"><div class="loading">loading…</div></div>
+  </section>
+
+  <!-- ═════════ 9 · THE WEEK ═════════ -->
+  <section id="week">
+    <div class="kicker">Cadence</div>
+    <h2>How a week runs</h2>
+    <div class="explain">The rhythm the OS assumes. Green marks = cron (runs without you);
+    amber marks = founder sessions.</div>
+    <div class="week" id="week-grid"></div>
+    <div class="legend">
+      <span><i style="background:var(--emerald)"></i> cron / automatic</span>
+      <span><i style="background:var(--amber)"></i> founder session</span>
+    </div>
+  </section>
+
+  <!-- ═════════ 10 · OPS LOG ═════════ -->
+  <section id="ops">
+    <div class="kicker">Ops log</div>
+    <h2>Recent agent activity</h2>
+    <div class="explain">Raw heartbeats and run events from <b>agent_execution_logs</b> — the
+    operational trail, kept separate from the learning ledgers.</div>
+    <div class="card"><div class="tbl-wrap" id="ops-table"></div></div>
+  </section>
+</main>
+
+<div class="chart-tip" id="chart-tip"></div>
+
+<script>
+/* ═══════════════ config ═══════════════ */
+
+// MARKETING_OS.md §2 — the roster. maxAgeH: how stale a cron agent may go before red.
+const ROSTER = [
+  {key:"research",   name:"Research",        job:"Scan → digest → content pull",           cadence:"Weekly · Sunday cron",     stage:"LIVE",        cls:"em", maxAgeH:192},
+  {key:"reply",      name:"Reply — Reddit",  job:"Find → judge → draft → gate → review",   cadence:"Daily · cron door pending", stage:"BUILT",       cls:"em", maxAgeH:null},
+  {key:"reply_x",    name:"Reply — X",       job:"Same pipeline, X adapter",               cadence:"Hand-fed candidates",       stage:"MANUAL REPS", cls:"am", maxAgeH:null},
+  {key:"x_content",  name:"X Content",       job:"Weekly post batch → Typefully",          cadence:"Weekly · local session",    stage:"SEMI",        cls:"am", maxAgeH:null},
+  {key:"packager",   name:"Packager",        job:"Title · thumbnail · description · slot", cadence:"Per video · session",       stage:"MANUAL REPS", cls:"am", maxAgeH:null},
+  {key:"repurposer", name:"Repurposer",      job:"Long video → shorts per channel",        cadence:"Per video · session",       stage:"ZERO REPS",   cls:"dm", maxAgeH:null},
+  {key:"analytics",  name:"Analytics",       job:"Close outcome checks · score predictions", cadence:"Daily sweep · built last", stage:"SCHEMA ONLY", cls:"dm", maxAgeH:null},
+];
+
+const VIDEO_LANES = [
+  {key:"idea",               label:"Idea"},
+  {key:"picked",             label:"Picked"},
+  {key:"scripted",           label:"Scripted"},
+  {key:"recorded",           label:"Recorded"},
+  {key:"edited",             label:"Edited"},
+  {key:"packaged_draft",     label:"Packaged draft", gate:true},
+  {key:"packaging_approved", label:"Approved · upload", gate:true},
+  {key:"published",          label:"Published"},
+  {key:"closed",             label:"Closed / skipped"},
+];
+
+const WEEK = [
+  {d:"Sun", items:[["cron","Research run → digest + content pull"],["sess","Close: grade runs, close 7d/28d checks, verdicts, pick 3 topics"]]},
+  {d:"Mon", items:[["sess","News video: script → record → package → publish"],["sess","X batch → Typefully"]]},
+  {d:"Tue", items:[["cron","Reply finder → judge → drafter"],["sess","Reply review CLI (~15 min) + close due 24h checks"]]},
+  {d:"Wed", items:[["cron","Reply pipeline"],["sess","Feature video + reply review"]]},
+  {d:"Thu", items:[["cron","Reply pipeline"],["sess","Ascent video + reply review"]]},
+  {d:"Fri", items:[["cron","Reply pipeline"],["sess","Repurposing: shorts from the week's videos"]]},
+  {d:"Sat", items:[["cron","Reply pipeline"],["sess","Reply review (light day)"]]},
+];
+
+/* ═══════════════ helpers ═══════════════ */
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function ago(iso){
+  if(!iso) return "—";
+  const s = (Date.now() - new Date(iso).getTime())/1000;
+  if(s < 90) return Math.round(s)+"s ago";
+  if(s < 5400) return Math.round(s/60)+"m ago";
+  if(s < 172800) return (s/3600).toFixed(1).replace(/\.0$/,"")+"h ago";
+  return Math.round(s/86400)+"d ago";
+}
+function until(iso){
+  const s = (new Date(iso).getTime() - Date.now())/1000;
+  if(s < 0) return {txt: ago(iso).replace(" ago","")+" overdue", overdue:true};
+  if(s < 5400) return {txt:"due in "+Math.round(s/60)+"m", overdue:false};
+  if(s < 172800) return {txt:"due in "+(s/3600).toFixed(1).replace(/\.0$/,"")+"h", overdue:false};
+  return {txt:"due in "+Math.round(s/86400)+"d", overdue:false};
+}
+function dateShort(iso){
+  return iso ? new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
+}
+const isSmoke = r => /smoke/i.test(JSON.stringify(r||{}));
+function verdictChip(v){
+  if(!v) return '<span class="chip am">awaiting verdict</span>';
+  const cls = v==="strong" ? "em" : v==="ok" ? "dm" : "rd";
+  return `<span class="chip ${cls}">${esc(v)}</span>`;
+}
+const pillarChip = p => p ? `<span class="chip dm">${esc(p)}</span>` : "";
+
+async function api(table, params){
+  const qs = params ? "?" + new URLSearchParams(params) : "";
+  const r = await fetch("/api/"+table+qs);
+  if(!r.ok){ const b = await r.json().catch(()=>({})); throw new Error(table+": "+(b.error||r.status)); }
+  return r.json();
+}
+
+/* ═══════════════ load + render ═══════════════ */
+
+let DATA = {}, lastLoad = null, OPEN_GATE = null;
+
+async function loadAll(){
+  const errors = [];
+  const want = {
+    runs:      api("research_runs", {select:"id,week_start,created_at,model,status,outcome_verdict,outcome_note,content_pull", order:"created_at.desc", limit:20}),
+    videos:    api("videos", {select:"*", order:"created_at.desc", limit:100}),
+    decisions: api("decisions", {select:"*", order:"decided_at.desc", limit:50}),
+    experiments: api("experiments", {select:"*", order:"created_at.desc", limit:20}),
+    checks:    api("outcome_checks", {select:"*", order:"due_at.asc", limit:100}),
+    candidates:api("reply_candidates", {select:"id,platform,status,community,post_title,judge_verdict,judge_score,created_at", order:"created_at.desc", limit:200}),
+    drafts:    api("reply_drafts", {select:"id,candidate_id,chosen,gate_status,platform,created_at", limit:200}),
+    ledger:    api("reply_ledger", {select:"id,platform,community,post_title,edit_ratio,edit_type,predicted_grade,op_replied,replied_at,created_at,curation_tag", order:"created_at.asc", limit:200}),
+    heartbeat: api("agent_heartbeat"),
+    ops:       api("agent_execution_logs", {select:"agent_name,event,status,message,model,duration_ms,created_at", order:"created_at.desc", limit:15}),
+    calib:     api("decision_calibration"),
+    calendar:  api("content_calendar", {select:"*", limit:100}),
+  };
+  const out = {};
+  await Promise.all(Object.entries(want).map(([k,p]) =>
+    p.then(v => out[k]=v).catch(e => { out[k]=[]; errors.push(e.message); })));
+  DATA = out; lastLoad = Date.now();
+
+  const bar = $("error-bar");
+  if(errors.length){ bar.style.display="block"; bar.textContent = "Some data failed to load — " + errors.join(" · "); }
+  else bar.style.display="none";
+
+  renderAll();
+}
+
+function renderAll(){
+  renderHero(); renderGates(); renderFleet(); renderPipeline();
+  renderLedger(); renderExperiments(); renderCalibration();
+  renderReplies(); renderChecks(); renderResearch(); renderLineage();
+  renderWeek(); renderOps();
+}
+
+/* ── hero stats ── */
+function renderHero(){
+  const v = DATA.videos||[], led = DATA.ledger||[], dec = DATA.decisions||[], runs = DATA.runs||[];
+  const published = v.filter(x=>x.status==="published").length;
+  const inFlight  = v.filter(x=>!["published","closed","skipped"].includes(x.status)).length;
+  const gates = countGates();
+  const open = gates.reduce((a,g)=>a+g.count,0);
+  $("hero-stats").innerHTML = `
+    <div class="stat-tile ${open? "warn":"good"}"><div class="n">${open}</div><div class="l">Open gates</div></div>
+    <div class="stat-tile"><div class="n">${inFlight}</div><div class="l">Videos in flight</div></div>
+    <div class="stat-tile"><div class="n">${published}</div><div class="l">Published</div></div>
+    <div class="stat-tile"><div class="n">${led.length}</div><div class="l">Replies sent</div></div>
+    <div class="stat-tile"><div class="n">${dec.length}</div><div class="l">Decisions logged</div></div>
+    <div class="stat-tile"><div class="n">${runs.length}</div><div class="l">Research runs</div></div>`;
+}
+
+/* ── gates ── */
+function countGates(){
+  const now = Date.now();
+  const runs = (DATA.runs||[]).filter(r=>!r.outcome_verdict);
+  const pack = (DATA.videos||[]).filter(v=>v.status==="packaged_draft");
+  const upload = (DATA.videos||[]).filter(v=>v.status==="packaging_approved");
+  const review = (DATA.candidates||[]).filter(c=>c.status==="drafted");
+  const overdue = (DATA.checks||[]).filter(c=>c.status==="open" && new Date(c.due_at).getTime()<now);
+  const xdraft = (DATA.calendar||[]).filter(p=>p.status==="draft");
+  return [
+    {key:"research", rows:runs, name:"Research verdict", count:runs.length, what:"Grade the digest strong / ok / off at the Sunday close — ungraded runs teach the agent nothing.",
+      items: runs.slice(0,3).map(r=>`<b>${dateShort(r.created_at)}</b> run`)},
+    {key:"packaging", rows:pack, name:"Packaging approval", count:pack.length, what:"Review title/thumbnail/description, then approve and upload by hand.",
+      items: pack.slice(0,3).map(v=>`<b>${esc(v.slug)}</b>`)},
+    {key:"publish", rows:upload, name:"Publish confirm", count:upload.length, what:"Uploaded? Set published_at + the YouTube id — this arms the outcome clock.",
+      items: upload.slice(0,3).map(v=>`<b>${esc(v.slug)}</b>`)},
+    {key:"reply", rows:review, name:"Reply review", count:review.length, what:"Drafted replies waiting on /review: edit in place → open in X → log as sent.",
+      items: review.slice(0,3).map(c=>`<b>${esc(c.community||c.platform)}</b> · ${esc((c.post_title||"").slice(0,40))}`)},
+    {key:"checks", rows:overdue, name:"Overdue outcome checks", count:overdue.length, what:"Open checks past due — close with real numbers or honestly skip.",
+      items: overdue.slice(0,3).map(c=>`<b>${c.window_label}</b> · ${esc(c.entity_table)}`)},
+    {key:"xbatch", rows:xdraft, name:"X batch", count:xdraft.length, what:"Drafted X posts to edit in-session and push to Typefully.", items:[]},
+  ];
+}
+function renderGates(){
+  const gates = countGates();
+  $("gates-grid").innerHTML = gates.map(g=>`
+    <div class="card gate ${g.count? "active":"clear"} ${OPEN_GATE===g.key? "open":""}" onclick="openGate('${g.key}')">
+      <div class="top"><span class="name">${g.name}</span><span class="count">${g.count}</span></div>
+      <div class="what">${g.count ? g.what : "Clear — nothing waiting here."}</div>
+      ${g.items.length? `<div class="items">${g.items.join("<br>")}</div>`:""}
+      <div class="hint">${g.key==="reply" ? "click → /review" : OPEN_GATE===g.key ? "click to close" : "click to work it"}</div>
+    </div>`).join("");
+  renderGateDrawer(gates);
+}
+
+/* ── gate drawer: the queue behind each card, actions included ── */
+function openGate(key){
+  if(key==="reply"){ location.href = "/review"; return; }
+  OPEN_GATE = (OPEN_GATE===key) ? null : key;
+  renderGates();
+}
+
+function renderGateDrawer(gates){
+  const box = $("gate-drawer");
+  const g = gates.find(x=>x.key===OPEN_GATE);
+  if(!g){ box.style.display="none"; box.innerHTML=""; return; }
+  const bodies = {
+    research: gateResearch, packaging: gatePackaging, publish: gatePublish,
+    checks: gateChecks, xbatch: gateXbatch,
+  };
+  const items = g.rows.length
+    ? (bodies[g.key])(g.rows)
+    : '<div class="gq-empty">Clear — nothing waiting here.</div>';
+  box.innerHTML = `
+    <div class="gd-head"><h3>${g.name} · ${g.count}</h3>
+      <button class="gd-close" onclick="openGate('${g.key}')">close ✕</button></div>
+    <div class="gd-sub">${g.what}</div>
+    <div class="gq">${items}</div>`;
+  box.style.display = "block";
+}
+
+function gateResearch(runs){
+  return runs.map(r=>`
+    <div class="gq-item">
+      <div class="gq-top"><span class="gq-title">${dateShort(r.created_at)} run</span>
+        ${r.model? `<span class="chip dm">${esc(r.model)}</span>`:""}
+        ${r.status? `<span class="chip dm">${esc(r.status)}</span>`:""}
+        <span class="gq-meta">${ago(r.created_at)}</span></div>
+      <div class="gq-act">
+        <button class="btn" onclick="toggleDigest('${r.id}')">read digest</button>
+        <input type="text" id="note-${r.id}" placeholder="one-line note (optional)">
+        <button class="btn em" onclick="gradeRun('${r.id}','strong')">strong</button>
+        <button class="btn" onclick="gradeRun('${r.id}','ok')">ok</button>
+        <button class="btn rd" onclick="gradeRun('${r.id}','off')">off</button>
+        <span class="gq-msg" id="msg-${r.id}"></span></div>
+      <div class="digest" id="digest-${r.id}"></div>
+    </div>`).join("");
+}
+
+function gatePackaging(vids){
+  return vids.map(v=>`
+    <div class="gq-item">
+      <div class="gq-top"><span class="gq-title">${esc(v.slug)}</span>
+        ${pillarChip(v.pillar)}<span class="gq-meta">${ago(v.created_at)}</span></div>
+      ${v.title_final? `<div class="gq-body">title: <b>${esc(v.title_final)}</b></div>`:""}
+      ${v.notes? `<div class="gq-body">${esc(String(v.notes).slice(0,240))}</div>`:""}
+      <div class="gq-act">
+        <button class="btn em" onclick="approveVideo('${v.id}')">Approve → ready to upload</button>
+        <span class="gq-msg" id="msg-${v.id}"></span></div>
+    </div>`).join("");
+}
+
+function gatePublish(vids){
+  return vids.map(v=>`
+    <div class="gq-item">
+      <div class="gq-top"><span class="gq-title">${esc(v.slug)}</span>
+        ${pillarChip(v.pillar)}<span class="gq-meta">${ago(v.created_at)}</span></div>
+      <div class="gq-body">Upload by hand first, then paste the YouTube ID or URL —
+        marking published opens the 24h / 7d / 28d outcome checks.</div>
+      <div class="gq-act">
+        <input type="text" id="yt-${v.id}" placeholder="YouTube ID or URL">
+        <button class="btn em" onclick="publishVideo('${v.id}')">Uploaded — mark published</button>
+        <span class="gq-msg" id="msg-${v.id}"></span></div>
+    </div>`).join("");
+}
+
+function gateChecks(checks){
+  return checks.map(c=>`
+    <div class="gq-item">
+      <div class="gq-top"><span class="chip am">${esc(c.window_label)}</span>
+        <span class="gq-title">${esc(checkEntity(c))}</span>
+        <span class="gq-meta">due ${ago(c.due_at)}</span></div>
+      <div class="gq-act">
+        <input type="text" id="res-${c.id}" placeholder="views=1200, likes=30 · or a note / skip reason">
+        <select id="src-${c.id}"><option value="manual">manual</option>
+          <option value="yt_api">yt_api</option><option value="screenshot">screenshot</option></select>
+        <button class="btn em" onclick="closeCheck('${c.id}')">Close with numbers</button>
+        <button class="btn" onclick="skipCheck('${c.id}')">Skip</button>
+        <span class="gq-msg" id="msg-${c.id}"></span></div>
+    </div>`).join("");
+}
+
+function gateXbatch(posts){
+  return posts.map(p=>`
+    <div class="gq-item">
+      <div class="gq-top"><span class="chip dm">${esc(p.platform||"x")}</span>
+        ${p.post_type? `<span class="chip dm">${esc(p.post_type)}</span>`:""}
+        <span class="gq-title">${esc((p.title||p.hook_text||(p.draft_text||"").slice(0,60)||"draft"))}</span>
+        <span class="gq-meta">${ago(p.created_at)}</span></div>
+      ${p.draft_text? `<div class="gq-body">${esc(String(p.draft_text).slice(0,240))}</div>`:""}
+      <div class="gq-body" style="color:var(--dim)">No dashboard action yet — edit in session, push via Typefully.</div>
+    </div>`).join("");
+}
+
+function checkEntity(c){
+  if(c.entity_table==="videos"){
+    const v=(DATA.videos||[]).find(v=>v.id===c.entity_id); if(v) return v.slug;
+  }
+  if(c.entity_table==="reply_ledger"){
+    const l=(DATA.ledger||[]).find(l=>l.id===c.entity_id);
+    if(l) return (l.post_title||"reply").slice(0,50);
+  }
+  return c.entity_table+" · "+String(c.entity_id).slice(0,8);
+}
+
+async function toggleDigest(runId){
+  const box = $("digest-"+runId);
+  if(box.style.display==="block"){ box.style.display="none"; return; }
+  if(!box.dataset.loaded){
+    box.style.display="block"; box.textContent="loading…";
+    try{
+      const rows = await api("research_runs",{select:"digest_md",id:"eq."+runId});
+      box.textContent = (rows[0]&&rows[0].digest_md) || "(no digest stored on this run)";
+      box.dataset.loaded = "1";
+    }catch(e){ box.textContent = "digest failed to load — "+e.message; }
+  }
+  box.style.display="block";
+}
+
+async function gatePost(path, payload, msgId){
+  const el = $(msgId);
+  if(el){ el.className="gq-msg"; el.textContent="saving…"; }
+  try{
+    const r = await fetch("/api/gate/"+path, {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+    const b = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(b.error||("HTTP "+r.status));
+    await loadAll();  // fresh counts; the drawer re-renders with the item gone
+  }catch(e){
+    if(el){ el.className="gq-msg err"; el.textContent = e.message; }
+  }
+}
+function gradeRun(runId, verdict){
+  gatePost("research_verdict", {run_id:runId, verdict,
+    note: ($("note-"+runId)||{}).value||""}, "msg-"+runId);
+}
+function approveVideo(id){ gatePost("approve_packaging", {video_id:id}, "msg-"+id); }
+function publishVideo(id){
+  const raw = (($("yt-"+id)||{}).value||"").trim();
+  const m = raw.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/);
+  const yt = m ? m[1] : raw;
+  if(!yt){ const el=$("msg-"+id); el.className="gq-msg err";
+    el.textContent="paste the YouTube ID or URL first"; return; }
+  gatePost("mark_published", {video_id:id, youtube_video_id:yt}, "msg-"+id);
+}
+function parseResult(txt){
+  const out = {}; let matched = false;
+  txt.split(/[,\n;]+/).forEach(part=>{
+    const m = part.trim().match(/^([\w.]+)\s*[=:]\s*(.+)$/);
+    if(m){ matched = true; const v = m[2].trim();
+      out[m[1]] = (v!=="" && !isNaN(Number(v))) ? Number(v) : v; }
+  });
+  if(!matched) return txt.trim() ? {note: txt.trim()} : null;
+  return out;
+}
+function closeCheck(id){
+  const result = parseResult((($("res-"+id)||{}).value||""));
+  if(!result){ const el=$("msg-"+id); el.className="gq-msg err";
+    el.textContent="enter the numbers (views=1200, likes=30) or a note"; return; }
+  gatePost("close_check", {check_id:id, result, source:(($("src-"+id)||{}).value||"manual")}, "msg-"+id);
+}
+function skipCheck(id){
+  gatePost("skip_check", {check_id:id, reason:(($("res-"+id)||{}).value||"").trim()}, "msg-"+id);
+}
+
+/* ── fleet ── */
+function renderFleet(){
+  const hb = {}; (DATA.heartbeat||[]).forEach(h=>hb[h.agent_name]=h);
+  $("fleet-grid").innerHTML = ROSTER.map(a=>{
+    const h = hb[a.key];
+    let hbHtml;
+    if(h){
+      const stale = a.maxAgeH && h.hours_since_success > a.maxAgeH;
+      hbHtml = `<span class="hb"><span class="dot" style="background:${stale? "var(--red)":"var(--emerald)"}"></span>
+        last success ${ago(h.last_success)}${stale? " · STALE":""}</span>`;
+    } else {
+      hbHtml = `<span class="hb"><span class="dot" style="background:var(--border)"></span>no heartbeats yet</span>`;
+    }
+    return `<div class="card agent">
+      <div class="head"><span class="name">${a.name}</span><span class="chip ${a.cls}">${a.stage}</span></div>
+      <div class="job">${a.job}</div>
+      <div class="meta"><span>${a.cadence}</span>${hbHtml}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ── video pipeline ── */
+function renderPipeline(){
+  const vids = DATA.videos||[];
+  const lanes = VIDEO_LANES.map(l=>{
+    const inLane = l.key==="closed"
+      ? vids.filter(v=>["closed","skipped"].includes(v.status))
+      : vids.filter(v=>v.status===l.key);
+    const cards = inLane.map(v=>`
+      <div class="vcard">
+        <div class="slug">${esc(v.slug)}</div>
+        <div class="row">${pillarChip(v.pillar)}
+          ${v.legacy? '<span class="chip dm">legacy</span>':""}
+          ${isSmoke(v)? '<span class="chip dm">smoke</span>':""}
+          ${v.outcome_verdict? verdictChip(v.outcome_verdict):""}
+          <span class="age" title="${esc(v.created_at)}">${ago(v.created_at)}</span></div>
+      </div>`).join("");
+    return `<div class="lane ${l.gate? "hot":""}">
+      <h3>${l.label}${l.gate? " ⛔":""} <span class="n">${inLane.length}</span></h3>
+      ${cards || '<div class="empty">—</div>'}
+    </div>`;
+  });
+  $("video-board").innerHTML = lanes.join("");
+}
+
+/* ── decisions ── */
+function renderLedger(){
+  const dec = DATA.decisions||[];
+  $("dec-count").textContent = dec.length + " total";
+  if(!dec.length){
+    $("decisions-list").innerHTML = '<div class="loading">No decisions logged yet. The first packaging session writes them.</div>';
+    return;
+  }
+  $("decisions-list").innerHTML = dec.slice(0,12).map(d=>{
+    const alts = (d.decision?.alternatives||[]).map(a=>`<b>${esc(a.option)}</b> — ${esc(a.why_rejected)}`).join(" · ");
+    const closed = !!d.outcome_checked_at;
+    return `<div class="dec">
+      <div class="top">
+        <span class="chip em">${esc(d.lever)}</span>
+        <span class="chip dm">${esc(d.surface)}</span>
+        <span class="chip ${d.mode==="experiment" ? "am":"dm"}">${esc(d.mode)}</span>
+        ${isSmoke(d)? '<span class="chip dm">smoke</span>':""}
+        <span class="age" style="margin-left:auto;color:var(--dim);font-size:0.82rem" title="${esc(d.decided_at)}">${ago(d.decided_at)} · ${esc(d.agent_name)}</span>
+      </div>
+      <div class="chosen">${esc(d.decision?.chosen ?? "—")}</div>
+      ${d.reasoning? `<div class="why">${esc(d.reasoning)}</div>`:""}
+      ${alts? `<div class="alts">rejected: ${alts}</div>`:""}
+      <div class="verdictline">
+        ${d.predicted_grade? `predicted ${verdictChip(d.predicted_grade)}`: '<span class="chip dm">no prediction (routine)</span>'}
+        <span>→</span>
+        ${closed? `outcome ${verdictChip(d.outcome_verdict)} <span class="chip dm">basis: ${esc(d.outcome_basis||"—")}</span>`
+                 : '<span class="chip am">outcome open</span>'}
+        ${d.prediction_hit===true? '<span class="chip em">prediction hit</span>':""}
+        ${d.prediction_hit===false? '<span class="chip rd">prediction missed</span>':""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ── experiments ── */
+function renderExperiments(){
+  const exps = DATA.experiments||[];
+  const active   = exps.filter(e=>e.status==="active" && e.method!=="yt_test_compare");
+  const activeTC = exps.filter(e=>e.status==="active" && e.method==="yt_test_compare");
+  const hist     = exps.filter(e=>e.status!=="active");
+
+  const slotHtml = (list, label) => list.length
+    ? list.map(e=>`<div class="slot filled">
+        <div class="title"><span class="chip am">ACTIVE</span> ${esc(e.lever)} · ${esc(e.surface)}</div>
+        <div style="font-size:0.93rem;color:var(--muted)">${esc(e.hypothesis)}</div>
+        <div style="font-size:0.86rem;color:var(--dim);margin-top:6px">
+          method ${esc(e.method)} · min_n ${e.min_n ?? "—"} · started ${dateShort(e.started_at)}</div>
+      </div>`).join("")
+    : `<div class="slot">${label} — <b style="color:var(--muted)">slot open</b>. A new hypothesis is born at the Sunday close.</div>`;
+
+  $("exp-slot").innerHTML = slotHtml(active, "Global experiment");
+  $("exp-tc-slot").innerHTML = slotHtml(activeTC, "Thumbnail Test &amp; Compare");
+  $("exp-history").innerHTML = hist.length
+    ? hist.map(e=>`<li>
+        <span class="chip ${e.status==="concluded" ? "em":"dm"}">${esc(e.status)}</span>
+        <span>${esc(e.lever)}</span>
+        ${e.result_verdict? `<span class="chip ${e.result_verdict==="supported"? "em": e.result_verdict==="refuted"? "rd":"dm"}">${esc(e.result_verdict)}</span>`:""}
+        ${isSmoke(e)? '<span class="chip dm">smoke</span>':""}
+        <span style="color:var(--dim);margin-left:auto">${dateShort(e.created_at)}</span>
+        ${e.learned_rule? `<div style="width:100%;color:var(--muted)">rule: ${esc(e.learned_rule)}</div>`:""}
+      </li>`).join("")
+    : "";
+}
+
+/* ── calibration ── */
+function renderCalibration(){
+  const rows = DATA.calib||[];
+  if(!rows.length){
+    $("calibration").innerHTML = `<div style="color:var(--dim);font-size:0.9rem">
+      Empty — by design. Only <b style="color:var(--muted)">experiment-mode</b> decisions with a
+      clean identifying metric land here. Once experiments close, this becomes the
+      predicted-vs-actual scoreboard per lever: the proof of whether the system's
+      predictions can be trusted.</div>`;
+    return;
+  }
+  $("calibration").innerHTML = `<div class="tbl-wrap"><table>
+    <tr><th>Lever</th><th>Surface</th><th>Predicted</th><th>n</th><th>Hit rate</th><th>Avg score</th></tr>
+    ${rows.map(r=>`<tr><td>${esc(r.lever)}</td><td>${esc(r.surface)}</td>
+      <td>${verdictChip(r.predicted_grade)}</td><td>${r.n}</td>
+      <td>${r.prediction_hit_rate==null? "—" : Math.round(r.prediction_hit_rate*100)+"%"}</td>
+      <td>${r.avg_outcome_score ?? "—"}</td></tr>`).join("")}
+  </table></div>`;
+}
+
+/* ── reply loop ── */
+function renderReplies(){
+  const cand = DATA.candidates||[], drafts = DATA.drafts||[], led = DATA.ledger||[];
+  const drafted = cand.filter(c=>c.status==="drafted").length;
+  const judged  = cand.filter(c=>c.judge_verdict).length;
+  const stages = [
+    ["Candidates found", cand.length],
+    ["Judged",           judged],
+    ["Drafts written",   drafts.length],
+    ["Awaiting review",  drafted],
+    ["Sent (ledger)",    led.length],
+  ];
+  const max = Math.max(...stages.map(s=>s[1]), 1);
+  $("reply-funnel").innerHTML = stages.map(([l,n])=>`
+    <div class="fstage"><span class="lbl">${l}</span>
+      <div class="bar" style="width:${Math.max(4, n/max*100)}%"></div>
+      <span class="n">${n}</span></div>`).join("");
+
+  // Phase-2 distiller gate: unlocks at ~25 captured edits
+  const edits = led.filter(r=>r.edit_ratio!=null).length;
+  const target = 25;
+  $("distiller-progress").innerHTML = `
+    <div style="font-weight:600;font-size:0.93rem;margin-bottom:6px">Phase 2 gate — voice distiller</div>
+    <div class="track"><div class="fill" style="width:${Math.min(100, edits/target*100)}%"></div></div>
+    <div class="cap"><span>${edits} / ${target} edits captured</span>
+      <span>unlocks the style-distiller build</span></div>`;
+
+  drawEditChart(led.filter(r=>r.edit_ratio!=null));
+
+  $("ledger-table").innerHTML = led.length ? `<table>
+    <tr><th>Sent</th><th>Where</th><th>Post</th><th>Edit ratio</th><th>Edit type</th><th>Predicted</th><th>OP replied</th></tr>
+    ${[...led].reverse().map(r=>`<tr>
+      <td title="${esc(r.replied_at||r.created_at)}">${dateShort(r.replied_at||r.created_at)}</td>
+      <td>${esc(r.community||r.platform)}</td>
+      <td>${esc((r.post_title||"—").slice(0,60))}</td>
+      <td><b style="color:${r.edit_ratio<0.25? "var(--emerald)": r.edit_ratio<0.5? "var(--amber)":"var(--red)"}">${r.edit_ratio?.toFixed(2) ?? "—"}</b></td>
+      <td>${esc(r.edit_type||"—")}</td>
+      <td>${r.predicted_grade? verdictChip(r.predicted_grade): '<span class="chip dm">—</span>'}</td>
+      <td>${r.op_replied===true? '<span class="chip em">yes</span>': r.op_replied===false? '<span class="chip dm">no</span>':'<span class="chip dm">open</span>'}</td>
+    </tr>`).join("")}
+  </table>` : '<div class="loading">No sent replies yet.</div>';
+}
+
+/* single-series line chart, hand-rolled SVG + hover tooltip */
+function drawEditChart(rows){
+  const wrap = $("edit-chart");
+  if(rows.length < 2){ wrap.innerHTML = '<div class="loading">Needs at least 2 sent replies to draw.</div>'; return; }
+  const W=560, H=220, P={l:36,r:14,t:14,b:26};
+  const xs = i => P.l + i*(W-P.l-P.r)/(rows.length-1);
+  const ys = v => P.t + (1-v)*(H-P.t-P.b);          // y domain fixed 0..1
+  const pts = rows.map((r,i)=>({x:xs(i), y:ys(r.edit_ratio), r}));
+  const path = pts.map((p,i)=>(i? "L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
+  const gridVals = [0, .25, .5, .75, 1];
+  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <rect x="${P.l}" y="${ys(0.25)}" width="${W-P.l-P.r}" height="${ys(0)-ys(0.25)}"
+      fill="rgba(29,181,132,.07)"/>
+    ${gridVals.map(v=>`
+      <line x1="${P.l}" x2="${W-P.r}" y1="${ys(v)}" y2="${ys(v)}" stroke="#1f2733" stroke-width="1"/>
+      <text x="${P.l-8}" y="${ys(v)+4}" fill="#5a6478" font-size="10" text-anchor="end">${v}</text>`).join("")}
+    <path d="${path}" fill="none" stroke="#1db584" stroke-width="2" stroke-linejoin="round"/>
+    ${pts.map((p,i)=>`
+      <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#0b0f14" stroke="#1db584" stroke-width="2"/>
+      <circle cx="${p.x}" cy="${p.y}" r="14" fill="transparent" data-i="${i}" class="hit" style="cursor:pointer"/>
+      <text x="${p.x}" y="${H-8}" fill="#5a6478" font-size="10" text-anchor="middle">${dateShort(p.r.replied_at||p.r.created_at)}</text>`).join("")}
+  </svg>`;
+  const tip = $("chart-tip");
+  wrap.querySelectorAll(".hit").forEach(c=>{
+    c.addEventListener("mousemove", ev=>{
+      const r = rows[+c.dataset.i];
+      tip.style.display="block";
+      tip.innerHTML = `<b>${r.edit_ratio.toFixed(2)}</b> edit ratio · ${esc(r.edit_type||"")}<br>
+        <span style="color:var(--dim)">${esc(r.community||r.platform)} · ${dateShort(r.replied_at||r.created_at)}</span>`;
+      tip.style.left = (ev.pageX+14)+"px"; tip.style.top = (ev.pageY-10)+"px";
+    });
+    c.addEventListener("mouseleave", ()=> tip.style.display="none");
+  });
+}
+
+/* ── outcome checks ── */
+function renderChecks(){
+  const checks = DATA.checks||[], now = Date.now();
+  const vidById = {}; (DATA.videos||[]).forEach(v=>vidById[v.id]=v);
+  const overdue = checks.filter(c=>c.status==="open" && new Date(c.due_at).getTime()<now);
+  const open    = checks.filter(c=>c.status==="open" && new Date(c.due_at).getTime()>=now);
+  const done    = checks.filter(c=>c.status==="done");
+  const skipped = checks.filter(c=>c.status==="skipped");
+  const closedTotal = done.length + skipped.length;
+  const coverage = closedTotal ? Math.round(done.length/closedTotal*100) : null;
+
+  $("check-tiles").innerHTML = `
+    <div class="stat-tile ${overdue.length? "bad":"good"}"><div class="n">${overdue.length}</div><div class="l">⚠ Overdue</div></div>
+    <div class="stat-tile"><div class="n">${open.length}</div><div class="l">Open · not due</div></div>
+    <div class="stat-tile good"><div class="n">${done.length}</div><div class="l">✓ Closed w/ data</div></div>
+    <div class="stat-tile"><div class="n">${skipped.length}</div><div class="l">Skipped (honest)</div></div>
+    <div class="stat-tile ${coverage==null? "": coverage>=70? "good":"warn"}"><div class="n">${coverage==null? "—": coverage+"%"}</div><div class="l">Close coverage</div></div>`;
+
+  const rows = [...overdue, ...open, ...done.slice(-5), ...skipped.slice(-5)];
+  $("checks-table").innerHTML = rows.length ? `<table>
+    <tr><th>Status</th><th>Window</th><th>Entity</th><th>Due</th><th>Result / source</th></tr>
+    ${rows.map(c=>{
+      const ent = c.entity_table==="videos" && vidById[c.entity_id] ? vidById[c.entity_id].slug : c.entity_table;
+      const d = until(c.due_at);
+      const st = c.status==="open"
+        ? (d.overdue? '<span class="chip rd">overdue</span>':'<span class="chip am">open</span>')
+        : c.status==="done"? '<span class="chip em">done</span>':'<span class="chip dm">skipped</span>';
+      const res = c.status==="done" ? esc(JSON.stringify(c.result||{}).slice(0,60))+` · ${esc(c.source||"")}`
+        : c.status==="skipped" ? esc(c.result?.skipped_reason||"") : "—";
+      return `<tr><td>${st}</td><td>${c.window_label}</td>
+        <td>${esc(ent)}${isSmoke(c)? ' <span class="chip dm">smoke</span>':""}</td>
+        <td title="${esc(c.due_at)}">${c.status==="open"? d.txt : dateShort(c.due_at)}</td>
+        <td>${res}</td></tr>`;
+    }).join("")}
+  </table>` : '<div class="loading">No checks yet — they open automatically when something publishes.</div>';
+}
+
+/* ── research runs ── */
+function renderResearch(){
+  const runs = DATA.runs||[];
+  $("research-table").innerHTML = runs.length ? `<table>
+    <tr><th>Run</th><th>Model</th><th>Verdict</th><th>This week's headline</th><th>Feature seed</th></tr>
+    ${runs.map(r=>{
+      const cp = r.content_pull||{};
+      return `<tr>
+        <td title="${esc(r.created_at)}"><b>${dateShort(r.created_at)}</b><div class="sub">${ago(r.created_at)}</div></td>
+        <td>${esc((r.model||"—").replace("claude-",""))}</td>
+        <td>${verdictChip(r.outcome_verdict)}${r.outcome_note? `<div class="sub">${esc(r.outcome_note)}</div>`:""}</td>
+        <td>${esc((cp.headline||"—").slice(0,140))}</td>
+        <td>${esc(cp.feature_seed?.tool||"—")}</td>
+      </tr>`;
+    }).join("")}
+  </table>` : '<div class="loading">No research runs yet.</div>';
+}
+
+/* ── lineage ── */
+function renderLineage(){
+  const runs = DATA.runs||[], vids = DATA.videos||[];
+  const byRun = {};
+  vids.forEach(v=>{ (byRun[v.source_research_run_id||"none"] ||= []).push(v); });
+  const runNode = (r) => {
+    const kids = byRun[r?.id||"none"]||[];
+    if(!kids.length && r===null) return "";
+    return `<div class="run-node">
+      <div class="run"><span class="chip em">research run</span>
+        ${r? `${dateShort(r.created_at)} ${verdictChip(r.outcome_verdict)}` : '<span style="color:var(--dim)">no upstream (manual / legacy)</span>'}</div>
+      <div class="children">
+        ${kids.length? kids.map(v=>`<div class="leaf"><span class="arrow">└─</span>
+            <span class="chip dm">video</span> <b>${esc(v.slug)}</b> ${pillarChip(v.pillar)}
+            <span class="chip ${v.status==="published"? "em":"dm"}">${esc(v.status)}</span>
+            <span class="arrow">→ posts: none yet</span></div>`).join("")
+          : '<div class="leaf" style="color:var(--dim)">no videos derived yet</div>'}
+      </div></div>`;
+  };
+  $("lineage-tree").innerHTML =
+    runs.map(runNode).join("") + runNode(null) +
+    `<div style="color:var(--dim);font-size:0.86rem;margin-top:10px">Replies attribute to channel +
+     finder signal, not research runs — an honest no-upstream (MARKETING_OS §4).</div>`;
+}
+
+/* ── week ── */
+function renderWeek(){
+  const today = new Date().getDay(); // 0 = Sun
+  $("week-grid").innerHTML = WEEK.map((w,i)=>`
+    <div class="day ${i===today? "today":""}">
+      <h4>${w.d}${i===today? " <span>today</span>":""}</h4>
+      <ul>${w.items.map(([k,t])=>`<li class="${k}">${t}</li>`).join("")}</ul>
+    </div>`).join("");
+}
+
+/* ── ops log ── */
+function renderOps(){
+  const ops = DATA.ops||[];
+  $("ops-table").innerHTML = ops.length ? `<table>
+    <tr><th>When</th><th>Agent</th><th>Event</th><th>Status</th><th>Message</th></tr>
+    ${ops.map(o=>`<tr>
+      <td title="${esc(o.created_at)}">${ago(o.created_at)}</td>
+      <td>${esc(o.agent_name)}</td><td>${esc(o.event)}</td>
+      <td><span class="chip ${o.status==="success"? "em": o.status==="failure"? "rd":"dm"}">${esc(o.status||"—")}</span></td>
+      <td>${esc(o.message||"—")}</td>
+    </tr>`).join("")}
+  </table>` : '<div class="loading">No ops rows yet.</div>';
+}
+
+/* ═══════════════ boot ═══════════════ */
+setInterval(()=>{ if(lastLoad) $("refresh-age").textContent = "updated "+ago(new Date(lastLoad).toISOString()); }, 5000);
+setInterval(loadAll, 60000);   // live refresh every minute
+loadAll();
+</script>
+</body>
+</html>

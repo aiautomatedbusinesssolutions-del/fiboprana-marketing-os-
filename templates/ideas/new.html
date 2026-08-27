@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}New idea — Fiboprana Marketing{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>New product idea</h1>
+        <div class="actions">
+            <a class="button-link" href="{{ url_for('ideas.ideas_list') }}">← Back to list</a>
+        </div>
+    </div>
+
+    {% if errors %}
+        <div class="notice notice-error">Please fix the highlighted fields below.</div>
+    {% endif %}
+
+    <p class="lede">Capture a product idea for Fiboprana. On save, the idea is automatically checked against the guardrails. You can re-check, approve, or reject from the detail view.</p>
+
+    <form method="post" action="{{ url_for('ideas.ideas_new_submit') }}" novalidate>
+        <div class="form-field {% if errors.title %}has-error{% endif %}">
+            <label for="f-title">Title <span class="muted">(required, short label)</span></label>
+            <input id="f-title" name="title" type="text" value="{{ defaults.title or '' }}" placeholder="e.g. Pre-trade rationale prompt">
+            {% if errors.title %}<div class="field-error">{{ errors.title }}</div>{% endif %}
+        </div>
+
+        <div class="form-field {% if errors.description %}has-error{% endif %}">
+            <label for="f-description">Description <span class="muted">(required, what the feature does and why)</span></label>
+            <textarea id="f-description" name="description" rows="6" placeholder="2-4 sentences. What it does. Who it serves. Why it matters.">{{ defaults.description or '' }}</textarea>
+            {% if errors.description %}<div class="field-error">{{ errors.description }}</div>{% endif %}
+        </div>
+
+        <div class="form-field">
+            <label for="f-source">Source <span class="muted">(optional — what triggered this idea)</span></label>
+            <input id="f-source" name="source" type="text" value="{{ defaults.source or '' }}" placeholder="e.g. Observation #14, X post engagement, conversation with K.">
+        </div>
+
+        <div class="form-field">
+            <label for="f-tags">Tags <span class="muted">(optional, comma-separated)</span></label>
+            <input id="f-tags" name="tags" type="text" value="{{ defaults.tags or '' }}" placeholder="e.g. journaling,coach,onboarding">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="button">Save idea</button>
+            <a class="button-link" href="{{ url_for('ideas.ideas_list') }}">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

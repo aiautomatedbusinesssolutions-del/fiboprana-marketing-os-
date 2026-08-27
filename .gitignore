@@ -1,0 +1,56 @@
+# SQLite databases (local data)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Export snapshots
+capture/exports/
+
+# Local-only portfolio journal screenshots (never rendered or sent)
+journal/screenshots/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment variables / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+
+# Generated weekly X post batches (output; regenerable from the digest)
+content/x_batches/
+
+# Installed agent skills (re-installable via npx skills add) + local Typefully config
+.agents/
+.typefully/
+
+# Claude Code local settings + skill symlinks (skill content lives in .agents/, gitignored)
+.claude/settings.local.json
+.claude/skills/
+
+# Obsidian per-user vault UI state (workspace layout, graph settings)
+wiki/.obsidian/
+
+# /week board check-off state (local, per-machine)
+fleet/flow_state.json
+fleet/fleet_controls.json
+fleet/video_ideas.json
+fleet/x_batch.json
+fleet/cta_comments.json
+fleet/logs/
+fleet/email_broadcast.json
