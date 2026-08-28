@@ -32,9 +32,9 @@ rss_feeds:
   - name: "Mindful.org"
     url:  "https://www.mindful.org/feed/"
   - name: "Quantified Self"
-    url:  "https://quantifiedself.com/blog/feed/"
-  - name: "MobiHealthNews"
-    url:  "https://www.mobihealthnews.com/feed"
+    url:  "https://quantifiedself.com/feed/"
+  - name: "Neuroscience News"
+    url:  "https://neurosciencenews.com/feed/"
   - name: "Oura Blog"
     url:  "https://ouraring.com/blog/feed/"
 
