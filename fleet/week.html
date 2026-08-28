@@ -629,9 +629,9 @@ const OVERVIEW = [
     ],
   },
   {
-    n: "3", title: "News video", why: "Perishable — it ships first of the videos. Click the card to open its workflow.",
+    n: "3", title: "Story video 1", why: "First pick from this week's three story ideas. When the digest hands you a timely story (like a lawsuit week), it goes here and ships first.",
     cards: [
-      { video: "news",    title: "News video",     body: "“What moved in mind-body this week, translated calmly.” Digest headline = the opener." },
+      { video: "news",    title: "Story video 1",  body: "One experiment, told as a story with a twist — the study is the protagonist. Timely pick ships first; digest + idea slate = the menu." },
     ],
   },
   {
@@ -648,10 +648,10 @@ const OVERVIEW = [
     ],
   },
   {
-    n: "5", title: "Feature + Own-Practice videos", why: "After the gate — the feature is the answer in product form. The own-practice video is optional; a skipped week never parks the pointer here.",
+    n: "5", title: "Story video 2", why: "Second pick from the week's three ideas — evergreen is fine here. The idea you don't pick just waits; on to the next thing. (Own-practice lane parked this era — practice notes feed story ideas instead.)",
     cards: [
-      { video: "feature", title: "Feature video",  body: "The feature is the answer in product form. OK if it lags a week." },
-      { video: "ascent",  title: "Own Practice",   body: "The practice-and-signals question lived by its own founder — what was noticed, never a verdict." },
+      { video: "feature", title: "Story video 2",  body: "The week's second story — same format, evergreen pick. Two videos a week, three ideas on the menu, founder picks two." },
+      { video: "ascent",  title: "Own Practice (parked)", body: "Parked while the two-story cadence proves out — the week's practice notes feed story ideas, not their own episode." },
     ],
   },
   {
@@ -675,7 +675,7 @@ const OVERVIEW = [
 // description + community post) → ship.
 const VIDEOS = {
   news: {
-    title: "News video", sub: "perishable — ships first · 10–15 min",
+    title: "Story video 1", sub: "timely pick ships first · 3–5 min master",
     stages: [
       { n: "a", title: "Prep", why: "Never script off the digest blurb alone.",
         cards: [
@@ -729,7 +729,7 @@ const VIDEOS = {
     ],
   },
   feature: {
-    title: "Feature video", sub: "tool must be LIVE first · ~8–12 min",
+    title: "Story video 2", sub: "evergreen pick · 3–5 min master",
     stages: [
       { n: "a", title: "Prep", why: "The screens have to exist to film them.",
         cards: [
@@ -781,7 +781,7 @@ const VIDEOS = {
     ],
   },
   ascent: {
-    title: "Own Practice", sub: "OPTIONAL each week · the week's practice notes ARE the episode skeleton",
+    title: "Own Practice (parked)", sub: "parked this era · practice notes feed story ideas instead",
     stages: [
       { n: "a", title: "Prep", why: "What was practiced + what the signals did + what was noticed — never a verdict, never an outcome claim.",
         cards: [
@@ -860,11 +860,11 @@ const NODES = [
     body: "Reads the digest, hands back 5 items: headline · video angle · competitor note · Reddit themes · feature seed." },
   { id: "qa",        col: 2, row: 0.5, kind: "me", label: "Founder Q&A", sub: "the react step",
     body: "5 structured questions; your verdict is logged via log_outcome — the learning signal the next run reads." },
-  { id: "newsvid",   col: 3, row: 0,   kind: "me", label: "News video", sub: "script → record → ship",
+  { id: "newsvid",   col: 3, row: 0,   kind: "me", label: "Story video 1", sub: "script → produce → ship",
     body: "Perishable reach play; ships first. Digest headline is the opener.", statKey: "vidNews", href: "#news" },
   { id: "gatebuild", col: 3, row: 1.2, kind: "me", label: "Feature gate + build", sub: "build-or-content call",
     body: "Inputs: research feature seed + the week's Reddit pain. Registry → demand → differentiation → quality bar; then Claude builds it in-session if it passes." },
-  { id: "featvid",   col: 4, row: 1.2, kind: "me", label: "Feature video", sub: "tool live first",
+  { id: "featvid",   col: 4, row: 1.2, kind: "me", label: "Story video 2", sub: "evergreen pick",
     body: "The tool demoed as the answer in product form.", statKey: "vidFeature", href: "#feature" },
   { id: "journal",   col: 1, row: 2.4, kind: "me", label: "Practice notes", sub: "the week's jottings",
     body: "What was practiced · what the signals did · what was noticed · what stays uncertain. The notes ARE the episode outline." },
