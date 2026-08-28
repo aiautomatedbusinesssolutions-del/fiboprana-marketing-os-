@@ -709,11 +709,10 @@ PRODUCTION_ASSETS = Path(os.environ.get(
 )) / "content" / "videos" / "assets"
 
 
-def narration_audio(week, video):
-    """(filename, mp3 bytes) of the LATEST narration render for this week's
-    lane (founder ask 2026-08-28: listen from the card, not the filesystem).
-    The production slug is derived from the script card's file name
-    (videos/scripts/<slug>.md), so this lights up the moment a script lands."""
+def _production_dir(week, video):
+    """The production assets dir for this week's lane. The slug is derived
+    from the script card's file name (videos/scripts/<slug>.md), so these
+    surfaces light up the moment a script lands."""
     if not (WEEK_RE.match(week) and VIDEO_RE.match(video)):
         raise ValueError("bad week/video")
     slot = read_state(VIDEO_IDEAS).get(week, {}).get(video) or {}
@@ -721,13 +720,45 @@ def narration_audio(week, video):
     slug = re.sub(r"-\d{4}-\d{2}-\d{2}$", "", Path(file).stem)
     if not slug:
         raise LookupError("no script on the card yet, so no production slug to look under")
-    d = PRODUCTION_ASSETS / slug
+    return slug, PRODUCTION_ASSETS / slug
+
+
+def narration_audio(week, video):
+    """(filename, mp3 bytes) of the LATEST narration render for this week's
+    lane (founder ask 2026-08-28: listen from the card, not the filesystem)."""
+    slug, d = _production_dir(week, video)
     versions = list(d.glob("narration-v*.mp3")) if d.is_dir() else []
     if not versions:
         raise LookupError(f"no narration rendered yet for '{slug}'")
     versions.sort(key=lambda p: int(re.search(r"v(\d+)$", p.stem).group(1)))
     latest = versions[-1]
     return latest.name, latest.read_bytes()
+
+
+_STILL_FILE_RE = re.compile(r"^beat-[A-Za-z0-9_-]+\.png$")
+
+
+def stills_listing(week, video):
+    """The generated beat stills for this week's lane, for the card's review
+    grid (founder ask 2026-08-28: approve the images from the card). Also
+    reports which clips exist so the same overlay works after animate."""
+    slug, d = _production_dir(week, video)
+    stills_dir = d / "stills"
+    clips_dir = d / "clips"
+    stills = sorted(p.name for p in stills_dir.glob("beat-*.png")) if stills_dir.is_dir() else []
+    clips = sorted(p.name for p in clips_dir.glob("beat-*.mp4")) if clips_dir.is_dir() else []
+    return {"slug": slug, "stills": stills, "clips": clips}
+
+
+def still_image(week, video, filename):
+    """One still's PNG bytes, filename whitelisted (no traversal)."""
+    if not _STILL_FILE_RE.match(filename or ""):
+        raise ValueError("bad still filename")
+    _slug, d = _production_dir(week, video)
+    f = d / "stills" / filename
+    if not f.is_file():
+        raise LookupError(f"no such still: {filename}")
+    return f.read_bytes()
 
 
 def post_video_ideas(body):
@@ -2070,6 +2101,19 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 _name, data = narration_audio(q.get("week", ""), q.get("video", ""))
                 return self._send(200, data, "audio/mpeg")
+            except (ValueError, LookupError) as e:
+                return self._json(404, {"error": str(e)})
+        if parsed.path == "/api/stills":
+            q = dict(urllib.parse.parse_qsl(parsed.query))
+            try:
+                return self._json(200, stills_listing(q.get("week", ""), q.get("video", "")))
+            except (ValueError, LookupError) as e:
+                return self._json(404, {"error": str(e)})
+        if parsed.path == "/api/still":
+            q = dict(urllib.parse.parse_qsl(parsed.query))
+            try:
+                data = still_image(q.get("week", ""), q.get("video", ""), q.get("file", ""))
+                return self._send(200, data, "image/png")
             except (ValueError, LookupError) as e:
                 return self._json(404, {"error": str(e)})
         if parsed.path.startswith("/api/"):

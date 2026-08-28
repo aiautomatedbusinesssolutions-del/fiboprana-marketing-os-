@@ -89,6 +89,26 @@ def api_narration():
     return Response(data, mimetype="audio/mpeg")
 
 
+@bp.get("/api/stills")
+def api_stills():
+    try:
+        return _json(fleet_dash.stills_listing(
+            request.args.get("week", ""), request.args.get("video", "")))
+    except (ValueError, LookupError) as e:
+        return _json({"error": str(e)}, 404)
+
+
+@bp.get("/api/still")
+def api_still():
+    try:
+        data = fleet_dash.still_image(
+            request.args.get("week", ""), request.args.get("video", ""),
+            request.args.get("file", ""))
+    except (ValueError, LookupError) as e:
+        return _json({"error": str(e)}, 404)
+    return Response(data, mimetype="image/png")
+
+
 @bp.get("/api/<path:name>")
 def api_get(name):
     if name in fleet_dash.STATE_FILES:
