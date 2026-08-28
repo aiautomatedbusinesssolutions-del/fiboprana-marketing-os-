@@ -481,6 +481,17 @@
   </div>
 </div>
 
+<div id="reviewview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Rate + review the video</h2>
+      <span class="meta" id="reviewMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="reviewBody"></div>
+  </div>
+</div>
+
 <!-- ═══ Fact verification report — read before scripting ═══ -->
 <div id="facts" class="overlay">
   <div class="panel">
@@ -740,6 +751,9 @@ const VIDEOS = {
           { key: "news/assemble", tag: "agent", title: "Assemble + review master",
             body: "timeline.mjs matches beats to the narration's word timestamps; Remotion renders the master (karaoke captions, hook card, CTA card, music bed). Watch it once against the pacing rules (no hold over ~12s, no repeated clip). Mark done = release candidate.",
             player: "news" },
+          { key: "news/review", tag: "me", title: "Rate + review the video",
+            body: "The production learning loop: score it 1–10 and answer five questions (pacing, visuals, narration, story, the ONE thing to change). The next video's scripts and motion prompts get written against your answers — same way your research Q&A steers the research.",
+            review: "news" },
         ] },
       { n: "e", title: "Package", why: "Everything the upload needs: thumbnail + locked description format; no em dashes anywhere.",
         cards: [
@@ -801,6 +815,9 @@ const VIDEOS = {
           { key: "feature/assemble", tag: "agent", title: "Assemble + review master",
             body: "timeline.mjs + Remotion render the master. Watch once against the pacing rules. Mark done = release candidate.",
             player: "feature" },
+          { key: "feature/review", tag: "me", title: "Rate + review the video",
+            body: "Score 1–10 + the five learning questions. Your answers steer the next video's prompts.",
+            review: "feature" },
         ] },
       { n: "e", title: "Package", why: "",
         cards: [
@@ -854,6 +871,9 @@ const VIDEOS = {
           { key: "ascent/assemble", tag: "agent", title: "Assemble + review master",
             body: "timeline.mjs + Remotion render the master. Watch once against the pacing rules. Mark done = release candidate.",
             player: "ascent" },
+          { key: "ascent/review", tag: "me", title: "Rate + review the video",
+            body: "Score 1–10 + the five learning questions. Your answers steer the next video's prompts.",
+            review: "ascent" },
         ] },
       { n: "e", title: "Package", why: "",
         cards: [
@@ -1583,6 +1603,85 @@ async function openPlayer(video) {
     "(every beat moves, no hold over ~12s, no repeated clip); name any weak " +
     "beat in session and it regenerates. Mark the card done when it's a release candidate."));
   select(files[0], buttons[0]);
+}
+
+// ── post-watch review — the production learning loop's write-side ───────────
+// Five questions + a score, saved onto the week's video slot. The next
+// video's scripts and motion prompts get written against these answers, the
+// same way the research Q&A steers the next research run.
+const REVIEW_QUESTIONS = [
+  ["pacing", "Pacing — the rhythm",
+   "Where did it drag or rush? Name the beat or timestamp if you can. (Video 2's lesson came from exactly this: 'the desk pan scrolled too far.')"],
+  ["visuals", "Visuals — weakest and strongest beat",
+   "The weakest beat and why (it gets fixed or its prompt pattern retired) · the strongest beat and why (it gets repeated on purpose)."],
+  ["narration", "Narration and voice",
+   "Delivery, pronunciations, pace, anything that didn't sound like you."],
+  ["story", "Story and script",
+   "Did the hook grab and the twist land? Anything you'd cut, add, or reorder?"],
+  ["next_time", "The ONE biggest thing to do differently next video",
+   "The strongest learning signal on this card — biggest things first, little things once the big ones are gone."],
+];
+
+async function openReview(video) {
+  const overlay = document.getElementById("reviewview");
+  const body = document.getElementById("reviewBody");
+  const meta = document.getElementById("reviewMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  let slot = {}, version = "";
+  try {
+    const all = await fetch("/api/video_ideas").then((r) => r.json());
+    slot = (all[WEEK] || {})[video] || {};
+  } catch (e) { /* fresh slate is fine */ }
+  try {
+    const rend = await fetch(`/api/renders?week=${WEEK}&video=${video}`).then((r) => r.json());
+    version = (rend.masters || [])[0] || "";
+  } catch (e) { /* no render yet is fine */ }
+  const existing = slot.review || { score: null, answers: {} };
+  body.replaceChildren();
+  if (existing.reviewed_at) {
+    body.append(el("div", "sr",
+      `saved ${existing.reviewed_at}${existing.version ? ` · reviewed: ${existing.version}` : ""} — edit and save again anytime`));
+  }
+  const scoreRow = el("div", "sec");
+  scoreRow.append(el("span", "seclbl", "Overall score (1–10): "));
+  const scoreInput = document.createElement("input");
+  scoreInput.type = "number"; scoreInput.min = "1"; scoreInput.max = "10";
+  scoreInput.value = existing.score ?? "";
+  scoreInput.style.cssText = "width:70px;background:none;color:inherit;border:1px solid var(--card-edge);border-radius:6px;padding:4px 8px;font:inherit";
+  scoreRow.append(scoreInput);
+  body.append(scoreRow);
+  const inputs = {};
+  for (const [key, label, hint] of REVIEW_QUESTIONS) {
+    const sec = el("div", "sec");
+    sec.append(el("div", "seclbl", label));
+    sec.append(el("div", "sr", hint));
+    const ta = document.createElement("textarea");
+    ta.value = existing.answers?.[key] || "";
+    ta.rows = 3;
+    ta.style.cssText = "width:100%;background:none;color:inherit;border:1px solid var(--card-edge);border-radius:8px;padding:8px;font:inherit;margin-top:4px";
+    sec.append(ta);
+    inputs[key] = ta;
+    body.append(sec);
+  }
+  const save = el("button", "mark", "💾 save the review");
+  save.onclick = async () => {
+    save.textContent = "saving…";
+    const review = {};
+    for (const [key] of REVIEW_QUESTIONS) review[key] = inputs[key].value;
+    try {
+      const r = await fetch("/api/video_ideas", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week: WEEK, video, review,
+                               score: scoreInput.value, version }),
+      });
+      const s = await r.json();
+      if (!r.ok) throw new Error(s.error || `HTTP ${r.status}`);
+      save.textContent = "✓ saved — this steers the next video";
+    } catch (e) { save.textContent = `failed: ${e.message}`; }
+  };
+  body.append(save);
 }
 
 async function openFacts(video) {
@@ -3098,7 +3197,7 @@ function stepCard(c, next, st) {
   if (c.finder) attachFinderRuns(card, c);
   if (c.livecheck) attachLiveCheck(card, c, done);
   const checkable = c.key && !c.info && c.tag !== "todo";
-  if (c.read || c.qa || c.ideas || c.audio || c.stills || c.player || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
+  if (c.read || c.qa || c.ideas || c.audio || c.stills || c.player || c.review || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
     const row = el("div", "doneRow");
     if (c.read) {
       const r = el("button", "mark read", `📖 ${c.read}`);
@@ -3139,6 +3238,11 @@ function stepCard(c, next, st) {
       const pv = el("button", "mark read", "▶ watch the renders");
       pv.onclick = () => openPlayer(c.player);
       row.append(pv);
+    }
+    if (c.review) {
+      const rv = el("button", "mark read", "⭐ rate + review");
+      rv.onclick = () => openReview(c.review);
+      row.append(rv);
     }
     if (c.gate) {
       const g = el("button", "mark read", "🚪 open the gate — see the evidence");

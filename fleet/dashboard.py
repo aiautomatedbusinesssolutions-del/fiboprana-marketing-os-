@@ -805,6 +805,32 @@ def post_video_ideas(body):
             raise ValueError("no such idea drafted for that week/video")
         slot["picked"] = picked
         slot["picked_at"] = _now()
+    elif "review" in body:
+        # Founder's post-watch video review (founder ask 2026-08-28): the
+        # production learning loop's write-side. Answers live on the slot;
+        # the next video's prompts + the production log are written against
+        # them, exactly like the research Q&A steers the next research run.
+        rev = body["review"]
+        if not isinstance(rev, dict):
+            raise ValueError("review must be an object")
+        allowed = ("pacing", "visuals", "narration", "story", "next_time")
+        clean = {}
+        for k, v in rev.items():
+            if k not in allowed:
+                raise ValueError(f"unknown review field: {k}")
+            if not isinstance(v, str) or len(v) > 4000:
+                raise ValueError(f"review field {k} must be a string of at most 4000 chars")
+            clean[k] = v.strip()
+        score = body.get("score")
+        if score is not None and score != "":
+            score = int(score)
+            if not 1 <= score <= 10:
+                raise ValueError("score must be 1-10")
+        else:
+            score = None
+        slot["review"] = {"score": score, "answers": clean,
+                          "version": (body.get("version") or "")[:60],
+                          "reviewed_at": _now()}
     elif "passed" in body:
         # Founder passes on a drafted idea (founder call 2026-08-28): unpicked,
         # un-passed ideas CARRY OVER into next week's slate; a pass drops one
