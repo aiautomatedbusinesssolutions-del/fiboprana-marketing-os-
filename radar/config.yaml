@@ -18,7 +18,13 @@ hn_queries:
   - "meditation"
   - "HRV"
   - "mental health app"
-  # AI-in-wellness trend signal — the weekly Trend Digest's main interest.
+  # Mind-state / consciousness tracking — the digest's PRIMARY lens (founder
+  # call 2026-08-27: more consciousness, less sleep).
+  - "EEG"
+  - "neurofeedback"
+  - "biofeedback"
+  - "consciousness"
+  # AI-in-wellness trend signal.
   - "AI wellness"
   - "emotion AI"
   - "digital health"
@@ -73,6 +79,12 @@ exa_queries:
   - "FDA general wellness versus medical device line for consumer mind or stress tracking apps"
   # Research signal — mind-body claims we could cover (with sources) in mind-science videos.
   - "new research on meditation breathwork or qigong effects measured with wearables or HRV"
+  # Consciousness-tracking edge (founder call 2026-08-27) — what is becoming
+  # possible in measuring mind states, and the ancient-practice intersection.
+  - "consumer EEG headbands and neurofeedback devices for measuring meditation and attention states"
+  - "studies of experienced meditators voluntarily controlling heart rate temperature or brain activity"
+  - "new technology or methods for measuring states of consciousness"
+  - "who owns wearable health data and whether users are compensated for it"
   # Startup watch: startups surface through launch + funding coverage, so hunt
   # those directly. Feeds the digest's "Startup watch" bucket.
   - "early-stage startup building mind-body wellness meditation or nervous system tracking app"

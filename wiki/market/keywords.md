@@ -20,7 +20,9 @@ high-volume: "reset your nervous system, no device" · "why you're tired but did
 practice proof ("does meditation actually work," "how to know if meditation is working,"
 "breathwork results") · burnout language ("wired and tired," "always tired high achiever")
 · mind-science curiosity ("heart brain connection," "vagus nerve," "tummo," "what does HRV
-mean") · privacy ("health app sells data," "wellness app privacy").
+mean") · consciousness tracking ("EEG meditation," "neurofeedback," "measure meditation
+depth," "monks control heart rate," "biofeedback training") · privacy & data ownership
+("health app sells data," "wellness app privacy," "who owns my health data").
 
 **Device-scoped framing (binding):** "mainstream wearables track the body, not the mind" —
 never the absolute "nothing tracks the mind" (consumer EEG exists: Muse, Neurable).
