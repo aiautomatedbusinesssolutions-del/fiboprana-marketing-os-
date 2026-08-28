@@ -629,9 +629,9 @@ const OVERVIEW = [
     ],
   },
   {
-    n: "3", title: "Story video 1", why: "First pick from this week's three story ideas. When the digest hands you a timely story (like a lawsuit week), it goes here and ships first.",
+    n: "3", title: "News video", why: "Perishable — it ships first of the videos. Click the card to open its workflow.",
     cards: [
-      { video: "news",    title: "Story video 1",  body: "One experiment, told as a story with a twist — the study is the protagonist. Timely pick ships first; digest + idea slate = the menu." },
+      { video: "news",    title: "News video",     body: "The week's timely story from the digest, told as a story — the development is the protagonist. Pick from the three drafted options." },
     ],
   },
   {
@@ -648,10 +648,10 @@ const OVERVIEW = [
     ],
   },
   {
-    n: "5", title: "Story video 2", why: "Second pick from the week's three ideas — evergreen is fine here. The idea you don't pick just waits; on to the next thing. (Own-practice lane parked this era — practice notes feed story ideas instead.)",
+    n: "5", title: "Feature + Story videos", why: "Three lanes, two videos a week — the founder picks which two. The feature video follows the gate (a feature decided from the research, tried, then shown); the story video is the evergreen ancient-practice lane.",
     cards: [
-      { video: "feature", title: "Story video 2",  body: "The week's second story — same format, evergreen pick. Two videos a week, three ideas on the menu, founder picks two." },
-      { video: "ascent",  title: "Own Practice (parked)", body: "Parked while the two-story cadence proves out — the week's practice notes feed story ideas, not their own episode." },
+      { video: "feature", title: "Feature video",  body: "The feature is the answer in product form: gate it from the research data, try it out, then the video shows it — generated visuals plus real clips of the feature. OK if it lags a week." },
+      { video: "ascent",  title: "Story video",    body: "An ancient practice, how modern people understand it (or don't) — legend as legend, record as record, ideally with a twist. Evergreen; pick from the three drafted options." },
     ],
   },
   {
@@ -675,7 +675,7 @@ const OVERVIEW = [
 // description + community post) → ship.
 const VIDEOS = {
   news: {
-    title: "Story video 1", sub: "timely pick ships first · 3–5 min master",
+    title: "News video", sub: "perishable — ships first · 3–5 min master",
     stages: [
       { n: "a", title: "Prep", why: "Never script off the digest blurb alone.",
         cards: [
@@ -729,18 +729,21 @@ const VIDEOS = {
     ],
   },
   feature: {
-    title: "Story video 2", sub: "evergreen pick · 3–5 min master",
+    title: "Feature video", sub: "feature decided at the gate, tried, then shown · 3–5 min master",
     stages: [
-      { n: "a", title: "Prep", why: "Evergreen story: an ancient practice, how modern people understand it (or don't), ideally with a twist.",
+      { n: "a", title: "Prep", why: "The feature has to exist to show it — the gate (Decide column) picks it from the research data first.",
         cards: [
-          { key: "feature/topic", tag: "me", title: "Pick the story",
-            body: "Three evergreen ancient-practice story options, drafted from the research and the backlog. Legend told as legend, record as record; the best ones carry a twist. Pick one, then mark done. (The old tool-is-live gate is parked with the feature era.)",
-            ideas: "feature" },
+          { key: "feature/live", tag: "me", title: "Feature is ready to show",
+            body: "Blocks everything below. Auto-checks the ideas registry: once the gated idea's Build stage says live, this flips done by itself — or mark it done yourself when the feature you're trying out is ready to put on screen.",
+            livecheck: true },
+          { key: "feature/example", tag: "me", title: "Pick the worked example",
+            body: "The one run of the feature that best shows the payoff — narration matches what's on screen. Proposes itself when the build is marked done (wire 12). View it, leave feedback if you want a different run, then mark done — that fires the script step.",
+            example: "feature" },
         ] },
-      { n: "b", title: "Script", why: "Every claim verified at scripting; legend labeled as legend.",
+      { n: "b", title: "Script", why: "Written against the real feature — never the build brief.",
         cards: [
           { key: "feature/script", tag: "agent", title: "Rundown + outline",
-            body: "Rundown + beats for the picked story, with sources for every factual claim and the brand-thread close. Read it, leave feedback until it sounds like you, then mark done — your done here IS the founder pass.",
+            body: "Rundown + beats scripted from the feature's real behavior: what pain it answers (the research data that gated it), what it shows, and the honest limits. Brand-thread close. Read it, leave feedback until it sounds like you, then mark done — your done here IS the founder pass.",
             script: "feature" },
         ] },
       { n: "c", title: "Deck", why: "Same kit as the news video.",
@@ -749,10 +752,10 @@ const VIDEOS = {
             body: "Branded HTML deck for the non-demo beats (the demo IS the screen). View it here, flip through with arrow keys, leave feedback, mark done when it's right.",
             deck: "feature" },
         ] },
-      { n: "d", title: "Produce", why: "Faceless chain in the sibling repo — narrate, stills, animate, assemble.",
+      { n: "d", title: "Produce", why: "Hybrid: generated visuals + real clips of the feature on screen.",
         cards: [
           { key: "feature/record", tag: "me", title: "Produce the video",
-            body: "Run the approved script through the production chain in Fiboprana Marketing (narrate, stills, animate, timeline, render). Mark done when the master is rendered — that moves the flow to Package." },
+            body: "Screen-capture the worked-example run for the demo beats; the faceless chain in Fiboprana Marketing (narrate, stills, animate, render) carries the rest. Mark done when the master is rendered." },
         ] },
       { n: "e", title: "Package", why: "",
         cards: [
@@ -760,7 +763,7 @@ const VIDEOS = {
             body: "Prompts (2 proven styles + 1 experiment; with/without face space); you generate, bring results to chat, we pick + iterate there.",
             thumbs: "feature" },
           { key: "feature/desc", tag: "agent", title: "Description + tags + community post",
-            body: "youtube_description.md format — carries the story, bridges to Fiboprana with the tracked link. View the whole upload package here, leave feedback, mark done.",
+            body: "youtube_description.md format — the description links the feature being shown (that's the landing). View the whole upload package here, leave feedback, mark done.",
             pkg: "feature" },
         ] },
       { n: "f", title: "Ship", why: "",
@@ -778,21 +781,20 @@ const VIDEOS = {
     ],
   },
   ascent: {
-    title: "Own Practice (parked)", sub: "parked this era · practice notes feed story ideas instead",
+    title: "Story video", sub: "ancient practice, modern lens · evergreen · 3–5 min master",
     stages: [
-      { n: "a", title: "Prep", why: "What was practiced + what the signals did + what was noticed — never a verdict, never an outcome claim.",
+      { n: "a", title: "Prep", why: "An ancient practice, how modern people understand it (or don't) — legend told as legend, record as record, ideally with a twist.",
         cards: [
-          { key: "ascent/session", tag: "me", title: "A real week of practice",
-            body: "The founder's own practice next to his own signals — the honest is-it-working question, lived." },
-          { key: "ascent/journal", tag: "me", title: "Jot the week's notes",
-            body: "The reflection beats: what was practiced · what the body's signals did · what was noticed · what stays uncertain." },
+          { key: "ascent/topic", tag: "me", title: "Pick the story",
+            body: "Three evergreen ancient-practice story options, drafted from the research and the backlog. The best ones carry a twist — a reversal, a convergence, a gap between legend and record. Pick one, then mark done.",
+            ideas: "ascent" },
         ] },
-      { n: "b", title: "Script", why: "The notes outline the episode; recap last week's arc.",
+      { n: "b", title: "Script", why: "Every factual claim carries a source; legend labeled as legend.",
         cards: [
-          { key: "ascent/script", tag: "agent", title: "Outline from the notes",
-            body: "Recap → this week's practice → what the signals showed → what it does and doesn't mean. Honest-about-uncertainty close." },
+          { key: "ascent/script", tag: "agent", title: "Rundown + outline",
+            body: "Cold-open on the story's most improbable image, continuous arc with the midpoint turn, honest-about-uncertainty close, brand thread before the CTA. Sources named for every claim." },
           { key: "ascent/script_ok", tag: "me", title: "Your pass on the script",
-            body: "It's your story — make sure it reads that way. Marking done IS the approval: stills, thumbnails, package and the long-form X post generate themselves from it." },
+            body: "It's your channel's voice — make sure it reads that way. Marking done IS the approval: stills, thumbnails, package and the long-form X post generate themselves from it." },
         ] },
       { n: "c", title: "Visuals", why: "",
         cards: [
@@ -807,9 +809,9 @@ const VIDEOS = {
       { n: "e", title: "Package", why: "",
         cards: [
           { key: "ascent/thumb", tag: "me", title: "Thumbnail",
-            body: "Prompts (2 proven + 1 experiment; Quiet Earth, no faces needed); episodic look so the series reads as a series." },
+            body: "Prompts (2 proven + 1 experiment; Quiet Earth, no faces needed); consistent story-series look so the lane reads as a series." },
           { key: "ascent/desc", tag: "agent", title: "Description + tags + community post",
-            body: "Series framing + soft waitlist / lead-magnet CTA + disclosure + disclaimer." },
+            body: "youtube_description.md format — story framing + soft waitlist / lead-magnet CTA + disclosure + disclaimer." },
         ] },
       { n: "f", title: "Ship", why: "",
         cards: [
@@ -857,11 +859,11 @@ const NODES = [
     body: "Reads the digest, hands back 5 items: headline · video angle · competitor note · Reddit themes · feature seed." },
   { id: "qa",        col: 2, row: 0.5, kind: "me", label: "Founder Q&A", sub: "the react step",
     body: "5 structured questions; your verdict is logged via log_outcome — the learning signal the next run reads." },
-  { id: "newsvid",   col: 3, row: 0,   kind: "me", label: "Story video 1", sub: "script → produce → ship",
+  { id: "newsvid",   col: 3, row: 0,   kind: "me", label: "News video", sub: "script → produce → ship",
     body: "Perishable reach play; ships first. Digest headline is the opener.", statKey: "vidNews", href: "#news" },
   { id: "gatebuild", col: 3, row: 1.2, kind: "me", label: "Feature gate + build", sub: "build-or-content call",
     body: "Inputs: research feature seed + the week's Reddit pain. Registry → demand → differentiation → quality bar; then Claude builds it in-session if it passes." },
-  { id: "featvid",   col: 4, row: 1.2, kind: "me", label: "Story video 2", sub: "evergreen pick",
+  { id: "featvid",   col: 4, row: 1.2, kind: "me", label: "Feature video", sub: "gate → try → show",
     body: "The tool demoed as the answer in product form.", statKey: "vidFeature", href: "#feature" },
   { id: "journal",   col: 1, row: 2.4, kind: "me", label: "Practice notes", sub: "the week's jottings",
     body: "What was practiced · what the signals did · what was noticed · what stays uncertain. The notes ARE the episode outline." },
