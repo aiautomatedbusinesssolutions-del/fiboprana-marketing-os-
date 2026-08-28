@@ -14,7 +14,7 @@ identical on both doors, which is why the HTML files need no edits.
 import json
 import urllib.parse
 
-from flask import Blueprint, Response, abort, request
+from flask import Blueprint, Response, abort, request, send_file
 
 from fleet import dashboard as fleet_dash
 from fleet.supabase import SupabaseError
@@ -107,6 +107,28 @@ def api_still():
     except (ValueError, LookupError) as e:
         return _json({"error": str(e)}, 404)
     return Response(data, mimetype="image/png")
+
+
+@bp.get("/api/renders")
+def api_renders():
+    try:
+        return _json(fleet_dash.renders_listing(
+            request.args.get("week", ""), request.args.get("video", "")))
+    except (ValueError, LookupError) as e:
+        return _json({"error": str(e)}, 404)
+
+
+@bp.get("/api/render")
+def api_render():
+    try:
+        f = fleet_dash.render_video_path(
+            request.args.get("week", ""), request.args.get("video", ""),
+            request.args.get("file", ""))
+    except (ValueError, LookupError) as e:
+        return _json({"error": str(e)}, 404)
+    # send_file(conditional=True) gives HTTP Range support — <video> can seek
+    # through a multi-hundred-MB master without loading it whole.
+    return send_file(f, mimetype="video/mp4", conditional=True)
 
 
 @bp.get("/api/<path:name>")

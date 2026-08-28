@@ -470,6 +470,17 @@
   </div>
 </div>
 
+<div id="playerview" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Watch the renders</h2>
+      <span class="meta" id="playerMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="playerBody"></div>
+  </div>
+</div>
+
 <!-- ═══ Fact verification report — read before scripting ═══ -->
 <div id="facts" class="overlay">
   <div class="panel">
@@ -727,7 +738,8 @@ const VIDEOS = {
           { key: "news/music", tag: "me", title: "Music picked",
             body: "Drop music.mp3 + music-license.txt into the video's assets folder (YouTube Audio Library; reuse the 2–3 brand tracks — sonic consistency is brand recognition). The render mixes it at −18 to −22dB under the voice. Mark done when it's in place." },
           { key: "news/assemble", tag: "agent", title: "Assemble + review master",
-            body: "timeline.mjs matches beats to the narration's word timestamps; Remotion renders the master (karaoke captions, hook card, CTA card, music bed). Watch it once against the pacing rules (no hold over ~12s, no repeated clip). Mark done = release candidate." },
+            body: "timeline.mjs matches beats to the narration's word timestamps; Remotion renders the master (karaoke captions, hook card, CTA card, music bed). Watch it once against the pacing rules (no hold over ~12s, no repeated clip). Mark done = release candidate.",
+            player: "news" },
         ] },
       { n: "e", title: "Package", why: "Everything the upload needs: thumbnail + locked description format; no em dashes anywhere.",
         cards: [
@@ -741,7 +753,8 @@ const VIDEOS = {
       { n: "f", title: "Ship", why: "Shorts are cuts of the master; nothing is re-edited.",
         cards: [
           { key: "news/edit", tag: "agent", title: "Shorts rendered",
-            body: "shorts-timeline.mjs + Remotion render the three 9:16 cuts from the shorts spec — each built around one irreducible fact, hook in 2s. The transcript is already in the corpus from the chain. Mark done when s1–s3 are rendered." },
+            body: "shorts-timeline.mjs + Remotion render the three 9:16 cuts from the shorts spec — each built around one irreducible fact, hook in 2s. The transcript is already in the corpus from the chain. Mark done when s1–s3 are rendered.",
+            player: "news" },
           { key: "news/publish", tag: "me", title: "Publish + log it",
             body: "Schedule on YouTube — this card notices the upload by itself (it checks the channel when you open this page) and logs everything: marketing.videos, outcome checks, this + thumbnail + description done. The paste box is the fallback if the auto-notice can't find a clear match.",
             pub: true },
@@ -786,7 +799,8 @@ const VIDEOS = {
           { key: "feature/music", tag: "me", title: "Music picked",
             body: "music.mp3 + music-license.txt into the assets folder (brand tracks, −18 to −22dB under voice). Mark done when in place." },
           { key: "feature/assemble", tag: "agent", title: "Assemble + review master",
-            body: "timeline.mjs + Remotion render the master. Watch once against the pacing rules. Mark done = release candidate." },
+            body: "timeline.mjs + Remotion render the master. Watch once against the pacing rules. Mark done = release candidate.",
+            player: "feature" },
         ] },
       { n: "e", title: "Package", why: "",
         cards: [
@@ -838,7 +852,8 @@ const VIDEOS = {
           { key: "ascent/music", tag: "me", title: "Music picked",
             body: "music.mp3 + music-license.txt into the assets folder (brand tracks, −18 to −22dB under voice). Mark done when in place." },
           { key: "ascent/assemble", tag: "agent", title: "Assemble + review master",
-            body: "timeline.mjs + Remotion render the master. Watch once against the pacing rules. Mark done = release candidate." },
+            body: "timeline.mjs + Remotion render the master. Watch once against the pacing rules. Mark done = release candidate.",
+            player: "ascent" },
         ] },
       { n: "e", title: "Package", why: "",
         cards: [
@@ -1519,6 +1534,55 @@ async function openStills(video) {
     `${data.stills.length} still(s) · ${data.clips.length} clip(s). Weak ones? Name the ` +
     "beats in session and they regenerate for pennies. When every beat holds up, mark " +
     "the card done — that click is the go signal for the next spend."));
+}
+
+// ── render player — watch the master + shorts from the card ─────────────────
+// /api/renders lists what exists; /api/render streams with Range support so
+// seeking works even on a multi-hundred-MB master.
+async function openPlayer(video) {
+  const overlay = document.getElementById("playerview");
+  const body = document.getElementById("playerBody");
+  const meta = document.getElementById("playerMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.textContent = "loading…";
+  const r = await fetch(`/api/renders?week=${WEEK}&video=${video}`).catch(() => null);
+  if (!r || !r.ok) {
+    let why = "nothing rendered yet";
+    try { why = (await r.json()).error || why; } catch (e) { /* keep default */ }
+    body.textContent = `${why} — renders appear here the moment Remotion finishes.`;
+    return;
+  }
+  const data = await r.json();
+  const files = [...data.masters, ...data.shorts];
+  body.replaceChildren();
+  if (!files.length) {
+    body.textContent = "nothing rendered yet — renders appear here the moment Remotion finishes.";
+    return;
+  }
+  const player = document.createElement("video");
+  player.controls = true;
+  player.style.cssText = "width:100%;max-height:70vh;border-radius:10px;background:#000";
+  const row = el("div", "pickRow");
+  const src = (f) => `/api/render?week=${WEEK}&video=${video}&file=${encodeURIComponent(f)}`;
+  const buttons = [];
+  const select = (f, btn) => {
+    player.src = src(f);
+    player.play().catch(() => {});
+    for (const b of buttons) b.classList.toggle("chosen", b === btn);
+    meta.textContent = `${video} video · week of ${WEEK} · ${f}`;
+  };
+  for (const f of files) {
+    const b = el("button", "mark", f.replace(/\.mp4$/, ""));
+    b.onclick = () => select(f, b);
+    buttons.push(b);
+    row.append(b);
+  }
+  body.append(player, row, el("div", "sr",
+    "Newest master first, then the shorts. Watch against the pacing rules " +
+    "(every beat moves, no hold over ~12s, no repeated clip); name any weak " +
+    "beat in session and it regenerates. Mark the card done when it's a release candidate."));
+  select(files[0], buttons[0]);
 }
 
 async function openFacts(video) {
@@ -3034,7 +3098,7 @@ function stepCard(c, next, st) {
   if (c.finder) attachFinderRuns(card, c);
   if (c.livecheck) attachLiveCheck(card, c, done);
   const checkable = c.key && !c.info && c.tag !== "todo";
-  if (c.read || c.qa || c.ideas || c.audio || c.stills || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
+  if (c.read || c.qa || c.ideas || c.audio || c.stills || c.player || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
     const row = el("div", "doneRow");
     if (c.read) {
       const r = el("button", "mark read", `📖 ${c.read}`);
@@ -3070,6 +3134,11 @@ function stepCard(c, next, st) {
       const sv = el("button", "mark read", "🖼 review the beat visuals");
       sv.onclick = () => openStills(c.stills);
       row.append(sv);
+    }
+    if (c.player) {
+      const pv = el("button", "mark read", "▶ watch the renders");
+      pv.onclick = () => openPlayer(c.player);
+      row.append(pv);
     }
     if (c.gate) {
       const g = el("button", "mark read", "🚪 open the gate — see the evidence");

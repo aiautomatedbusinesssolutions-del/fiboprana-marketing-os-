@@ -736,6 +736,31 @@ def narration_audio(week, video):
 
 
 _STILL_FILE_RE = re.compile(r"^beat-[A-Za-z0-9_-]+\.png$")
+_RENDER_FILE_RE = re.compile(r"^(master-v\d+|short-s\d+)\.mp4$")
+
+
+def renders_listing(week, video):
+    """The rendered master(s) + shorts for this week's lane, newest master
+    first — feeds the card's watch overlay (founder ask 2026-08-28)."""
+    slug, d = _production_dir(week, video)
+    masters = sorted((p.name for p in d.glob("master-v*.mp4")),
+                     key=lambda n: int(re.search(r"v(\d+)", n).group(1)),
+                     reverse=True)
+    shorts = sorted(p.name for p in d.glob("short-s*.mp4"))
+    return {"slug": slug, "masters": masters, "shorts": shorts}
+
+
+def render_video_path(week, video, filename):
+    """Absolute path of one rendered mp4, filename whitelisted (no traversal).
+    Returned as a path (not bytes): renders are hundreds of MB, so both doors
+    stream them with Range support instead of loading into memory."""
+    if not _RENDER_FILE_RE.match(filename or ""):
+        raise ValueError("bad render filename")
+    _slug, d = _production_dir(week, video)
+    f = d / filename
+    if not f.is_file():
+        raise LookupError(f"no such render: {filename}")
+    return f
 
 
 def stills_listing(week, video):
@@ -2116,6 +2141,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, data, "image/png")
             except (ValueError, LookupError) as e:
                 return self._json(404, {"error": str(e)})
+        if parsed.path == "/api/renders":
+            q = dict(urllib.parse.parse_qsl(parsed.query))
+            try:
+                return self._json(200, renders_listing(q.get("week", ""), q.get("video", "")))
+            except (ValueError, LookupError) as e:
+                return self._json(404, {"error": str(e)})
+        if parsed.path == "/api/render":
+            q = dict(urllib.parse.parse_qsl(parsed.query))
+            try:
+                f = render_video_path(q.get("week", ""), q.get("video", ""), q.get("file", ""))
+            except (ValueError, LookupError) as e:
+                return self._json(404, {"error": str(e)})
+            return self._send_file_range(f, "video/mp4")
         if parsed.path.startswith("/api/"):
             name = parsed.path[len("/api/"):].strip("/")
             if name in STATE_FILES:
@@ -2148,6 +2186,46 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, code, data):
         return self._send(code, json.dumps(data, default=str).encode("utf-8"),
                           "application/json")
+
+    def _send_file_range(self, path, ctype):
+        """Stream a large file with HTTP Range support so <video> can seek —
+        renders are hundreds of MB and never belong in memory whole."""
+        size = path.stat().st_size
+        start, end = 0, size - 1
+        m = re.match(r"bytes=(\d*)-(\d*)$", self.headers.get("Range", "") or "")
+        partial = bool(m and (m.group(1) or m.group(2)))
+        if partial:
+            if m.group(1):
+                start = int(m.group(1))
+                if m.group(2):
+                    end = min(int(m.group(2)), size - 1)
+            else:  # suffix range: last N bytes
+                start = max(0, size - int(m.group(2)))
+            if start >= size:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.end_headers()
+                return
+        length = end - start + 1
+        self.send_response(206 if partial else 200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(length))
+        if partial:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.end_headers()
+        with path.open("rb") as fh:
+            fh.seek(start)
+            remaining = length
+            while remaining > 0:
+                chunk = fh.read(min(1024 * 512, remaining))
+                if not chunk:
+                    break
+                try:
+                    self.wfile.write(chunk)
+                except (ConnectionError, BrokenPipeError):
+                    return  # player closed / seeked away — normal
+                remaining -= len(chunk)
 
     def _send(self, code, body, ctype):
         self.send_response(code)
