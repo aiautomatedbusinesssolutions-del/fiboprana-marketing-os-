@@ -701,6 +701,35 @@ def post_fleet_controls(body):
     return state
 
 
+# Production repo (the faceless chain) — narration + rendered assets live there.
+# Default: the sibling "Fiboprana Marketing" repo; override with PRODUCTION_REPO.
+PRODUCTION_ASSETS = Path(os.environ.get(
+    "PRODUCTION_REPO",
+    str(Path(__file__).resolve().parent.parent.parent / "Fiboprana Marketing"),
+)) / "content" / "videos" / "assets"
+
+
+def narration_audio(week, video):
+    """(filename, mp3 bytes) of the LATEST narration render for this week's
+    lane (founder ask 2026-08-28: listen from the card, not the filesystem).
+    The production slug is derived from the script card's file name
+    (videos/scripts/<slug>.md), so this lights up the moment a script lands."""
+    if not (WEEK_RE.match(week) and VIDEO_RE.match(video)):
+        raise ValueError("bad week/video")
+    slot = read_state(VIDEO_IDEAS).get(week, {}).get(video) or {}
+    file = (slot.get("script") or {}).get("file") or ""
+    slug = re.sub(r"-\d{4}-\d{2}-\d{2}$", "", Path(file).stem)
+    if not slug:
+        raise LookupError("no script on the card yet, so no production slug to look under")
+    d = PRODUCTION_ASSETS / slug
+    versions = list(d.glob("narration-v*.mp3")) if d.is_dir() else []
+    if not versions:
+        raise LookupError(f"no narration rendered yet for '{slug}'")
+    versions.sort(key=lambda p: int(re.search(r"v(\d+)$", p.stem).group(1)))
+    latest = versions[-1]
+    return latest.name, latest.read_bytes()
+
+
 def post_video_ideas(body):
     """Two founder writes on the week's video state: pick an idea, or leave
     script feedback. The ideas/facts/script themselves are drafted in session
@@ -2036,6 +2065,13 @@ class Handler(BaseHTTPRequestHandler):
             if deck.is_file():
                 return self._send(200, deck.read_bytes(), "text/html; charset=utf-8")
             return self._send(404, b"no such deck", "text/plain")
+        if parsed.path == "/api/narration":
+            q = dict(urllib.parse.parse_qsl(parsed.query))
+            try:
+                _name, data = narration_audio(q.get("week", ""), q.get("video", ""))
+                return self._send(200, data, "audio/mpeg")
+            except (ValueError, LookupError) as e:
+                return self._json(404, {"error": str(e)})
         if parsed.path.startswith("/api/"):
             name = parsed.path[len("/api/"):].strip("/")
             if name in STATE_FILES:

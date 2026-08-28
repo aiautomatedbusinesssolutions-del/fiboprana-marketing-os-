@@ -77,6 +77,18 @@ def aid_deck(name):
     return Response(deck.read_bytes(), mimetype="text/html")
 
 
+@bp.get("/api/narration")
+def api_narration():
+    # Binary route, registered before the generic /api handler resolves it:
+    # Flask prefers the static rule, so this wins over /api/<path:name>.
+    try:
+        _name, data = fleet_dash.narration_audio(
+            request.args.get("week", ""), request.args.get("video", ""))
+    except (ValueError, LookupError) as e:
+        return _json({"error": str(e)}, 404)
+    return Response(data, mimetype="audio/mpeg")
+
+
 @bp.get("/api/<path:name>")
 def api_get(name):
     if name in fleet_dash.STATE_FILES:

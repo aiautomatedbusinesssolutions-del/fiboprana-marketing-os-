@@ -448,6 +448,17 @@
   </div>
 </div>
 
+<div id="audio" class="overlay">
+  <div class="panel">
+    <div class="rhead">
+      <h2>Narration</h2>
+      <span class="meta" id="audioMeta"></span>
+      <button class="close" onclick="closeOverlays()">✕ close</button>
+    </div>
+    <div id="audioBody"></div>
+  </div>
+</div>
+
 <!-- ═══ Fact verification report — read before scripting ═══ -->
 <div id="facts" class="overlay">
   <div class="panel">
@@ -697,7 +708,8 @@ const VIDEOS = {
       { n: "c", title: "Produce", why: "The faceless chain — audio first, every beat gets motion, founder reviews between stages.",
         cards: [
           { key: "news/narrate", tag: "agent", title: "Narrate + timings",
-            body: "Voice clone reads the approved script verbatim (narrate.mjs), then transcribe + durations pin every beat's clip length to the real audio. Listen through ONCE — flag flat or rushed lines for a re-render — then mark done." },
+            body: "Voice clone reads the approved script verbatim (narrate.mjs), then transcribe + durations pin every beat's clip length to the real audio. Listen through ONCE — flag flat or rushed lines for a re-render — then mark done.",
+            audio: "news" },
           { key: "news/visuals", tag: "agent", title: "Stills + clips",
             body: "stills.mjs generates every beat (style tail appended; end_scene beats get both frames), animate.mjs adds motion (camera-first prompts; FLF beats via Kling). Review the contact sheet; delete weak ones and re-run — stills are pennies. Mark done when every beat holds up." },
           { key: "news/assemble", tag: "agent", title: "Assemble + review master",
@@ -752,7 +764,8 @@ const VIDEOS = {
       { n: "c", title: "Produce", why: "Hybrid: generated visuals + real screen clips of the feature.",
         cards: [
           { key: "feature/narrate", tag: "agent", title: "Narrate + timings",
-            body: "Voice clone reads the approved script verbatim; transcribe + durations pin every beat's clip length to the real audio. Listen through once, flag re-renders, mark done." },
+            body: "Voice clone reads the approved script verbatim; transcribe + durations pin every beat's clip length to the real audio. Listen through once, flag re-renders, mark done.",
+            audio: "feature" },
           { key: "feature/visuals", tag: "agent", title: "Stills + clips + screen capture",
             body: "Generated beats through stills.mjs/animate.mjs (camera-first); demo beats are screen captures of the worked-example run. Review the contact sheet; regenerate weak ones. Mark done when every beat holds up." },
           { key: "feature/assemble", tag: "agent", title: "Assemble + review master",
@@ -800,7 +813,8 @@ const VIDEOS = {
       { n: "c", title: "Produce", why: "The faceless chain — audio first, every beat gets motion.",
         cards: [
           { key: "ascent/narrate", tag: "agent", title: "Narrate + timings",
-            body: "Voice clone reads the approved script verbatim; transcribe + durations pin every beat's clip length to the real audio. Listen through once, flag re-renders, mark done." },
+            body: "Voice clone reads the approved script verbatim; transcribe + durations pin every beat's clip length to the real audio. Listen through once, flag re-renders, mark done.",
+            audio: "ascent" },
           { key: "ascent/visuals", tag: "agent", title: "Stills + clips",
             body: "Every beat through stills.mjs/animate.mjs (style tail, camera-first motion; end_scene beats via the FLF model). Review the contact sheet; regenerate weak ones. Mark done when every beat holds up." },
           { key: "ascent/assemble", tag: "agent", title: "Assemble + review master",
@@ -1411,6 +1425,35 @@ function renderIdeas(body, video, slot) {
 // ── the fact-verification report ────────────────────────────────────────────
 // Written into video_ideas.json under <video>.facts by the verifying agent
 // (in-session today; a dispatched fleet agent once the drain job exists).
+// ── narration player — the founder's ear-check, right on the card ───────────
+// Streams the LATEST narration-vN.mp3 from the production repo via
+// /api/narration (both doors). 404 = no script/narration yet; say so plainly.
+async function openAudio(video) {
+  const overlay = document.getElementById("audio");
+  const body = document.getElementById("audioBody");
+  const meta = document.getElementById("audioMeta");
+  overlay.classList.add("open");
+  meta.textContent = `${video} video · week of ${WEEK}`;
+  body.replaceChildren();
+  const url = `/api/narration?week=${WEEK}&video=${video}`;
+  const head = await fetch(url).catch(() => null);
+  if (!head || !head.ok) {
+    let why = "no narration rendered yet";
+    try { why = (await head.json()).error || why; } catch (e) { /* keep default */ }
+    body.textContent = `${why} — it appears here the moment narrate.mjs runs.`;
+    return;
+  }
+  const player = document.createElement("audio");
+  player.controls = true;
+  player.src = url;
+  player.style.width = "100%";
+  body.append(player);
+  body.append(el("div", "sr",
+    "Latest render, streamed from the production repo. Flag flat or rushed lines " +
+    "in session for a re-render; when it sounds right, mark the card done — " +
+    "that click is the go signal for the stills + clips spend."));
+}
+
 async function openFacts(video) {
   const overlay = document.getElementById("facts");
   const body = document.getElementById("factsBody");
@@ -2924,7 +2967,7 @@ function stepCard(c, next, st) {
   if (c.finder) attachFinderRuns(card, c);
   if (c.livecheck) attachLiveCheck(card, c, done);
   const checkable = c.key && !c.info && c.tag !== "todo";
-  if (c.read || c.qa || c.ideas || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
+  if (c.read || c.qa || c.ideas || c.audio || c.facts || c.script || c.example || c.deck || c.thumbs || c.pkg || c.xbatch || c.email || c.go || checkable) {
     const row = el("div", "doneRow");
     if (c.read) {
       const r = el("button", "mark read", `📖 ${c.read}`);
@@ -2950,6 +2993,11 @@ function stepCard(c, next, st) {
       const i = el("button", "mark read", "🎬 pick from the ideas");
       i.onclick = () => openIdeas(c.ideas);
       row.append(i);
+    }
+    if (c.audio) {
+      const a = el("button", "mark read", "🎧 listen to the narration");
+      a.onclick = () => openAudio(c.audio);
+      row.append(a);
     }
     if (c.gate) {
       const g = el("button", "mark read", "🚪 open the gate — see the evidence");
