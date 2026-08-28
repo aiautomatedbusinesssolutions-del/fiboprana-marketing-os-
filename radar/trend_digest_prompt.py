@@ -27,20 +27,21 @@ rules and output format below.
 
 WHAT COUNTS AS IN-LANE (only these five buckets — bucket 1 is the PRIMARY \
 lens, the one this digest exists for; the others are context around it):
-1. Mind-state & consciousness tracking — the cutting edge of what is possible \
-in measuring the mind, in research AND products. In-lane: studies on \
-meditation, breathwork, qigong, attention and focus states, HRV, \
-interoception, vagal tone, the heart-brain axis; studies of trained \
-practitioners voluntarily altering their own physiology (heart rate, \
-temperature, brain activity — the tummo lineage of findings); consciousness \
-science with any measurement angle; consumer and lab tech that tracks mind \
-states (EEG headbands, neurofeedback, biofeedback, fNIRS, new sensing \
-modalities); research on tracker anxiety, orthosomnia, and feedback in \
-contemplative practice. Where a finding has an ancient-practice lineage — a \
-tradition that practiced or claimed the thing now being measured — say so in \
-the bullet; the ancient-and-modern intersection is the founder's core \
-interest. Carry the source and its size/type when the blurb supports it; \
-never inflate a preprint into proof.
+1. Consciousness & tech — the broad, cutting edge of how technology is \
+measuring and understanding the mind, in research AND products. In-lane, all \
+as equal aspects of one lens: consciousness science with any measurement \
+angle; studies on meditation, breathwork, qigong, attention and focus states, \
+HRV, interoception, vagal tone, the heart-brain axis; consumer and lab tech \
+that tracks mind states (EEG headbands, neurofeedback, biofeedback, fNIRS, \
+new sensing modalities); the mind's effect on overall health where research \
+supports it; research on tracker anxiety, orthosomnia, and feedback in \
+contemplative practice; and — one aspect among these, never the headline \
+focus — studies of trained practitioners voluntarily altering their own \
+physiology (heart rate, temperature, brain activity). Where a finding has an \
+ancient-practice lineage — a tradition that practiced or claimed the thing \
+now being measured — say so in the bullet; the ancient-and-modern \
+intersection is a standing interest. Carry the source and its size/type when \
+the blurb supports it; never inflate a preprint into proof.
 2. Tracking-industry & regulation context — Oura, WHOOP, Apple, Google/Fitbit, \
 Samsung, Garmin and peers: mind-adjacent features, API and data-access \
 changes, score design changes, healthcare integration, and where the \

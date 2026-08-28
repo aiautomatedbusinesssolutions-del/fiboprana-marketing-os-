@@ -731,19 +731,16 @@ const VIDEOS = {
   feature: {
     title: "Story video 2", sub: "evergreen pick · 3–5 min master",
     stages: [
-      { n: "a", title: "Prep", why: "The screens have to exist to film them.",
+      { n: "a", title: "Prep", why: "Evergreen story: an ancient practice, how modern people understand it (or don't), ideally with a twist.",
         cards: [
-          { key: "feature/live", tag: "me", title: "Tool is live",
-            body: "Blocks everything below. Auto-checks the ideas registry: once the idea's Build gate says live, this flips done by itself.",
-            livecheck: true },
-          { key: "feature/example", tag: "me", title: "Pick the worked example",
-            body: "One run of the tool that best shows the payoff — narration matches the screen. Proposes itself the moment the build is marked done (wire 12), built from the tool's own source so the on-screen copy is exact. View it here, leave feedback if you want a different run, then mark done — that click fires the script agent.",
-            example: "feature" },
+          { key: "feature/topic", tag: "me", title: "Pick the story",
+            body: "Three evergreen ancient-practice story options, drafted from the research and the backlog. Legend told as legend, record as record; the best ones carry a twist. Pick one, then mark done. (The old tool-is-live gate is parked with the feature era.)",
+            ideas: "feature" },
         ] },
-      { n: "b", title: "Script", why: "Written against the real, built tool — never the build brief.",
+      { n: "b", title: "Script", why: "Every claim verified at scripting; legend labeled as legend.",
         cards: [
           { key: "feature/script", tag: "agent", title: "Rundown + outline",
-            body: "Agent scripts from the shipped page's real copy, read straight from the product repo. Brand-thread close. Read it, leave feedback until it sounds like you — and glance at the demo beat against the live tool once (the worked-example run makes you do this anyway) — then mark done. Your done here IS the founder pass: deck, thumbnails, package and the long-form X post generate themselves from it, and the script stays right here for recording.",
+            body: "Rundown + beats for the picked story, with sources for every factual claim and the brand-thread close. Read it, leave feedback until it sounds like you, then mark done — your done here IS the founder pass.",
             script: "feature" },
         ] },
       { n: "c", title: "Deck", why: "Same kit as the news video.",
@@ -752,10 +749,10 @@ const VIDEOS = {
             body: "Branded HTML deck for the non-demo beats (the demo IS the screen). View it here, flip through with arrow keys, leave feedback, mark done when it's right.",
             deck: "feature" },
         ] },
-      { n: "d", title: "Record", why: "Demo the real tool on screen.",
+      { n: "d", title: "Produce", why: "Faceless chain in the sibling repo — narrate, stills, animate, assemble.",
         cards: [
-          { key: "feature/record", tag: "me", title: "Record the video",
-            body: "Screen-capture the worked example run for the demo beat; the deck carries the rest. Mark done when it's recorded — that moves the flow to Package." },
+          { key: "feature/record", tag: "me", title: "Produce the video",
+            body: "Run the approved script through the production chain in Fiboprana Marketing (narrate, stills, animate, timeline, render). Mark done when the master is rendered — that moves the flow to Package." },
         ] },
       { n: "e", title: "Package", why: "",
         cards: [
@@ -763,7 +760,7 @@ const VIDEOS = {
             body: "Prompts (2 proven styles + 1 experiment; with/without face space); you generate, bring results to chat, we pick + iterate there.",
             thumbs: "feature" },
           { key: "feature/desc", tag: "agent", title: "Description + tags + community post",
-            body: "Description links the live tool — that's the SEO landing. View the whole upload package here, leave feedback, mark done.",
+            body: "youtube_description.md format — carries the story, bridges to Fiboprana with the tracked link. View the whole upload package here, leave feedback, mark done.",
             pkg: "feature" },
         ] },
       { n: "f", title: "Ship", why: "",
