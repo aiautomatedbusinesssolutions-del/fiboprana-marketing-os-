@@ -49,6 +49,12 @@ angles, not three phrasings of one story. If the week is dominated by one \
 thread, one option may take the thread head-on, but the other two must find \
 different in-lane stories.
 
+CARRYOVER: the user message may include a CARRYOVER block of ideas from last \
+week that the founder neither picked nor passed on. Include each of them in \
+your three options VERBATIM (same id, title, story, angle, strength, risk) \
+unless this week's digest makes one stale, and draft only the remaining \
+slots fresh. A carried idea competes for the star like any other.
+
 DEDUP: you receive the titles of recent videos and past weekly picks. Do not \
 re-pitch a story a recent video already covered unless there is a real NEW \
 development this week - and then the story field must lead with what changed, \

@@ -720,6 +720,20 @@ def post_video_ideas(body):
             raise ValueError("no such idea drafted for that week/video")
         slot["picked"] = picked
         slot["picked_at"] = _now()
+    elif "passed" in body:
+        # Founder passes on a drafted idea (founder call 2026-08-28): unpicked,
+        # un-passed ideas CARRY OVER into next week's slate; a pass drops one
+        # from the carry-over. body.undo brings a passed idea back.
+        target = body["passed"]
+        if not (IDEA_ID_RE.match(target)
+                and any(i.get("id") == target for i in slot.get("ideas", []))):
+            raise ValueError("no such idea drafted for that week/video")
+        passed = set(slot.get("passed") or [])
+        if body.get("undo"):
+            passed.discard(target)
+        else:
+            passed.add(target)
+        slot["passed"] = sorted(passed)
     elif "thumb_pick" in body:
         # Which thumbnail prompt won the render round — recorded at decision
         # time (founder call 2026-08-11). Studio only ever sees the ONE

@@ -302,6 +302,8 @@
             border: 1px solid var(--card-edge); color: var(--ink); background: rgba(255,255,255,.06); }
   .wkchip.now { background: var(--emerald); border-color: var(--emerald); color: #06130e; }
   .overlay .idea.starred { border-color: var(--amber); }
+  .overlay .idea.passed { opacity: .45; }
+  .overlay .mark.pass { border-color: var(--card-edge); color: var(--ink-dim); margin-left: 8px; }
   .overlay .idea.chosen { border-color: var(--emerald); box-shadow: 0 0 0 1px var(--emerald); }
   .overlay .idea .ihead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
   .overlay .idea .ihead .ititle { font-weight: 600; font-size: 16px; }
@@ -736,6 +738,9 @@ const VIDEOS = {
           { key: "feature/live", tag: "me", title: "Feature is ready to show",
             body: "Blocks everything below. Auto-checks the ideas registry: once the gated idea's Build stage says live, this flips done by itself — or mark it done yourself when the feature you're trying out is ready to put on screen.",
             livecheck: true },
+          { key: "feature/topic", tag: "me", title: "Pick the video angle",
+            body: "Once a feature is gated, three ways to market THIS feature get drafted here (in session for now) — e.g. demo-led, pain-story-led, build-in-public — each shaped for the production tools we have (generated visuals + real feature clips). Pick one, then mark done.",
+            ideas: "feature" },
           { key: "feature/example", tag: "me", title: "Pick the worked example",
             body: "The one run of the feature that best shows the payoff — narration matches what's on screen. Proposes itself when the build is marked done (wire 12). View it, leave feedback if you want a different run, then mark done — that fires the script step.",
             example: "feature" },
@@ -1367,22 +1372,41 @@ function renderIdeas(body, video, slot) {
     card.append(el("div", "sr", `Strength: ${idea.strength}  ·  Risk: ${idea.risk}`));
     if (idea.id === slot.starred && slot.why_star)
       card.append(el("div", "why", `★ why: ${slot.why_star}`));
+    const isPassed = (slot.passed || []).includes(idea.id);
+    if (isPassed) card.classList.add("passed");
     if (idea.id !== slot.picked) {
       const row = el("div", "pickRow");
-      const b = el("button", "mark", slot.picked ? "switch to this one" : "✓ pick this one");
-      b.onclick = async () => {
-        b.textContent = "saving…";
+      if (!isPassed) {
+        const b = el("button", "mark", slot.picked ? "switch to this one" : "✓ pick this one");
+        b.onclick = async () => {
+          b.textContent = "saving…";
+          try {
+            const r = await fetch("/api/video_ideas", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ week: WEEK, video, picked: idea.id }),
+            });
+            const s = await r.json();
+            if (!r.ok) throw new Error(s.error || `HTTP ${r.status}`);
+            renderIdeas(body, video, s);
+          } catch (e) { b.textContent = `failed: ${e.message}`; }
+        };
+        row.append(b);
+      }
+      // Unpicked ideas carry over into next week's slate; a pass drops one.
+      const p = el("button", "mark pass", isPassed ? "↩ bring it back" : "✗ pass — don't carry over");
+      p.onclick = async () => {
+        p.textContent = "saving…";
         try {
           const r = await fetch("/api/video_ideas", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ week: WEEK, video, picked: idea.id }),
+            body: JSON.stringify({ week: WEEK, video, passed: idea.id, undo: isPassed }),
           });
           const s = await r.json();
           if (!r.ok) throw new Error(s.error || `HTTP ${r.status}`);
           renderIdeas(body, video, s);
-        } catch (e) { b.textContent = `failed: ${e.message}`; }
+        } catch (e) { p.textContent = `failed: ${e.message}`; }
       };
-      row.append(b);
+      row.append(p);
       card.append(row);
     }
     body.append(card);
