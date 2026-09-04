@@ -6,6 +6,7 @@ so we don't fetch and discard.
 """
 
 import json
+import re
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -28,8 +29,17 @@ def search(query, hits_per_query=20, lookback_days=30):
     with urllib.request.urlopen(req, timeout=20) as r:
         data = json.loads(r.read().decode("utf-8"))
 
+    # Algolia typo-tolerance makes short queries match near-anything ("Oura" ->
+    # "our", "HRV" -> "HRM"), and search_by_date then hands back the 20 newest of
+    # those. Keep only hits where the query actually appears as a whole word in
+    # the title or story text (2026-09-03 fix: the front page was leaking in).
+    word = re.compile(r"(?<![A-Za-z0-9])" + re.escape(query) + r"(?![A-Za-z0-9])", re.I)
+
     items = []
     for hit in data.get("hits", []):
+        haystack = f"{hit.get('title') or ''} {hit.get('story_text') or ''}"
+        if not word.search(haystack):
+            continue
         # External link when present; fall back to the HN comments page.
         story_url = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID')}"
         if not story_url:

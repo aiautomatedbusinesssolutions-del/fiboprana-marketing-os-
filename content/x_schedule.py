@@ -41,7 +41,7 @@ import os  # noqa: E402  (after load_dotenv so the key is present)
 API_BASE = "https://api.typefully.com/v2"
 # Fiboprana's Typefully social set (X only) — set TYPEFULLY_SOCIAL_SET_ID in
 # .env once the account is connected; 0 means not configured yet.
-SOCIAL_SET = int(os.getenv("TYPEFULLY_SOCIAL_SET_ID", "0"))
+SOCIAL_SET = int(os.getenv("TYPEFULLY_SOCIAL_SET_ID") or "0")  # blank in .env must not crash the import
 X_BATCH_STATE = ROOT / "fleet" / "x_batch.json"
 MT = ZoneInfo("America/Denver")
 SLOT_HOURS = (12, 17)  # first and second post of each day, Mountain time

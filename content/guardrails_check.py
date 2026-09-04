@@ -164,3 +164,35 @@ def check_idea_against_guardrails(title, description, model="claude-sonnet-4-6")
             "rules_violated": [],
             "explanation": str(e),
         }
+
+
+# ---------------------------------------------------------------------------
+# Offline pre-check (added 2026-09-03). The model check above needs an LLM key;
+# this is the cheap floor that runs anywhere: a regex pass for the phrasings the
+# wellness line (wiki compliance/advice-line) bans outright plus the AI-tell
+# floor (voice-guardrails). Advisory, never a gate: it flags for a human to
+# read, it does not decide. Returns a list of {rule, match} dicts; empty = clean.
+import re as _re
+
+_OFFLINE_RULES = [
+    ("L1 disease claim", r"(cure[sd]?|heals?|diagnos(e|es|is|ing)|treat(s|ment)? (your|the) (anxiety|depression|insomnia|stress|condition|disease)|prevents? (disease|illness|burnout))"),
+    ("L2 health-outcome claim", r"(reduc(e|es|ing) (your )?(anxiety|depression|stress|cortisol)|lower(s|ing)? (your )?cortisol|improv(e|es|ing) (your )?sleep by|clinically proven|doctor[- ]recommended|medical[- ]grade)"),
+    ("L3 measurement claim", r"(measur(e|es|ing) (your|their) (stress|emotions?|mind|consciousness|mental state|calm|focus)|detects? (your )?(stress|emotions?|mood))"),
+    ("L5 uniqueness claim", r"(the only (app|tool|product)|first[- ]ever|nothing (else )?tracks the mind|no one else)"),
+    ("P1 score framing", r"(your (readiness|recovery|sleep|stress) score|you'?re at \d+%|daily grade|rank(s|ed|ing)? you)"),
+    ("P2 optimization/streak pressure", r"(streak|leaderboard|crush your goals|falling behind|optimi[sz]e your (mind|sleep|life|body)|biohack)"),
+    ("P3 FOMO/urgency", r"(limited time|act now|don'?t miss|risk[- ]free|only \d+ (spots|left))"),
+    ("voice: em dash", r"—"),
+    ("voice: 'not just X, it's Y'", r"not just [^.,;]{1,40}, (it'?s|it is|but)"),
+    ("voice: filler", r"(in fact|indeed|moreover)"),
+    ("voice: bare 'practice' in public copy", r"practice"),
+]
+
+
+def check_text_offline(text):
+    """Keyless regex pass over one piece of public copy. Advisory only."""
+    hits = []
+    for rule, pattern in _OFFLINE_RULES:
+        for m in _re.finditer(pattern, text or "", _re.I):
+            hits.append({"rule": rule, "match": m.group(0)})
+    return hits

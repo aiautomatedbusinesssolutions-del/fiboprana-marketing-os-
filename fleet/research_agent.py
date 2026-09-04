@@ -26,6 +26,7 @@ from radar.exa_client import get_exa_client, RadarConfigError
 from radar.routes import _generate_trend_digest
 
 from fleet import llm, research_verify, store
+from fleet import wiki  # noqa: E402
 from fleet.supabase import SupabaseError
 from fleet.content_pull_prompt import CONTENT_PULL_SYSTEM_PROMPT
 
@@ -110,13 +111,18 @@ def _parse_pull_json(text):
 
 
 def _shipped_features_block():
-    """The live-product inventory (content/SHIPPED_FEATURES.md) for the
-    shipped-product dedup rule (prompt v1.7). Missing file degrades to a
-    labeled absence rather than failing the run."""
-    path = Path(__file__).resolve().parent.parent / "content" / "SHIPPED_FEATURES.md"
+    """The live-product inventory for the shipped-product dedup rule (prompt v1.7).
+    Fiboprana keeps it in the wiki (product/feature-inventory, which declares
+    content_pull as a consumer), not in the engine's old content/SHIPPED_FEATURES.md
+    (re-pointed 2026-09-03; the old path never existed in this clone and the
+    fallback string hid it). A missing page degrades to a labeled absence and a
+    stderr warning, never a failed run."""
+    import sys
     try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
+        return wiki.load("product/feature-inventory")
+    except wiki.WikiError as e:
+        print(f"WARNING: wiki page 'product/feature-inventory' unavailable — content "
+              f"pull runs without the shipped inventory ({e})", file=sys.stderr)
         return "(shipped-features inventory unavailable this run)"
 
 

@@ -172,6 +172,17 @@ def write_report(idea, digest_md, claims, sources):
                                parse=parse, model=MODEL)
 
 
+def _fail(state, week, slot, msg):
+    """Pop the card's in-flight marker on an early failure and record why
+    (2026-09-03 walk: a failed plan step left the facts card 'checking' forever)."""
+    slot.pop("facts_generating_since", None)
+    slot["facts_last_error"] = msg[:300]
+    slot["facts_last_error_at"] = _now()
+    state.setdefault(week, {})["news"] = slot
+    write_state(state)
+    return f"facts: FAIL ({msg})"
+
+
 def run(week, dry_run=False):
     state = read_state()
     slot = state.get(week, {}).get("news")
@@ -187,12 +198,12 @@ def run(week, dry_run=False):
     digest_md = latest_digest_md()
     plan, gerr = plan_checks(idea, digest_md)
     if gerr:
-        return f"facts: FAIL (plan: {gerr})"
+        return _fail(state, week, slot, f"plan: {gerr}")
     print(f"claims: {len(plan['claims'])}, queries: {len(plan['queries'])}")
     sources = run_searches(plan["queries"])
     if len(sources) < 3:
-        return (f"facts: FAIL (only {len(sources)} usable sources fetched - "
-                "check EXA_API_KEY / the queries; card stays manual)")
+        return _fail(state, week, slot, f"only {len(sources)} usable sources fetched - "
+                     "check EXA_API_KEY / the queries; card stays manual")
     print(f"sources fetched: {len(sources)}")
     if dry_run:
         for s in sources:

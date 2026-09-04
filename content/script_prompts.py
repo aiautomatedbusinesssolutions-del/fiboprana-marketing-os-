@@ -39,7 +39,8 @@ optimization framing. No "the only / first ever / no one else". Scope \
 device claims to the viewer's own devices ("your ring tracks your body, \
 not your mind"), never "nothing tracks the mind". Never name capabilities \
 that have not shipped.
-- Never name or endorse competitor products beyond factual news reporting; \
+- Never name a competitor as the subject of a video, and never endorse or trash \
+one; category-level framing only; \
 respect the tools ("the ring you already own"), win on framing.
 - FACELESS FORMAT: every beat's narration is written VERBATIM (word for \
 word, no bullet outlines, no ad-lib notes) because a voice clone reads it \
@@ -49,11 +50,19 @@ painterly, sand ground, one gold mind element, one pine body element, \
 faceless silhouette figures, slow breathing motion).
 - Every video ends on the standing Fiboprana close: you already track your \
 body, and a number on a ring is not the same as knowing what is going on \
-inside; the goal is quiet proof that your practice is doing something, over \
+inside; the goal is quiet proof that your meditation (or the named method) is doing something, over \
 weeks, with no score and no grade, and you decide what it means. Then the \
 soft CTA and a reply-loop question ("Tell me below").
 - Output ONLY the markdown document, starting with "# " and the title. No \
 prose before or after, no code fences."""
+
+# The story rule lives in the business wiki (channels/youtube) so the founder edits it
+# there, never here. Fail-closed at import, same as the X prompts: no rule, no drafts.
+from fleet import wiki as _wiki  # noqa: E402
+_STORY_RULE = ("THE STORY RULE (from the business wiki, channels/youtube; binding for every "
+               "story, fact check, and script):\n" + _wiki.load("channels/youtube") + "\n\n")
+
+SCRIPT_SHARED_RULES = _STORY_RULE + SCRIPT_SHARED_RULES
 
 SCRIPT_NEWS_SYSTEM_PROMPT = f"""You draft the weekly NEWS video script for \
 Fiboprana: this week's mind-body, neurowellness, or wearable-world story \

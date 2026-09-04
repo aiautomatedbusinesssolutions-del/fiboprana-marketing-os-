@@ -13,3 +13,6 @@ mcp>=1.0
 # CPU by default; first run downloads a Whisper model. Pulls ctranslate2, av,
 # onnxruntime — the one heavy dependency, isolated to the video pipeline.
 faster-whisper>=1.0
+
+# Time zone database for zoneinfo on Windows (x_schedule / email_send use America/Denver).
+tzdata>=2024.1

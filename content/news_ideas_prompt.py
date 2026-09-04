@@ -109,3 +109,13 @@ this shape:
 Exactly 3 ideas. Each id is a short lowercase slug (letters only, 4-12 chars, \
 memorable, like "scoreanx" or "mindlayer"), all three distinct. starred must \
 be one of the three ids."""
+
+# The story rule lives in the business wiki (channels/youtube) so the founder edits it
+# there, never here. Fail-closed at import, same as the X prompts: no rule, no drafts.
+from fleet import wiki as _wiki  # noqa: E402
+_STORY_RULE = ("THE STORY RULE (from the business wiki, channels/youtube; binding for every "
+               "story, fact check, and script):\n" + _wiki.load("channels/youtube") + "\n\n")
+
+NEWS_IDEAS_SYSTEM_PROMPT = NEWS_IDEAS_SYSTEM_PROMPT.replace(
+    "OUTPUT: valid JSON only", _STORY_RULE + "OUTPUT: valid JSON only")
+assert _STORY_RULE in NEWS_IDEAS_SYSTEM_PROMPT

@@ -132,6 +132,26 @@ def write_week_state(posts, digest_row, batch_file):
     tmp.replace(X_BATCH_STATE)
 
 
+
+def _clear_generating_marker(error):
+    """The /week card sets generating_since before spawning us; on a failed run
+    pop it and leave the error on the slot so the overlay can say why instead
+    of 'drafting right now' forever (bug found on the 2026-09-03 walk)."""
+    monday = date.today() - timedelta(days=date.today().weekday())
+    try:
+        state = json.loads(X_BATCH_STATE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return
+    slot = state.get(str(monday))
+    if not isinstance(slot, dict) or slot.get("posts"):
+        return
+    slot.pop("generating_since", None)
+    slot["last_error"] = str(error)[:300]
+    slot["last_error_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    tmp = X_BATCH_STATE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    tmp.replace(X_BATCH_STATE)
+
 ECHO_THRESHOLD = 0.30  # shingle-overlap Jaccard above this = near-duplicate
 RECENT_BATCHES = 3     # how many past weekly batches form the no-echo corpus
 
@@ -198,10 +218,12 @@ def main():
         digest = load_latest_digest()
     except SupabaseError as e:
         print(f"Couldn't read the digest from Supabase: {e}", file=sys.stderr)
+        _clear_generating_marker(f"Couldn't read the digest from Supabase: {e}")
         return 1
     if digest is None:
         print("No research digest in Supabase. Run `python -m fleet.research_run` first.",
               file=sys.stderr)
+        _clear_generating_marker("No research digest in Supabase")
         return 1
     print(f"Using digest from {digest['generated_at']} (id {digest['id']}).")
 
@@ -235,6 +257,7 @@ def main():
                                user=user_message, max_tokens=6000, temperature=0.8)
     if err:
         print(err, file=sys.stderr)
+        _clear_generating_marker(err)
         return 1
     if result.truncated:
         print("Warning: response hit the token cap — the batch may be incomplete.",
@@ -245,6 +268,7 @@ def main():
         posts = content_utils.parse_weekly_x_response(raw, expected_count=args.count)
     except ValueError as e:
         print(f"AI response wasn't valid: {e}", file=sys.stderr)
+        _clear_generating_marker(f"AI response wasn't valid: {e}")
         return 1
 
     posts, drop_notes = drop_unpostable(posts, recent_posts)
@@ -252,6 +276,7 @@ def main():
         print(note, file=sys.stderr)
     if not posts:
         print("Every post was dropped (length/echo) - regenerate.", file=sys.stderr)
+        _clear_generating_marker("Every post was dropped (length/echo)")
         return 1
 
     # Auto-attach tracking: every CTA link reply leaves here as a

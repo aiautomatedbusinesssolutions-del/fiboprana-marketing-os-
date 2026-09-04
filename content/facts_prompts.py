@@ -20,7 +20,10 @@ sources for them (company press releases, the original articles, the actual \
 papers or preprints, regulator publications).
 
 Rules:
-- 4 to 8 claims, each one sentence, concrete and checkable.
+- 4 to 8 claims, each one sentence, concrete and checkable. Include the story's \
+ancient half: the tradition's claim the video will pair with the modern finding, \
+so a primary text in a named translation gets fetched and quoted, never paraphrased \
+from memory.
 - 3 to 5 queries, each targeting a different claim cluster or source type; \
 include company and product names verbatim; no quotes marks in queries.
 - NEVER use an em dash anywhere.
@@ -74,3 +77,14 @@ HARD RULES: NEVER an em dash anywhere. Wellness framing only: no cure/\
 treat/diagnose language, no health-outcome claims, no "measures your \
 stress". If the whole story collapses under checking, say DO NOT SCRIPT \
 YET and explain what is missing."""
+
+# The story rule lives in the business wiki (channels/youtube) so the founder edits it
+# there, never here. Fail-closed at import, same as the X prompts: no rule, no drafts.
+from fleet import wiki as _wiki  # noqa: E402
+_STORY_RULE = ("THE STORY RULE (from the business wiki, channels/youtube; binding for every "
+               "story, fact check, and script):\n" + _wiki.load("channels/youtube") + "\n\n")
+
+FACTS_VERIFY_SYSTEM_PROMPT = FACTS_VERIFY_SYSTEM_PROMPT.replace(
+    "FORMAT (markdown, mirror this structure exactly):",
+    _STORY_RULE + "FORMAT (markdown, mirror this structure exactly):")
+assert _STORY_RULE in FACTS_VERIFY_SYSTEM_PROMPT

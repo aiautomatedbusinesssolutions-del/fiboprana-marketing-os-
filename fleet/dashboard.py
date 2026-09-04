@@ -865,11 +865,18 @@ def post_video_ideas(body):
         if not (text and len(text) <= 4000):
             raise ValueError("feedback must be 1-4000 chars")
         target = body.get("target", "script")
-        if target not in ("script", "deck", "pkg", "example", "xpost"):
-            raise ValueError("target must be script | deck | pkg | example | xpost")
-        if target not in slot:
-            raise ValueError(f"no {target} drafted yet")
-        slot[target].setdefault("feedback", []).append({"at": _now(), "text": text})
+        if target not in ("script", "deck", "pkg", "example", "xpost", "ideas"):
+            raise ValueError("target must be script | deck | pkg | example | xpost | ideas")
+        if target == "ideas":
+            # Feedback on the story slate itself (founder ask 2026-09-03: the
+            # ideas overlay had no box). ideas is a list, so notes live beside it.
+            if not slot.get("ideas"):
+                raise ValueError("no ideas drafted yet")
+            slot.setdefault("ideas_feedback", []).append({"at": _now(), "text": text})
+        else:
+            if target not in slot:
+                raise ValueError(f"no {target} drafted yet")
+            slot[target].setdefault("feedback", []).append({"at": _now(), "text": text})
     elif "approve" in body:
         # The founder's "ready to schedule" click on the long-form X post —
         # the gate the scheduling agent acts behind.

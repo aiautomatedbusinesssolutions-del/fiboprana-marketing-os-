@@ -86,6 +86,25 @@ def parse_issue(text):
     return issue, None
 
 
+
+def _clear_generating_marker(error):
+    """Pop the /week card's in-flight marker on a failed draft and record why
+    (bug found on the 2026-09-03 walk: a failed spawn read as 'drafting' forever)."""
+    monday = date.today() - timedelta(days=date.today().weekday())
+    try:
+        state = json.loads(EMAIL_STATE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return
+    slot = state.get(str(monday))
+    if not isinstance(slot, dict) or slot.get("pattern_md"):
+        return
+    slot.pop("generating_since", None)
+    slot["last_error"] = str(error)[:300]
+    slot["last_error_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    tmp = EMAIL_STATE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    tmp.replace(EMAIL_STATE)
+
 def write_week_slot(issue, digest_row):
     monday = date.today() - timedelta(days=date.today().weekday())
     try:
@@ -120,9 +139,11 @@ def main():
         digest = load_latest_digest()
     except SupabaseError as e:
         print(f"Couldn't read the digest from Supabase: {e}", file=sys.stderr)
+        _clear_generating_marker(f"Couldn't read the digest from Supabase: {e}")
         return 1
     if not digest:
         print("No research digest on record — run the research first.", file=sys.stderr)
+        _clear_generating_marker("No research digest on record — run the research first.")
         return 1
 
     user_message = build_user_message(digest["digest_md"])
@@ -134,11 +155,13 @@ def main():
                                user=user_message, max_tokens=2500, temperature=0.5)
     if err:
         print(f"Generation failed: {err}", file=sys.stderr)
+        _clear_generating_marker(f"Generation failed: {err}")
         return 1
 
     issue, parse_err = parse_issue(result.text)
     if parse_err:
         print(f"Bad issue from the model: {parse_err}", file=sys.stderr)
+        _clear_generating_marker(f"Bad issue from the model: {parse_err}")
         return 1
 
     week = write_week_slot(issue, digest)

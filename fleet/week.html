@@ -690,7 +690,7 @@ const OVERVIEW = [
       // in-session until an autonomous agent takes the step over. No time
       // estimate on cards — runtime/cost lives on the agent screens.
       { key: "decide/build", tag: "agent", title: "Build the tool",
-        body: "Only if the gate passed — Claude builds it in-session, you review: real component + on-brand FAQs + quiz/Pro hook + sitemap entry + its proxy.ts allowlist line (the page 307s without it)." },
+        body: "Only if the gate passed — Claude builds it in-session, you review: a real page in fiboprana-site (its own route + interactive component) + on-brand FAQs + the beta-list CTA + a sitemap entry once the site has one. Every word inside the wellness line; no scores, no assessment of the reader." },
     ],
   },
   {
@@ -1315,7 +1315,7 @@ async function openGate() {
     "The gate, in order: (1) registry — does the app already have this tool? then content instead. "
     + "(2) demand — one distinct search query it can own. (3) differentiation — prefer the "
     + "know-yourself angle over a generic calculator. (4) quality bar — only build if it can be a real "
-    + "interactive component with on-brand FAQs and the quiz/Pro hook. Your click above records the "
+    + "interactive component with on-brand FAQs and the beta-list CTA, inside the wellness line. Your click above records the "
     + "call and marks this card done — Claude fills the gate paperwork (registry match, query, "
     + "angle, quality bar) on the idea's page after."));
 }
@@ -1475,6 +1475,9 @@ function renderIdeas(body, video, slot) {
     }
     body.append(card);
   }
+  body.append(feedbackBox(slot.ideas_feedback || [],
+    "Feedback on the story options themselves: an option to reframe (and how), an angle that is off-brand, a story that is missing. The agent rewrites the slate from these; carry-over ideas keep your notes.",
+    videoFeedback(video, "ideas")));
 }
 
 // ── the fact-verification report ────────────────────────────────────────────
@@ -2107,7 +2110,9 @@ async function openXBatch() {
   catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
   const batch = all[WEEK];
   if (!batch || !(batch.posts || []).length) {
-    body.textContent = (batch || {}).generating_since
+    body.textContent = (batch || {}).last_error
+      ? `the batch agent failed: ${batch.last_error} (${batch.last_error_at || ""}). Fix the cause, then re-run content.x_run or draft the batch in session.`
+      : (batch || {}).generating_since
       ? "the batch agent is drafting right now — reopen this card in a minute or two and the posts will be here."
       : "no batch yet — it drafts itself the moment the post-research Q&A is marked done (give it a minute or two after that click, then reopen). If the Q&A has been done a while and this stays empty, check fleet/logs/x_run_auto.log or ask in session.";
     return;
@@ -2353,7 +2358,9 @@ async function openEmail() {
   catch (e) { body.textContent = `couldn't load — ${e.message}`; return; }
   const issue = all[WEEK];
   if (!issue || !issue.pattern_md) {
-    body.textContent = (issue || {}).generating_since
+    body.textContent = (issue || {}).last_error
+      ? `the email agent failed: ${issue.last_error} (${issue.last_error_at || ""}). Fix the cause, then re-run content.email_run or draft the issue in session.`
+      : (issue || {}).generating_since
       ? "the email agent is drafting this week's issue right now — reopen this card in a minute and it will be here."
       : "no issue yet — it drafts itself the moment the post-research Q&A is marked done, same trigger as the X batch (give it a minute or two after that click, then reopen). If the Q&A has been done a while and this stays empty, check fleet/logs/email_run_auto.log or ask in session.";
     return;
