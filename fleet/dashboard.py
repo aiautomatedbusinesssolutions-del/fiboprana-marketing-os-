@@ -290,8 +290,12 @@ def post_flow_state(body):
     # script card itself; ascent has a separate script_ok card because the
     # outline card is the agent's own step (fixed 2026-08-13 — firing on
     # ascent/script would have generated artifacts from an unapproved draft).
-    if done and (step == "script" and video in ("news", "feature")
-                 or key == "ascent/script_ok"):
+    # 2026-09-04: the story lane now mirrors the news lane (topic → facts →
+    # script[me]); its old agent-drafted script + separate script_ok card are
+    # gone, so the founder's mark on ascent/script is the approval too. Its
+    # facts + script are drafted in session (facts_run/script_run are still
+    # news/feature-only), so no spawn fires on ascent/topic or ascent/facts.
+    if done and step == "script" and video in ("news", "feature", "ascent"):
         spawn_video_artifacts(week, video)
     return steps
 
@@ -747,7 +751,34 @@ def renders_listing(week, video):
                      key=lambda n: int(re.search(r"v(\d+)", n).group(1)),
                      reverse=True)
     shorts = sorted(p.name for p in d.glob("short-s*.mp4"))
-    return {"slug": slug, "masters": masters, "shorts": shorts}
+    return {"slug": slug, "masters": masters, "shorts": shorts,
+            "flags": _read_flags(d)}
+
+
+# ── fix-this-moment loop (founder ask 2026-09-04) ───────────────────────────
+# The player card lets the founder pause on a moment and say what's wrong;
+# the flag lands in the production repo next to the renders
+# (content/videos/assets/<slug>/flags.jsonl) where scripts/fix-moment.mjs
+# maps it to its beat, edits/re-animates that beat, and marks it fixed.
+def _read_flags(d):
+    f = d / "flags.jsonl"
+    if not f.is_file():
+        return []
+    return [json.loads(line) for line in
+            f.read_text(encoding="utf-8").strip().splitlines() if line.strip()]
+
+
+def post_flag_moment(body):
+    week, video = body["week"], body["video"]
+    slug, d = _production_dir(week, video)
+    t = float(body["t"])
+    note = (body.get("note") or "").strip()
+    row = {"at": _now(), "file": body.get("file") or "", "t": round(t, 2),
+           "note": note, "status": "pending"}
+    d.mkdir(parents=True, exist_ok=True)
+    with (d / "flags.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    return {"slug": slug, "flags": _read_flags(d)}
 
 
 def render_video_path(week, video, filename):
@@ -2109,6 +2140,7 @@ def api_select(table, params):
 POST_ACTIONS = {
     "model_set": post_model_set,
     "flow_state": post_flow_state,
+    "flag_moment": post_flag_moment,
     "fleet_controls": post_fleet_controls,
     "video_ideas": post_video_ideas,
     "x_batch": post_x_batch,

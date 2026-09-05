@@ -798,7 +798,7 @@ const VIDEOS = {
         ] },
       { n: "b", title: "Script", why: "Written against the real feature — never the build brief.",
         cards: [
-          { key: "feature/script", tag: "agent", title: "Rundown + outline",
+          { key: "feature/script", tag: "me", title: "Script: rundown + outline",
             body: "Rundown + beats scripted from the feature's real behavior: what pain it answers (the research data that gated it), what it shows, and the honest limits. Brand-thread close. Read it, leave feedback until it sounds like you, then mark done — your done here IS the founder pass.",
             script: "feature" },
         ] },
@@ -848,15 +848,17 @@ const VIDEOS = {
       { n: "a", title: "Prep", why: "An ancient practice, how modern people understand it (or don't) — legend told as legend, record as record, ideally with a twist.",
         cards: [
           { key: "ascent/topic", tag: "me", title: "Pick the story",
-            body: "Three evergreen ancient-practice story options, drafted from the research and the backlog. The best ones carry a twist — a reversal, a convergence, a gap between legend and record. Pick one, then mark done.",
+            body: "Three evergreen story options under the story rule (one question, an ancient half and a modern half), drafted from the research, the backlog, and last week's carry-overs. The best ones carry a twist — a reversal, a convergence, a gap between legend and record. Pick one, then mark done — that click is the go-signal for the facts check.",
             ideas: "ascent" },
+          { key: "ascent/facts", tag: "agent", title: "Verify the facts",
+            body: "Every claim in the picked story checked against primary sources before a line is scripted: the ancient text in a named translation, the study against the actual paper, legend labeled as legend. The report lands here (corrections the script must carry, confirmed facts, say-with-care lines, sources). Read it, then mark done.",
+            facts: "ascent" },
         ] },
       { n: "b", title: "Script", why: "Every factual claim carries a source; legend labeled as legend.",
         cards: [
-          { key: "ascent/script", tag: "agent", title: "Rundown + outline",
-            body: "Cold-open on the story's most improbable image, continuous arc with the midpoint turn, honest-about-uncertainty close, brand thread before the CTA. Sources named for every claim." },
-          { key: "ascent/script_ok", tag: "me", title: "Your pass on the script",
-            body: "It's your channel's voice — make sure it reads that way. Marking done IS the approval: stills, thumbnails, package and the long-form X post generate themselves from it." },
+          { key: "ascent/script", tag: "me", title: "Script: rundown + outline",
+            body: "Drafted from the verified facts: cold-open on the story's most improbable image, ancient half then modern half of the same question, honest-about-uncertainty close, brand thread before the CTA. Read it here, leave feedback until it sounds like you, then mark done — that click IS the approval, and nothing downstream (narration, stills, clips) starts before it.",
+            script: "ascent" },
         ] },
       { n: "c", title: "Produce", why: "The faceless chain — audio first, every beat gets motion.",
         cards: [
@@ -880,7 +882,8 @@ const VIDEOS = {
           { key: "ascent/thumb", tag: "me", title: "Thumbnail",
             body: "Prompts (2 proven + 1 experiment; Quiet Earth, no faces needed); consistent story-series look so the lane reads as a series." },
           { key: "ascent/desc", tag: "agent", title: "Description + tags + community post",
-            body: "youtube_description.md format — story framing + soft waitlist / lead-magnet CTA + disclosure + disclaimer." },
+            body: "youtube_description.md format — story framing + soft waitlist / lead-magnet CTA + disclosure + disclaimer. The package lands here for review.",
+            pkg: "ascent" },
         ] },
       { n: "f", title: "Ship", why: "",
         cards: [
@@ -1387,6 +1390,11 @@ function closeOverlays() {
   // Blur first: a focused post editor saves on blur, so no close path
   // (Escape, ✕, click outside) can drop an in-progress edit.
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  // Stop any narration / master playback when its card closes (founder,
+  // 2026-09-04: the audio kept playing after the card was dismissed).
+  for (const m of document.querySelectorAll(".overlay audio, .overlay video")) {
+    try { m.pause(); } catch (e) { /* not playing */ }
+  }
   for (const o of document.querySelectorAll(".overlay")) o.classList.remove("open");
 }
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeOverlays(); });
@@ -1601,11 +1609,67 @@ async function openPlayer(video) {
     buttons.push(b);
     row.append(b);
   }
-  body.append(player, row, el("div", "sr",
+  body.append(player, row);
+
+  // ── fix this moment (founder ask 2026-09-04) ──────────────────────────
+  // Pause on the moment, say what's wrong, flag it. The flag lands in the
+  // production repo (flags.jsonl next to the renders); scripts/fix-moment.mjs
+  // maps it to its beat, edits or re-animates that beat, and marks it fixed.
+  let currentFile = files[0];
+  const flagBox = el("div", "pull");
+  const flagLbl = el("div", "lbl", "Fix this moment");
+  flagLbl.append(el("span", "hint",
+    "pause where it's wrong, say what should change (or leave blank for 'redo the motion'), flag it. " +
+    "No need to name the beat — the timestamp finds it."));
+  flagBox.append(flagLbl);
+  const flagList = el("div");
+  const renderFlags = (fl) => {
+    flagList.replaceChildren();
+    for (const f of fl || []) {
+      const m = Math.floor(f.t / 60), s = String(Math.floor(f.t % 60)).padStart(2, "0");
+      flagList.append(el("div", "val",
+        `${f.status === "fixed" ? "✓" : "•"} ${m}:${s} — ${f.note || "(redo the motion)"}` +
+        (f.status === "fixed" ? ` · fixed (beat ${f.beat}, ${f.mode})` : " · pending")));
+    }
+  };
+  renderFlags(data.flags);
+  const ta = document.createElement("textarea");
+  ta.placeholder = "e.g. the gold thread should stay inside the body · the monk looks too young · make the fire brighter";
+  ta.rows = 2;
+  const flagRow = el("div", "saveRow");
+  const flagBtn = el("button", "mark", "🚩 flag this moment");
+  const stamp = el("span", "hint", "");
+  player.addEventListener("timeupdate", () => {
+    const t = player.currentTime || 0;
+    stamp.textContent = `at ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  });
+  flagBtn.onclick = async () => {
+    player.pause();
+    flagBtn.textContent = "saving…";
+    try {
+      const r = await fetch("/api/flag_moment", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week: WEEK, video, file: currentFile, t: player.currentTime || 0, note: ta.value.trim() }),
+      });
+      const s = await r.json();
+      if (!r.ok) throw new Error(s.error || `HTTP ${r.status}`);
+      renderFlags(s.flags);
+      ta.value = "";
+      flagBtn.textContent = "🚩 flag this moment";
+    } catch (e) { flagBtn.textContent = `failed: ${e.message}`; }
+  };
+  flagRow.append(flagBtn, stamp);
+  flagBox.append(flagList, ta, flagRow);
+  body.append(flagBox);
+
+  body.append(el("div", "sr",
     "Newest master first, then the shorts. Watch against the pacing rules " +
-    "(every beat moves, no hold over ~12s, no repeated clip); name any weak " +
-    "beat in session and it regenerates. Mark the card done when it's a release candidate."));
-  select(files[0], buttons[0]);
+    "(every beat moves, no hold over ~12s, no repeated clip). Flag weak moments above " +
+    "and they get fixed in session (scripts/fix-moment.mjs). Mark the card done when it's a release candidate."));
+  const origSelect = select;
+  const selectTracked = (f, btn) => { currentFile = f; origSelect(f, btn); };
+  for (let i = 0; i < files.length; i++) buttons[i].onclick = () => selectTracked(files[i], buttons[i]);
+  selectTracked(files[0], buttons[0]);
 }
 
 // ── post-watch review — the production learning loop's write-side ───────────
@@ -1767,7 +1831,7 @@ async function openScript(video) {
         ? "no script drafted yet — it drafts itself the moment the verified facts report is approved (the Verify-the-facts card). Give it a minute or two after that click."
         : video === "feature"
           ? "no script drafted yet — it drafts itself the moment the worked example is marked done. (No separate fact check in this lane: the example is built from the tool's own source code, so the live tool IS the verified artifact.) Give it a minute or two after that click."
-          : "no script drafted yet — ask for it in session.";
+          : "no script drafted yet — the story lane's script is drafted in session from the verified facts report (the Verify-the-facts card). Ask for it in session once that card is marked done.";
     return;
   }
   meta.textContent += ` · ${script.status} · written ${daysAgo(script.written_at)}`

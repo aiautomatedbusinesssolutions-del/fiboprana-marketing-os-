@@ -15,7 +15,9 @@ composition is those two meeting on sand.*
 
 **Primary style — "Quiet Earth":** flat, matte, softly-painterly illustration; muted earth
 palette on sand; subtle paper grain; generous negative space; one gold element and one pine
-element per scene; human figures faceless/silhouetted; slow, breathing motion.
+element per scene; human figures are stylized illustrated characters and may have faces
+(founder call 2026-09-04) as long as they are never photorealistic and never the likeness
+of a real, identifiable person; slow, breathing motion.
 
 **Type:** Fraunces for hook cards and pull-quotes; Geist Sans kinetic captions with the
 keyword highlighted in gold. **Sound:** founder's own-voice clone, calm and unhurried;
